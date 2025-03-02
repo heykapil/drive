@@ -1,6 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+      // ppr: true,
+      serverActions: {
+        allowedOrigins: ["api.kapil.app", "api2.kapil.app"],
+      },
+
+    },
+  eslint: {
+    ignoreDuringBuilds: true
+  }
   /* config options here */
 };
 
