@@ -88,5 +88,11 @@ const isTemplateStringsArray = (
   );
 };
 
-export const testDatabaseConnection = async () =>
-  query('SELECt COUNT(*) FROM pg_stat_user_tables');
+export const testDBConnection = async () => {
+  try {
+      await query('SELECT NOW()'); // Simple query to test connection
+      return { status: 'Success' };
+    } catch (error: any) {
+      return { status: 'Error', message: error.message };
+    }
+}

@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   experimental: {
       // ppr: true,
       serverActions: {
-        allowedOrigins: ["api.kapil.app", "api2.kapil.app"],
+      allowedOrigins: ["api.kapil.app", "api2.kapil.app", "auth.kapil.app"],
       },
 
     },

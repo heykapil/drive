@@ -1,128 +1,112 @@
-import {
-    CopyObjectCommand,
-    DeleteObjectCommand,
-    ListObjectsCommand,
-    PutObjectCommand,
-    S3Client,
-} from '@aws-sdk/client-s3';
-import { nanoid } from './nanoid';
-type StorageListResponse = {
-  url: string
-  fileName: string
-  uploadedAt?: Date
-}[];
+'use server'
+import { HeadBucketCommand, ListBucketsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { cookies } from 'next/headers';
+import { BucketConfig, buckets } from './bucket.config';
 
-const AWS_BUCKET = process.env.AWS_BUCKET_NAME ?? '';
-const AWS_ACCESS_KEY = process.env.AWS_ACCESS_KEY_ID ?? '';
-const AWS_SECRET_ACCESS_KEY =
-  process.env.AWS_SECRET_ACCESS_KEY ?? '';
-const AWS_ENDPOINT = process.env.AWS_ENDPOINT ?? '';
+export async function s3BucketSyncError({ bucket }: {bucket: string}){
+  const cookieStore = await cookies();
+  const secureCookie: boolean = process.env.BETTER_AUTH_URL?.startsWith('https://') || false;
+  const cookiePrefix  = secureCookie ? '__Secure-' : '';
+  const selectedBucket =  cookieStore.get(cookiePrefix+'s3-bucket')?.value || 'default'
+  if (selectedBucket === bucket) {
+    return false;
+  } else{
+    return true;
+  }
+}
 
-export const Client = () =>
-  new S3Client({
+export async function s3() {
+  const cookieStore = await cookies();
+  const secureCookie: boolean = process.env.BETTER_AUTH_URL?.startsWith('https://') || false;
+  const cookiePrefix  = secureCookie ? '__Secure-' : '';
+  const selectedBucket =  cookieStore.get(cookiePrefix+'s3-bucket')?.value || 'default'
+  const bucketConfig = buckets[selectedBucket] ?? buckets.default
+  return new S3Client({
     region: 'auto',
-    endpoint: AWS_ENDPOINT,
+    endpoint: bucketConfig.endpoint,
     credentials: {
-      accessKeyId: AWS_ACCESS_KEY,
-      secretAccessKey: AWS_SECRET_ACCESS_KEY,
+      accessKeyId: bucketConfig.accessKey,
+      secretAccessKey: bucketConfig.secretKey,
     },
+    forcePathStyle: true,
   });
-export const AWS_BASE_URL_PUBLIC = 'https://cdn.kapil.app'
-export const AWS_BASE_URL_PRIVATE =
-  AWS_ENDPOINT && AWS_BUCKET
-    ? `${AWS_ENDPOINT}/${AWS_BUCKET}`
-    : undefined;
+}
 
-const urlForKey = (key?: string, isPublic = true) =>
-  isPublic
-    ? `${AWS_BASE_URL_PUBLIC}/${key}`
-    : `${AWS_BASE_URL_PRIVATE}/${key}`;
+export async function s3WithConfig(bucketConfig: BucketConfig) {
+  return new S3Client({
+    region: bucketConfig.region || 'auto',
+    endpoint: bucketConfig.endpoint,
+    credentials: {
+      accessKeyId: bucketConfig.accessKey,
+      secretAccessKey: bucketConfig.secretKey,
+    },
+    forcePathStyle: true,
+  });
+}
 
-export const isUrlFromCloudflareR2 = (url?: string) =>
-  (AWS_BASE_URL_PRIVATE &&
-    url?.startsWith(AWS_BASE_URL_PRIVATE)) ||
-  (AWS_BASE_URL_PUBLIC &&
-    url?.startsWith(AWS_BASE_URL_PUBLIC));
+export async function testS3Connections() {
+  const results = [];
 
-export const s3PutObjectCommandForKey = (Key: string) =>
-  new PutObjectCommand({ Bucket: AWS_BUCKET, Key });
+  for (const [name, config] of Object.entries(buckets)) {
+    try {
+      const s3 = await s3WithConfig(config);
+      await s3.send(new ListBucketsCommand({}));
+      results.push({ bucket: name, status: 'Success' });
+    } catch (error: any) {
+      results.push({ bucket: name, status: 'Error', message: error.message });
+    }
+  }
+  return results;
+}
 
-export const s3Put = async (
-  file: Buffer,
-  fileName: string,
-): Promise<string> =>
-Client()
-    .send(
-      new PutObjectCommand({
-        Bucket: AWS_BUCKET,
-        Key: fileName,
-        Body: file,
-      }),
-    )
-    .then(() => urlForKey(fileName));
+const MAX_BUCKET_CAPACITY_GB = 25; // 25GB limit
+const MAX_BUCKET_CAPACITY_BYTES = MAX_BUCKET_CAPACITY_GB * 1024 * 1024 * 1024; // Convert to bytes
 
-export const s3Copy = async (
-  fileNameSource: string,
-  fileNameDestination: string,
-  addRandomSuffix?: boolean,
-) => {
-  const name = fileNameSource.split('.')[0];
-  const extension = fileNameSource.split('.')[1];
-  const Key = addRandomSuffix
-    ? `${name}-${nanoid(6)}.${extension}`
-    : fileNameDestination;
-  return Client()
-    .send(
-      new CopyObjectCommand({
-        Bucket: AWS_BUCKET,
-        CopySource: `${AWS_BUCKET}/${fileNameSource}`,
-        Key,
-      }),
-    )
-    .then(() => urlForKey(fileNameDestination));
-};
+export async function getS3StorageUsage() {
+  const results = [];
 
-export const s3List = async (
-  Prefix: string,
-): Promise<StorageListResponse> =>
-  Client()
-    .send(
-      new ListObjectsCommand({
-        Bucket: AWS_BUCKET,
-        Prefix,
-      }),
-    )
-    .then(
-      (data) =>
-        data.Contents?.map(({ Key, LastModified }) => ({
-          url: urlForKey(Key),
-          fileName: Key ?? '',
-          uploadedAt: LastModified,
-        })) ?? [],
-    );
+  for (const [name, config] of Object.entries(buckets)) {
+    try {
+      const s3 = await s3WithConfig(config);
 
-export const s3Delete = async (Key: string) => {
-  Client().send(
-    new DeleteObjectCommand({
-      Bucket: AWS_BUCKET,
-      Key,
-    }),
-  );
-};
+      // Check if the bucket exists
+      await s3.send(new HeadBucketCommand({ Bucket: config.name }));
 
-const getStorageUrlsForPrefix = async (prefix = '') => {
-  const urls: StorageListResponse = [];
-    urls.push(...await s3List(prefix)
-      .catch(() => []));
+      let totalSize = 0;
+      let continuationToken: string | undefined = undefined;
 
+      do {
+        const response: any = await s3.send(
+          new ListObjectsV2Command({
+            Bucket: config.name,
+            ContinuationToken: continuationToken,
+          })
+        );
 
-  return urls
-    .sort((a, b) => {
-      if (!a.uploadedAt) { return 1; }
-      if (!b.uploadedAt) { return -1; }
-      return b.uploadedAt.getTime() - a.uploadedAt.getTime();
-    });
-};
+        totalSize += response.Contents?.reduce((sum: number, obj: any) => +sum + (obj.Size || 0), 0) || 0;
+        continuationToken = response.NextContinuationToken;
+      } while (continuationToken);
 
-export const testStorageConnection = () =>
-  getStorageUrlsForPrefix();
+      // Calculate available storage
+      const availableStorageBytes = Math.max(MAX_BUCKET_CAPACITY_BYTES - totalSize, 0);
+      const availableStorageGB = (availableStorageBytes / (1024 * 1024 * 1024)).toFixed(2);
+
+      results.push({
+        bucket: name,
+        status: "Success",
+        storageUsed: totalSize,
+        storageUsedMB: (totalSize / (1024 * 1024)).toFixed(2) + " MB",
+        storageUsedGB: (totalSize / (1024 * 1024 * 1024)).toFixed(2) + " GB",
+        availableCapacityGB: availableStorageGB + " GB",
+      });
+    } catch (error: any) {
+      results.push({
+        bucket: name,
+        status: "Error",
+        message: error.message,
+      });
+    }
+  }
+
+  return results;
+}
