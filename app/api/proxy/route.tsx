@@ -10,7 +10,6 @@ export async function GET(req: Request) {
     }
 
     const response = await fetch(fileUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
-
     if (!response.ok) throw new Error("Failed to fetch file");
 
     return new Response(response.body, {
@@ -20,7 +19,6 @@ export async function GET(req: Request) {
       },
     });
   } catch (error: any) {
-    console.log(error)
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
