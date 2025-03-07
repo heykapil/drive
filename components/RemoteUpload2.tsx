@@ -51,7 +51,7 @@ export default function RemoteUpload() {
 
   return (
   <div className="w-full mx-auto space-y-6 p-2">
-        <Card>
+        <Card className="">
           <CardContent className="space-y-4">
             <div className="relative w-full mx-auto">
                   <div className="flex">
@@ -107,7 +107,7 @@ export default function RemoteUpload() {
             </div>
 
             <Button onClick={async()=>await handleUpload(useProxy, proxyUrl)} disabled={isUploading} className="w-full">
-              {isUploading ? "Uploading..." : "Upload"}
+              {isUploading ? "Uploading..." : `Upload to ${selectedBucket}`}
             </Button>
           </CardContent>
         </Card>

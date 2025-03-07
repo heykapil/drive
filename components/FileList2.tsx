@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { formatBytes, formatDate } from "@/lib/utils";
-import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, Trash2 } from "lucide-react";
-import { useEffect, useReducer } from "react";
+import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, ToggleLeft, Trash2 } from "lucide-react";
+import { useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmModal } from "./ConfirmModal";
 import FileIcon from "./FileIcon";
@@ -13,6 +13,7 @@ import FileViewer from "./FileViewer3";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Skeleton } from "./ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import VideoPlayer from "./VideoPlayer";
 
 type FileState = {
   files: any[];
@@ -28,6 +29,8 @@ type FileState = {
   modals: {
     delete: boolean;
     privacy: boolean;
+    multidelete: boolean;
+    multiprivacy: boolean;
   };
   loading: boolean;
   error: string | null;
@@ -40,16 +43,16 @@ type FileAction =
 
 const initialState: FileState = {
   files: [],
-  sort: 'name_asc',
+  sort: 'uploaded_at_desc',
   search: '',
   page: 1,
-  limit: 10,
+  limit: 25,
   totalPages: 1,
   totalFiles: 0,
   view: 'list',
   selectedFile: null,
   previewFile: null,
-  modals: { delete: false, privacy: false },
+  modals: { delete: false, privacy: false, multidelete: false, multiprivacy: false },
   loading: false,
   error: null,
 };
@@ -70,6 +73,73 @@ function fileReducer(state: FileState, action: FileAction): FileState {
 export default function FileList() {
   const { selectedBucket } = useBucketStore();
   const [state, dispatch] = useReducer(fileReducer, initialState);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+
+  const toggleFileSelection = (fileId: string) => {
+    setSelectedFiles((prev) => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(fileId)) {
+        newSelection.delete(fileId);
+      } else {
+        newSelection.add(fileId);
+      }
+      return newSelection;
+    });
+  };
+
+    const togglePrivacyForSelected = async () => {
+    if (selectedFiles.size === 0) return;
+    try {
+      dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
+
+      const requests = Array.from(selectedFiles).map(async (fileId) => {
+        const file = state.files.find(f => f.id === fileId);
+        return fetch(`/api/files/privacy?bucket=${selectedBucket}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            fileId,
+            isPublic: !file?.is_public
+          }),
+        });
+      });
+
+      await Promise.all(requests);
+      toast.success("Privacy updated for selected files");
+      dispatch({ type: "SET_MODAL", modal: "multiprivacy", value: false })
+      fetchFiles();
+      setSelectedFiles(new Set()); // Clear selection after update
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update privacy");
+    } finally {
+      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
+    }
+  };
+
+  const deleteFiles = async () => {
+    if (selectedFiles.size === 0) return;
+
+    try {
+      dispatch({ type: "SET_FIELD", field: "loading", value: true });
+
+      const requests = Array.from(selectedFiles).map(async (fileId) => {
+        return fetch(`/api/files?bucket=${selectedBucket}`, {
+          method: "DELETE",
+          body: JSON.stringify({ fileId }),
+        });
+      });
+
+      await Promise.all(requests);
+      toast.success("Selected files deleted successfully");
+      dispatch({ type: "SET_MODAL", modal: "multidelete", value: false })
+      fetchFiles();
+      setSelectedFiles(new Set()); // Clear selection after deletion
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete files");
+    } finally {
+      dispatch({ type: "SET_FIELD", field: "loading", value: false });
+    }
+  };
+
 
   useEffect(() => {
     if (selectedBucket) {
@@ -95,7 +165,7 @@ export default function FileList() {
       const data = await res.json();
       const publicFilesWithUrls = data.files.map((file: any) => ({
         ...file,
-        url: `https://s3.tebi.io/${file.bucket}/${file.key}`,
+        url:  `https://s3.tebi.io/${file.bucket}/${file.key}`,
       }));
 
       dispatch({ type: 'SET_FIELD', field: 'files', value: publicFilesWithUrls });
@@ -175,7 +245,7 @@ export default function FileList() {
       const res = await fetch(`/api/files/url?bucket=${selectedBucket}&fileId=${id}&expiresIn=7200`);
       const { url, error } = await res.json();
       if (error) toast.error(error);
-      return url;
+      return   url;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to get download URL');
       return null;
@@ -282,6 +352,19 @@ export default function FileList() {
         <Button size="icon" variant="outline" onClick={fetchFiles}>
           <RefreshCw className={`w-5 h-5 ${state.loading ? 'animate-spin' : ''}`} />
         </Button>
+        {selectedFiles.size > 0 && (
+          <div className="flex flex-row items-center justify-between gap-2">
+            <Button onClick={() => {
+              dispatch({ type: "SET_MODAL", modal: "multiprivacy", value: true })}}
+              variant="outline">
+               <ToggleLeft /> <span className="sr-only lg:not-sr-only"> Toggle Privacy ({selectedFiles.size} files)</span>
+            </Button>
+            <Button onClick={() => {
+              dispatch({ type: "SET_MODAL", modal: "multidelete", value: true })}} variant="destructive">
+              <Trash2 />  <span className="sr-only lg:not-sr-only">Delete ({selectedFiles.size} files)</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {state.loading ? (
@@ -314,8 +397,8 @@ export default function FileList() {
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
-                    ) : file.is_public && file.type.startsWith("video/") ? (
-                      <video src={file.url} controls className="w-full h-full object-cover" />
+                    ) : file.is_public && (file.type.startsWith("video/") || file.filename?.match(/\.(mp4|webm|ogg|mov)$/)) ? (
+                      <VideoPlayer url={file.url} />
                     ) : (
                       <a role="link" className="hover:underliner hover:cursor-pointer flex items-center justify-center" onClick={async () => {
                         const url = await getDownloadUrl(file.id);
@@ -460,6 +543,19 @@ export default function FileList() {
               <Table className="w-full table">
                 <TableHeader>
                   <TableRow>
+                    <TableHead>
+                      <input
+                        type="checkbox"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedFiles(new Set(state.files.map((file) => file.id)));
+                          } else {
+                            setSelectedFiles(new Set());
+                          }
+                        }}
+                        checked={selectedFiles.size === state.files.length && state.files.length > 0}
+                      />
+                    </TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Size</TableHead>
                     <TableHead className="sr-only lg:not-sr-only">Uploaded</TableHead>
@@ -470,13 +566,20 @@ export default function FileList() {
                 <TableBody>
                   {state.files.map((file) => (
                     <TableRow key={file.id}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={selectedFiles.has(file.id)}
+                          onChange={() => toggleFileSelection(file.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium truncate max-w-[180px] md:max-w-[250px] lg:max-w-[450px]">
                         {file.filename}
                       </TableCell>
                       <TableCell>{formatBytes(file.size)}</TableCell>
                       <TableCell className="sr-only lg:not-sr-only">{formatDate(file.uploaded_at)}</TableCell>
-                      <TableCell className="sr-only lg:not-sr-only">
-                        {file.is_public ? 'Public' : 'Private'}
+                      <TableCell className="sr-only lg:not-sr-only text-right">
+                        {file.is_public ? "Public" : "Private"}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -503,8 +606,12 @@ export default function FileList() {
                             <DropdownMenuItem
                               onClick={async () => {
                                 const url = await getDownloadUrl(file.id);
-                                dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                                dispatch({ type: 'SET_FIELD', field: 'previewFile', value: { url, name: file.filename, type: file.type, uploaded_at: formatDate(file.uploaded_at), size: formatBytes(file.size) } });
+                                dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                dispatch({
+                                  type: "SET_FIELD",
+                                  field: "previewFile",
+                                  value: { url, name: file.filename, type: file.type, uploaded_at: formatDate(file.uploaded_at), size: formatBytes(file.size) },
+                                });
                               }}
                             >
                               <Fullscreen className="mr-2 h-4 w-4" />
@@ -521,8 +628,8 @@ export default function FileList() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                                dispatch({ type: 'SET_MODAL', modal: 'privacy', value: true });
+                                dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                dispatch({ type: "SET_MODAL", modal: "privacy", value: true });
                               }}
                             >
                               {file.is_public ? (
@@ -530,14 +637,14 @@ export default function FileList() {
                               ) : (
                                 <Eye className="mr-2 h-4 w-4" />
                               )}
-                              {file.is_public ? 'Make Private' : 'Make Public'}
+                              {file.is_public ? "Make Private" : "Make Public"}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => {
-                                dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                                dispatch({ type: 'SET_MODAL', modal: 'delete', value: true });
+                                dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                dispatch({ type: "SET_MODAL", modal: "delete", value: true });
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -550,7 +657,7 @@ export default function FileList() {
                   ))}
                   {state.files.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         No files found
                       </TableCell>
                     </TableRow>
@@ -573,6 +680,16 @@ export default function FileList() {
 
       {/* Modals */}
       <ConfirmModal
+        open={state.modals.multidelete}
+        onClose={() => dispatch({ type: 'SET_MODAL', modal: 'multidelete', value: false })}
+        onConfirm={deleteFiles}
+        title="Delete Files"
+        description={`Are you sure you want to delete "${selectedFiles.size}" files? This action cannot be undone.`}
+        confirmText={state.loading ? "Deleting..." : "Delete"}
+        danger
+      />
+
+      <ConfirmModal
         open={state.modals.delete}
         onClose={() => dispatch({ type: 'SET_MODAL', modal: 'delete', value: false })}
         onConfirm={deleteFile}
@@ -580,6 +697,15 @@ export default function FileList() {
         description={`Are you sure you want to delete "${state.selectedFile?.filename}"? This action cannot be undone.`}
         confirmText={state.loading ? "Deleting..." : "Delete"}
         danger
+      />
+
+      <ConfirmModal
+        open={state.modals.multiprivacy}
+        onClose={() => dispatch({ type: 'SET_MODAL', modal: 'multiprivacy', value: false })}
+        onConfirm={togglePrivacyForSelected}
+        title="Toggle Privacy for Files"
+        description={`Are you sure you want to toggle privacy of "${selectedFiles.size}" files? This action cannot be undone.`}
+        confirmText={state.loading ? "Changing..." : "Toggle Privacy"}
       />
 
       <ConfirmModal

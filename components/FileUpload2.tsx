@@ -211,7 +211,7 @@ export default function FileUpload() {
 
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg">
+    <div className="space-y-4 p-4 lg:ml-4 border rounded-lg">
       <div {...getRootProps()} className="border-dashed border-2 px-6 py-36 text-center cursor-pointer bg-background rounded-lg">
         <input {...getInputProps()} />
         <p>Drag & drop files here, or click to select</p>
@@ -238,7 +238,7 @@ export default function FileUpload() {
         ))}
       </div>
       <Button onClick={uploadFiles} disabled={state.files.length === 0 || state.uploading}>
-        {state.uploading ? "Uploading..." : "Upload Files"}
+        {state.uploading ? "Uploading..." : `Upload to ${selectedBucket}`}
       </Button>
     </div>
   );

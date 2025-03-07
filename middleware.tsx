@@ -9,31 +9,33 @@ export async function middleware(request: NextRequest) {
   const cookiePrefix  = secureCookie ? '__Secure-' : '';
   const session_token = request.cookies.get(`${cookiePrefix}kapil.app.session_token`)?.value || '';
   const sessionData = request.cookies.get(`${cookiePrefix}kapil.app.sessionData`)?.value || '';
-
+  const production = process.env.NODE_ENV === 'production';
   const midResponse = NextResponse.next();
-  if (!session_token) {
+  if (production && !session_token) {
    return NextResponse.redirect(new URL('/login?redirectTo='+ encodeURI(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
   }
-  if (session_token && !sessionData) {
+  if (production && session_token && !sessionData) {
     const { data: session } = await betterFetch<Session>('/api/auth/get-session', {
       baseURL: process.env.BETTER_AUTH_URL,
       headers: {
         cookie: request.headers.get("cookie") || "",
       },
     });
-    if (!session) {
+    if (production && !session) {
      return NextResponse.redirect(new URL('/login?redirectTo='+ encodeURIComponent(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
     }
-    midResponse.cookies.set({
-      name: `${cookiePrefix}kapil.app.sessionData`,
-      value: await signJWT(session),
-      httpOnly: true,
-      sameSite: 'none',
-      domain: process.env.NODE_ENV === 'production' ? '.kapil.app' : '.localhost',
-      secure: process.env.NODE_ENV === 'production' ? true : false,
-      expires: new Date(Date.now() + 1000*60*5),
-      path: '/',
-    });
+    if (production) {
+      midResponse.cookies.set({
+        name: `${cookiePrefix}kapil.app.sessionData`,
+        value: await signJWT(session!),
+        httpOnly: true,
+        sameSite: 'none',
+        domain: process.env.NODE_ENV === 'production' ? '.kapil.app' : '.localhost',
+        secure: process.env.NODE_ENV === 'production' ? true : false,
+        expires: new Date(Date.now() + 1000 * 60 * 5),
+        path: '/',
+      });
+    }
   }
   return midResponse;
 }

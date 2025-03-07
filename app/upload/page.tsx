@@ -4,11 +4,11 @@ import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 export default async function UploadPage() {
+  const production = process.env.NODE_ENV === 'production';
   const session = await getSession();
-  if(session?.user?.username !== 'admin'){
+  if(production && session?.user?.username !== 'admin'){
     return notFound()
   }
-
   return (
     <Suspense>
     <HeaderNav />

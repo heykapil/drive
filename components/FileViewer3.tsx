@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download } from "lucide-react";
+import VideoPlayer from "./VideoPlayer";
 
 interface FileViewerProps {
   previewFile: {
@@ -19,6 +20,8 @@ interface FileViewerProps {
 export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
   const { name, url, type, uploaded_at, size, is_public } = previewFile;
   const fileType = type.split("/")[0];
+  const isImage = fileType === "image" || name.match(/\.(jpeg|jpg|gif|png)$/);
+  const isVideo = fileType === "video" || name.match(/\.(mp4|webm|ogg|mov)$/);
   return (
     <Dialog open={!!previewFile} onOpenChange={onClose}>
       <DialogContent className="min-w-[90%] h-[90vh] flex flex-col">
@@ -34,12 +37,9 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
           </div>
         </DialogHeader>
         <div className="flex justify-center items-center flex-grow p-4 bg-gray-100 rounded-md overflow-auto">
-          {fileType === "image" && <img src={url} alt={name} className="max-h-full w-auto rounded-md" />}
-          {fileType === "video" && (
-            <video controls className="max-h-full w-auto rounded-md">
-              <source src={url} type={type} />
-              Your browser does not support the video tag.
-            </video>
+          {isImage && <img src={url} alt={name} className="max-h-full w-auto rounded-md" />}
+          {isVideo && (
+            <VideoPlayer url={url} />
           )}
           {type === "application/pdf" && (
             <iframe src={url} className="w-full h-full bg-white rounded-md border"></iframe>
