@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useBucketStore } from "@/hooks/use-bucket-store";
+import { sanitizeFileName } from "@/lib/helpers/sanitize-file-name";
 import { useState } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
+import { Card, CardContent } from "./ui/card";
 
 export default function RemoteUpload() {
   const [urls, setUrls] = useState("");
@@ -12,18 +14,35 @@ export default function RemoteUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const { selectedBucket } = useBucketStore()
   const uploadMultipart = async (fileUrl: string) => {
+
     try {
+      toast.info('Uploading file from url:', {
+        description: fileUrl
+      })
+
+      // 0. Use proxy
+      const proxyDomain = process.env.NODE_ENV === "development" ? "/api/proxy" : "https://proxy.kapil.app";
+      const proxyUrl = `${proxyDomain}?url=${encodeURIComponent(fileUrl)}`;
+      toast.info('Using proxy', {
+        description: proxyDomain
+      })
+
       // 1. Get file metadata
-      const proxyUrl = `/api/proxy?bucket=${selectedBucket}&url=${encodeURIComponent(fileUrl)}`;
-      const headRes = await fetch(proxyUrl, { method: "HEAD" });
-      if (!headRes.ok) throw new Error("Failed to fetch file metadata");
+
+      const headRes = await fetch(proxyUrl, {
+        method: "HEAD",
+      });
+      if (!headRes.ok) toast.error("Failed to fetch file metadata");
 
       // 2. Extract metadata
       const contentLength = headRes.headers.get("content-length");
       const contentType = headRes.headers.get("content-type") || "application/octet-stream";
-      if (!contentLength) throw new Error("Could not determine file size");
-      const fileSize = parseInt(contentLength, 10);
-      const fileName = fileUrl.split("/").pop() || `file-${Date.now()}`;
+      if (!contentLength) {
+        toast.error('Could not determine file size')
+        throw new Error("Could not determine file size")
+      }
+      const fileSize = parseInt(contentLength as string, 10);
+      const fileName = sanitizeFileName(fileUrl.split("/").pop() || `file-${Date.now()}`);
 
       // 3. Initiate multipart upload
       const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
@@ -32,7 +51,10 @@ export default function RemoteUpload() {
         headers: { "Content-Type": "application/json" },
       });
       const { uploadId, key } = await initRes.json();
-      if (!uploadId) throw new Error("Failed to initiate upload.");
+      if (!uploadId) {
+        toast.error('Failed to initiate upload')
+        throw new Error("Failed to initiate upload.")
+      }
 
       // 4. Upload configuration
       const chunkSize = 5 * 1024 * 1024; // 5MB chunks
@@ -41,10 +63,19 @@ export default function RemoteUpload() {
       const parts: { PartNumber: number; ETag: string }[] = [];
 
       // 5. Fetch file stream
-      const fileRes = await fetch(`/api/proxy?url=${encodeURIComponent(fileUrl)}`);
-      if (!fileRes.ok) throw new Error("Failed to fetch file");
+      const fileRes = await fetch(`${proxyDomain}?url=${encodeURIComponent(fileUrl)}`, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+      });
+
+      if (!fileRes.ok) {
+        toast.error('Failed to fetch file')
+        throw new Error("Failed to fetch file")
+      }
       const reader = fileRes.body?.getReader();
-      if (!reader) throw new Error("Failed to read file stream");
+      if (!reader) {
+        toast.error('Failed to read stream')
+        throw new Error("Failed to read file stream")
+      }
 
       // 6. Stream processing variables
       let buffer = new Uint8Array(0);
@@ -62,15 +93,24 @@ export default function RemoteUpload() {
           });
 
           const { url } = await presignRes.json();
-          if (!url) throw new Error(`Presigned URL missing for part ${partNumber}`);
+          if (!url) {
+            toast.error(`Presigned URL missing for part ${partNumber}`)
+            throw new Error(`Presigned URL missing for part ${partNumber}`)
+          }
 
           // Upload chunk
           const uploadRes = await fetch(url, { method: "PUT", body: chunk });
-          if (!uploadRes.ok) throw new Error(`Part ${partNumber} upload failed (${uploadRes.status})`);
+          if (!uploadRes.ok) {
+            toast.error(`Part ${partNumber} upload failed (${uploadRes.status})`)
+            throw new Error(`Part ${partNumber} upload failed (${uploadRes.status})`)
+          };
 
           // Store ETag
           const eTag = uploadRes.headers.get("ETag")?.replace(/"/g, "");
-          if (!eTag) throw new Error(`ETag missing for part ${partNumber}`);
+          if (!eTag) {
+            toast.error(`Etag missing for part ${partNumber}`)
+            throw new Error(`ETag missing for part ${partNumber}`)
+          };
           parts.push({ PartNumber: partNumber, ETag: eTag });
 
           // Update progress
@@ -118,6 +158,7 @@ export default function RemoteUpload() {
           // Check for errors
           for (const result of results) {
             if (result.status === "rejected") {
+              toast.error(result.reason)
               throw new Error(result.reason);
             }
           }
@@ -129,6 +170,7 @@ export default function RemoteUpload() {
         const results = await Promise.allSettled(uploadQueue);
         for (const result of results) {
           if (result.status === "rejected") {
+            toast.error(result.reason)
             throw new Error(result.reason);
           }
         }
@@ -151,49 +193,68 @@ export default function RemoteUpload() {
       const finalResult = await finalRes.json();
 
       if (!finalResult.success) {
+        toast.error(`Failed to complete multipart upload`)
         throw new Error("Failed to complete multipart upload");
+      } else {
+        toast.success('File uploaded')
       }
-
-      toast.success(`${fileName} uploaded successfully!`);
     } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(`Upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      console.log(error)
+      toast.error("Upload error:"+ error)
     }
   };
 
   const handleUpload = async () => {
     const urlList = urls.split("\n").map(url => url.trim()).filter(Boolean);
-    if (urlList.length === 0) return;
-
-    setIsUploading(true);
-    setProgress(Object.fromEntries(urlList.map(url => [url, 0])));
-
-    await Promise.all(urlList.map(uploadMultipart));
+    if (urlList.length === 0) return toast.error("No URLs found");
+    setProgress(Object.fromEntries(urlList.map((url) => [url, 0])));
+    for (const url of urlList) {
+      await uploadMultipart(url)
+    }
     setIsUploading(false);
   };
 
   return (
-    <div className="w-full mx-auto space-y-4">
-      <Textarea
-        placeholder="Enter URLs, each on a new line"
-        value={urls}
-        onChange={(e) => setUrls(e.target.value)}
-        rows={6}
-        className="w-full"
-      />
-      <Button onClick={handleUpload} disabled={isUploading}>
-        {isUploading ? "Uploading..." : "Upload"}
-      </Button>
-      {Object.keys(progress).length > 0 && (
-        <div className="space-y-2">
-          {Object.entries(progress).map(([url, progressValue]) => (
-            <div key={url}>
-              <p className="text-sm truncate">{url}</p>
-              <Progress value={progressValue} className="w-full" />
+  <div className="w-full mx-auto space-y-6 p-2">
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="relative">
+              <Textarea
+                placeholder="Enter URLs, each on a new line"
+                value={urls}
+                onChange={(e) => setUrls(e.target.value)}
+                rows={6}
+                className="w-full font-mono text-sm tracking-wide pl-10"
+                style={{ counterReset: "line-number" }}
+              />
+              <div className="absolute left-2 top-2 h-full text-gray-400 text-xs flex flex-col items-end pr-2">
+                {urls.split("\n").map((_, i) => (
+                  <span key={i} className="block w-full text-right">{i + 1}</span>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+            <Button onClick={handleUpload} disabled={isUploading} className="w-full">
+              {isUploading ? "Uploading..." : "Upload"}
+            </Button>
+          </CardContent>
+        </Card>
+      {Object.keys(progress).length > 0 && (
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {Object.entries(progress).map(([url, progressValue]) => (
+              <div key={url} className="space-y-1">
+                <p className="text-sm font-medium truncate overflow-hidden max-w-full" title={url}>
+                  {url.length > 30 ? `${url.substring(0, 47)}...` : url}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Progress value={progressValue} className="w-full" />
+                  <span className="text-xs font-medium w-12 text-right">{progressValue}%</span>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
-    </div>
+  </div>
   );
 }

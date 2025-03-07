@@ -19,7 +19,7 @@ export function ConfirmModal({ open, onClose, onConfirm, title, description, con
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <p className="text-gray-600">{description}</p>
+        <p className="text-gray-600 truncate max-w-xl">{description}</p>
         <DialogFooter>
           <Button onClick={onClose} variant="outline">Cancel</Button>
           <Button onClick={onConfirm} variant={danger ? "destructive" : "default"}>

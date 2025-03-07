@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
         cookie: request.headers.get("cookie") || "",
       },
     });
-    if (!session || session?.user?.username !== 'admin') {
+    if (!session) {
      return NextResponse.redirect(new URL('/login?redirectTo='+ encodeURIComponent(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
     }
     midResponse.cookies.set({

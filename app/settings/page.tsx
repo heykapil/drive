@@ -2,17 +2,20 @@ import HeaderNav from "@/components/header-nav";
 import { StorageChart } from "@/components/StoragePieChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { testSystemHealth } from "@/lib/actions";
+import { getSession } from "@/lib/auth";
 import { buckets } from "@/service/bucket.config";
 import { getS3StorageUsage } from "@/service/s3-tebi";
 import { AlertTriangle, CheckCircle } from "lucide-react";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
-
-const COLORS = ['#10b981', '#f87171']; // Green for available, Red for used
-
 export default async function SettingsPage() {
+  // console.log(usage)
+  const session = await getSession();
+  if(session?.user?.username !== 'admin'){
+    return notFound()
+  }
   const health = await testSystemHealth()
   const usage = await getS3StorageUsage();
-  // console.log(usage)
   return (
     <Suspense>
     <HeaderNav />

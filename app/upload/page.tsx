@@ -1,7 +1,14 @@
 import FileUpload from "@/components/FileUpload2";
 import HeaderNav from "@/components/header-nav";
+import { getSession } from "@/lib/auth";
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 export default async function UploadPage() {
+  const session = await getSession();
+  if(session?.user?.username !== 'admin'){
+    return notFound()
+  }
+
   return (
     <Suspense>
     <HeaderNav />
