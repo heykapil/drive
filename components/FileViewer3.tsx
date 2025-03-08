@@ -36,7 +36,7 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
             </Button>
           </div>
         </DialogHeader>
-        <div className="flex justify-center items-center flex-grow p-4 bg-gray-100 rounded-md overflow-auto">
+        <div className="flex justify-center items-center flex-grow p-1 bg-gray-100 rounded-md overflow-auto">
           {isImage && <img src={url} alt={name} className="max-h-full w-auto rounded-md" />}
           {isVideo && (
             <VideoPlayer url={url} />

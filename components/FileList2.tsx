@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { formatBytes, formatDate } from "@/lib/utils";
-import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, ToggleLeft, Trash2 } from "lucide-react";
+import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, Square, Trash2 } from "lucide-react";
 import { useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmModal } from "./ConfirmModal";
@@ -30,7 +30,8 @@ type FileState = {
     delete: boolean;
     privacy: boolean;
     multidelete: boolean;
-    multiprivacy: boolean;
+    multipublic: boolean;
+    multiprivate: boolean;
   };
   loading: boolean;
   error: string | null;
@@ -52,7 +53,7 @@ const initialState: FileState = {
   view: 'list',
   selectedFile: null,
   previewFile: null,
-  modals: { delete: false, privacy: false, multidelete: false, multiprivacy: false },
+  modals: { delete: false, privacy: false, multidelete: false, multipublic: false, multiprivate: false },
   loading: false,
   error: null,
 };
@@ -87,25 +88,24 @@ export default function FileList() {
     });
   };
 
-    const togglePrivacyForSelected = async () => {
+    const togglePrivacyForSelected = async (isPublic:boolean) => {
     if (selectedFiles.size === 0) return;
     try {
       dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
-
       const requests = Array.from(selectedFiles).map(async (fileId) => {
-        const file = state.files.find(f => f.id === fileId);
         return fetch(`/api/files/privacy?bucket=${selectedBucket}`, {
           method: "PATCH",
           body: JSON.stringify({
             fileId,
-            isPublic: !file?.is_public
+            isPublic: isPublic
           }),
         });
       });
 
       await Promise.all(requests);
-      toast.success("Privacy updated for selected files");
-      dispatch({ type: "SET_MODAL", modal: "multiprivacy", value: false })
+      toast.success(`${selectedFiles.size} files are now ${isPublic ? 'public' : 'private'}`);
+      dispatch({ type: "SET_MODAL", modal: "multiprivate", value: false })
+      dispatch({ type: "SET_MODAL", modal: "multipublic", value: false })
       fetchFiles();
       setSelectedFiles(new Set()); // Clear selection after update
     } catch (error) {
@@ -156,7 +156,7 @@ export default function FileList() {
 
       const res = await fetch(
         `/api/files?bucket=${selectedBucket}&sort=${state.sort}&search=${state.search}&page=${state.page}&limit=${state.limit}`, {
-          cache: 'no-store',
+          // cache: 'no-store',
         }
       );
 
@@ -355,9 +355,14 @@ export default function FileList() {
         {selectedFiles.size > 0 && (
           <div className="flex flex-row items-center justify-between gap-2">
             <Button onClick={() => {
-              dispatch({ type: "SET_MODAL", modal: "multiprivacy", value: true })}}
+              dispatch({ type: "SET_MODAL", modal: "multiprivate", value: true })}}
               variant="outline">
-               <ToggleLeft /> <span className="sr-only lg:not-sr-only"> Toggle Privacy ({selectedFiles.size} files)</span>
+               <EyeOff /> <span className="sr-only lg:not-sr-only"> Make private ({selectedFiles.size} files)</span>
+            </Button>
+            <Button onClick={() => {
+              dispatch({ type: "SET_MODAL", modal: "multipublic", value: true })}}
+              variant="outline">
+               <Eye /> <span className="sr-only lg:not-sr-only"> Make public ({selectedFiles.size} files)</span>
             </Button>
             <Button onClick={() => {
               dispatch({ type: "SET_MODAL", modal: "multidelete", value: true })}} variant="destructive">
@@ -384,288 +389,260 @@ export default function FileList() {
 
           {state.view === "grid" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {state.files.map((file) => (
-                <div
-                  key={file.id}
-                  className="relative group border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-card"
-                >
-                  <div className="h-40 bg-muted/50 flex items-center justify-center">
-                    {file.is_public && file.type.startsWith("image/") ? (
-                      <img
-                        src={file.url}
-                        alt={file.filename}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : file.is_public && (file.type.startsWith("video/") || file.filename?.match(/\.(mp4|webm|ogg|mov)$/)) ? (
-                      <VideoPlayer url={file.url} />
-                    ) : (
-                      <a role="link" className="hover:underliner hover:cursor-pointer flex items-center justify-center" onClick={async () => {
-                        const url = await getDownloadUrl(file.id);
-                        dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                        dispatch({ type: 'SET_FIELD', field: 'previewFile', value: { url, name: file.filename, is_public: file.is_public, type: file.type, uploaded_at: formatDate(file.uploaded_at), size: formatBytes(file.size) } });
-                      }}>
-                      <div className="flex flex-col items-center p-4">
-                        <FileIcon fileType={file.filename} />
-                        <span className="text-sm mt-2 text-center">{file.filename}</span>
-                      </div>
-                      </a>
-                    )}
-                  </div>
-
-                  <div className="p-2 bg-background border-t">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium truncate">
-                        {file.filename}
-                      </span>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={async () => {
-                            const url = await getDownloadUrl(file.id);
-                            if (url) copyToClipboard(url);
-                          }}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                            dispatch({ type: 'SET_MODAL', modal: 'privacy', value: true });
-                          }}
-                        >
-                          {file.is_public ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive/80"
-                          onClick={() => {
-                            dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                            dispatch({ type: 'SET_MODAL', modal: 'delete', value: true });
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {state.view === "compact" && (
-            <div className="flex flex-col gap-2">
-              {state.files.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex group justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3 truncate">
-                    <a role="link" className="hover:underliner hover:cursor-pointer flex items-center justify-center" onClick={async () => {
-                      const url = await getDownloadUrl(file.id);
-                      dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                      dispatch({ type: 'SET_FIELD', field: 'previewFile', value: { url, name: file.filename, type: file.type, uploaded_at: formatDate(file.uploaded_at), size: formatBytes(file.size) } });
-                    }}>
-                    <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center mr-2">
-                      <FileIcon fileType={file.filename} />
-                    </div>
-                    <div className="truncate">
-                      <p className="text-sm font-medium truncate max-w-[150px] sm:max-w-none">
-                        {file.filename}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate max-w-[180px] sm:max-w-none">
-                        {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
-                      </p>
-                    </div>
-                    </a>
-                  </div>
-
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={async () => {
-                        const url = await getDownloadUrl(file.id);
-                        if (url) copyToClipboard(url);
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => {
-                        dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                        dispatch({ type: 'SET_MODAL', modal: 'privacy', value: true });
-                      }}
-                    >
-                      {file.is_public ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive/80"
-                      onClick={() => {
-                        dispatch({ type: 'SET_FIELD', field: 'selectedFile', value: file });
-                        dispatch({ type: 'SET_MODAL', modal: 'delete', value: true });
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {state.view === "list" && (
-            <div className="rounded-md border overflow-x-auto">
-              <Table className="w-full table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
-                      <input
-                        type="checkbox"
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedFiles(new Set(state.files.map((file) => file.id)));
-                          } else {
-                            setSelectedFiles(new Set());
-                          }
-                        }}
-                        checked={selectedFiles.size === state.files.length && state.files.length > 0}
-                      />
-                    </TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Size</TableHead>
-                    <TableHead className="sr-only lg:not-sr-only">Uploaded</TableHead>
-                    <TableHead className="sr-only lg:not-sr-only">Visibility</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
                   {state.files.map((file) => (
-                    <TableRow key={file.id}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          checked={selectedFiles.has(file.id)}
-                          onChange={() => toggleFileSelection(file.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium truncate max-w-[180px] md:max-w-[250px] lg:max-w-[450px]">
-                        {file.filename}
-                      </TableCell>
-                      <TableCell>{formatBytes(file.size)}</TableCell>
-                      <TableCell className="sr-only lg:not-sr-only">{formatDate(file.uploaded_at)}</TableCell>
-                      <TableCell className="sr-only lg:not-sr-only text-right">
-                        {file.is_public ? "Public" : "Private"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <span className="sr-only">Open menu</span>
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <circle cx="12" cy="12" r="1" />
-                                <circle cx="12" cy="5" r="1" />
-                                <circle cx="12" cy="19" r="1" />
-                              </svg>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={async () => {
-                                const url = await getDownloadUrl(file.id);
-                                dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
-                                dispatch({
-                                  type: "SET_FIELD",
-                                  field: "previewFile",
-                                  value: { url, name: file.filename, type: file.type, uploaded_at: formatDate(file.uploaded_at), size: formatBytes(file.size) },
-                                });
-                              }}
-                            >
-                              <Fullscreen className="mr-2 h-4 w-4" />
-                              Preview File
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
+                    <div
+                      key={file.id}
+                      className={`relative group border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-card ${selectedFiles.has(file.id) ? "border-blue-500" : "border-gray-300"}`}
+                      onClick={() => toggleFileSelection(file.id)}
+                    >
+                      <div className="h-40 bg-muted/50 flex items-center justify-center">
+                        {file.is_public && file.type.startsWith("image/") ? (
+                          <img
+                            src={file.url}
+                            alt={file.filename}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : file.is_public && (file.type.startsWith("video/") || file.filename?.match(/\.(mp4|webm|ogg|mov)$/)) ? (
+                          <VideoPlayer url={file.url} />
+                        ) : (
+                          <a
+                            role="link"
+                            className="hover:underliner hover:cursor-pointer flex items-center justify-center"
+                            onClick={async () => {
+                              const url = await getDownloadUrl(file.id);
+                              dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                              dispatch({
+                                type: "SET_FIELD",
+                                field: "previewFile",
+                                value: {
+                                  url,
+                                  name: file.filename,
+                                  is_public: file.is_public,
+                                  type: file.type,
+                                  uploaded_at: formatDate(file.uploaded_at),
+                                  size: formatBytes(file.size),
+                                },
+                              });
+                            }}
+                          >
+                            <div className="flex flex-col items-center p-4">
+                              <FileIcon fileType={file.filename} />
+                              <span className="text-sm mt-2 text-center">{file.filename}</span>
+                            </div>
+                          </a>
+                        )}
+                      </div>
+
+                      <div className="p-2 bg-background border-t">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium truncate">{file.filename}</span>
+                          <div className="flex gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
                               onClick={async () => {
                                 const url = await getDownloadUrl(file.id);
                                 if (url) copyToClipboard(url);
                               }}
                             >
-                              <Copy className="mr-2 h-4 w-4" />
-                              Copy Link
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
                               onClick={() => {
                                 dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
                                 dispatch({ type: "SET_MODAL", modal: "privacy", value: true });
                               }}
                             >
-                              {file.is_public ? (
-                                <EyeOff className="mr-2 h-4 w-4" />
-                              ) : (
-                                <Eye className="mr-2 h-4 w-4" />
-                              )}
-                              {file.is_public ? "Make Private" : "Make Public"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
+                              {file.is_public ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive/80"
                               onClick={() => {
                                 dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
                                 dispatch({ type: "SET_MODAL", modal: "delete", value: true });
                               }}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
+                        </p>
+                      </div>
+                      <div className="absolute top-2 right-2 text-blue-500">
+                        {selectedFiles.has(file.id) ? <CheckSquare /> : <Square />}
+                      </div>
+                    </div>
                   ))}
-                  {state.files.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
-                        No files found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                </div>
           )}
+
+          {state.view === "compact" && (
+                 <div className="flex flex-col gap-2">
+                   {state.files.map((file) => (
+                     <div
+                       key={file.id}
+                       className={`flex group justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors ${selectedFiles.has(file.id) ? "border-blue-500" : "border-gray-300"}`}
+                       onClick={() => toggleFileSelection(file.id)}
+                     >
+                       <div className="flex items-center gap-3 truncate">
+                         <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center mr-2">
+                           <FileIcon fileType={file.filename} />
+                         </div>
+                         <div className="truncate">
+                           <p className="text-sm font-medium truncate max-w-[150px] sm:max-w-none">
+                             {file.filename}
+                           </p>
+                           <p className="text-xs text-muted-foreground truncate max-w-[180px] sm:max-w-none">
+                             {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
+                           </p>
+                         </div>
+                       </div>
+                       <div className="absolute top-2 right-2 text-blue-500">
+                         {selectedFiles.has(file.id) ? <CheckSquare /> : <Square />}
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               )}
+
+          {/* List view */}
+          {state.view === "list" && (
+                      <div className="rounded-md border overflow-x-auto">
+                        <Table className="w-full table">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>
+                                <input
+                                  type="checkbox"
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedFiles(new Set(state.files.map((file) => file.id)));
+                                    } else {
+                                      setSelectedFiles(new Set());
+                                    }
+                                  }}
+                                  checked={selectedFiles.size === state.files.length && state.files.length > 0}
+                                />
+                              </TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Size</TableHead>
+                              <TableHead className="sr-only lg:not-sr-only">Uploaded</TableHead>
+                              <TableHead className="sr-only lg:not-sr-only">Visibility</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {state.files.map((file) => (
+                              <TableRow key={file.id} className={`${selectedFiles.has(file.id) ? 'border border-x-2 border-y-2 rounded-lg border-blue-500': ''}`}>
+                                <TableCell>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedFiles.has(file.id)}
+                                    onChange={() => toggleFileSelection(file.id)}
+                                  />
+                                </TableCell>
+                                <TableCell className="font-medium truncate max-w-[200px] md:max-w-[250px] lg:max-w-[450px]">
+                                  {file.filename}
+                                </TableCell>
+                                <TableCell>{formatBytes(file.size)}</TableCell>
+                                <TableCell className="sr-only lg:not-sr-only">{formatDate(file.uploaded_at)}</TableCell>
+                                <TableCell className="sr-only lg:not-sr-only text-right">
+                                  {file.is_public ? "Public" : "Private"}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <span className="sr-only">Open menu</span>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="h-4 w-4"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <circle cx="12" cy="12" r="1" />
+                                          <circle cx="12" cy="5" r="1" />
+                                          <circle cx="12" cy="19" r="1" />
+                                        </svg>
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={async () => {
+                                          const url = await getDownloadUrl(file.id);
+                                          dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                          dispatch({
+                                            type: "SET_FIELD",
+                                            field: "previewFile",
+                                            value: { url, name: file.filename, type: file.type, uploaded_at: formatDate(file.uploaded_at), size: formatBytes(file.size) },
+                                          });
+                                        }}
+                                      >
+                                        <Fullscreen className="mr-2 h-4 w-4" />
+                                        Preview File
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={async () => {
+                                          const url = await getDownloadUrl(file.id);
+                                          if (url) copyToClipboard(url);
+                                        }}
+                                      >
+                                        <Copy className="mr-2 h-4 w-4" />
+                                        Copy Link
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                          dispatch({ type: "SET_MODAL", modal: "privacy", value: true });
+                                        }}
+                                      >
+                                        {file.is_public ? (
+                                          <EyeOff className="mr-2 h-4 w-4" />
+                                        ) : (
+                                          <Eye className="mr-2 h-4 w-4" />
+                                        )}
+                                        {file.is_public ? "Make Private" : "Make Public"}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-destructive"
+                                        onClick={() => {
+                                          dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                          dispatch({ type: "SET_MODAL", modal: "delete", value: true });
+                                        }}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {state.files.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={6} className="h-24 text-center">
+                                  No files found
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
         </>
       )}
 
@@ -700,12 +677,21 @@ export default function FileList() {
       />
 
       <ConfirmModal
-        open={state.modals.multiprivacy}
-        onClose={() => dispatch({ type: 'SET_MODAL', modal: 'multiprivacy', value: false })}
-        onConfirm={togglePrivacyForSelected}
-        title="Toggle Privacy for Files"
-        description={`Are you sure you want to toggle privacy of "${selectedFiles.size}" files? This action cannot be undone.`}
-        confirmText={state.loading ? "Changing..." : "Toggle Privacy"}
+        open={state.modals.multipublic}
+        onClose={() => dispatch({ type: 'SET_MODAL', modal: 'multipublic', value: false })}
+        onConfirm={()=>togglePrivacyForSelected(true)}
+        title="Make Files Public"
+        description={`Do you want to make ${selectedFiles.size} files public?`}
+        confirmText={state.loading ? "Making public..." : "Make public"}
+      />
+
+      <ConfirmModal
+        open={state.modals.multiprivate}
+        onClose={() => dispatch({ type: 'SET_MODAL', modal: 'multiprivate', value: false })}
+        onConfirm={()=>togglePrivacyForSelected(false)}
+        title="Make private"
+        description={`Do you want to make ${selectedFiles.size} files private?`}
+        confirmText={state.loading ? "Making..." : "Make private"}
       />
 
       <ConfirmModal
