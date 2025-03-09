@@ -33,7 +33,7 @@ export default function RootLayout({
       <body className={`${readexPro.className} antialiased bg-background text-neutral-900 dark:text-white`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <svg
-                   className="pointer-events-none fixed top-0 left-0 isolate z-50 opacity-25 dark:opacity-[0.15] mix-blend-normal"
+                  className="pointer-events-none fixed top-0 left-0 isolate z-50 opacity-25 dark:opacity-[0.15] mix-blend-normal"
                    width="100%"
                    height="100%"
                  >

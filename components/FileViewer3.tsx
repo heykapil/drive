@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download } from "lucide-react";
-import VideoPlayer from "./VideoPlayer";
+import { VideoPlayer } from "./VideoPlayer2";
 
 interface FileViewerProps {
   previewFile: {
@@ -39,7 +39,7 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
         <div className="flex justify-center items-center flex-grow p-1 bg-gray-100 rounded-md overflow-auto">
           {isImage && <img src={url} alt={name} className="max-h-full w-auto rounded-md" />}
           {isVideo && (
-            <VideoPlayer url={url} />
+            <VideoPlayer url={url} id={url} />
           )}
           {type === "application/pdf" && (
             <iframe src={url} className="w-full h-full bg-white rounded-md border"></iframe>

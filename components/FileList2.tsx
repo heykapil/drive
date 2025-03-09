@@ -13,7 +13,7 @@ import FileViewer from "./FileViewer3";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Skeleton } from "./ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import VideoPlayer from "./VideoPlayer";
+import { VideoPlayer } from "./VideoPlayer3";
 
 type FileState = {
   files: any[];
@@ -75,7 +75,6 @@ export default function FileList() {
   const { selectedBucket } = useBucketStore();
   const [state, dispatch] = useReducer(fileReducer, initialState);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-
   const toggleFileSelection = (fileId: string) => {
     setSelectedFiles((prev) => {
       const newSelection = new Set(prev);
@@ -393,7 +392,6 @@ export default function FileList() {
                     <div
                       key={file.id}
                       className={`relative group border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-card ${selectedFiles.has(file.id) ? "border-blue-500" : "border-gray-300"}`}
-                      onClick={() => toggleFileSelection(file.id)}
                     >
                       <div className="h-40 bg-muted/50 flex items-center justify-center">
                         {file.is_public && file.type.startsWith("image/") ? (
@@ -404,7 +402,9 @@ export default function FileList() {
                             loading="lazy"
                           />
                         ) : file.is_public && (file.type.startsWith("video/") || file.filename?.match(/\.(mp4|webm|ogg|mov)$/)) ? (
-                          <VideoPlayer url={file.url} />
+                        // <VideoProvider>
+                          <VideoPlayer url={file.url} id={file.id}  />
+                        // </VideoProvider>
                         ) : (
                           <a
                             role="link"
@@ -477,7 +477,9 @@ export default function FileList() {
                           {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
                         </p>
                       </div>
-                      <div className="absolute top-2 right-2 text-blue-500">
+                      <div className="absolute top-2 right-2 text-blue-500"
+                        onClick={() => toggleFileSelection(file.id)}
+                      >
                         {selectedFiles.has(file.id) ? <CheckSquare /> : <Square />}
                       </div>
                     </div>
