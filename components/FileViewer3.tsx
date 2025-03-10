@@ -8,6 +8,7 @@ import { VideoPlayer } from "./VideoPlayer4";
 interface FileViewerProps {
   previewFile: {
     name: string;
+    id: string,
     url: string;
     type: string;
     uploaded_at: string;
@@ -18,7 +19,7 @@ interface FileViewerProps {
 }
 
 export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
-  const { name, url, type, uploaded_at, size, is_public } = previewFile;
+  const { name, url, type, uploaded_at, size, id, is_public } = previewFile;
   const fileType = type.split("/")[0];
   const isImage = fileType === "image" || name.match(/\.(jpeg|jpg|gif|png)$/);
   const isVideo = fileType === "video" || name.match(/\.(mp4|webm|ogg|mov)$/);
@@ -39,7 +40,7 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
         <div className="flex justify-center items-center flex-grow p-1 bg-black rounded-md overflow-auto">
           {isImage && <img src={url} alt={name} className="max-h-full w-auto rounded-md" />}
           {isVideo && (
-            <VideoPlayer url={url} id={url} />
+            <VideoPlayer url={url} id={id} />
           )}
           {type === "application/pdf" && (
             <iframe src={url} className="w-full h-full bg-white rounded-md border"></iframe>

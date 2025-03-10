@@ -415,6 +415,7 @@ export default function FileList() {
                                 field: "previewFile",
                                 value: {
                                   url,
+                                  id: file.id,
                                   name: file.filename,
                                   is_public: file.is_public,
                                   type: file.type,
@@ -491,17 +492,36 @@ export default function FileList() {
                      <div
                        key={file.id}
                        className={`flex group justify-between items-center p-3 rounded-lg hover:bg-muted/50 transition-colors ${selectedFiles.has(file.id) ? "border-1 border-blue-500" : "border border-muted"}`}
-                       onClick={() => toggleFileSelection(file.id)}
                      >
                        <div className="flex items-center gap-3 truncate">
                          <div className="w-8 h-8 bg-muted rounded-md flex items-center justify-center mr-2">
-                           <FileIcon fileType={file.filename} />
+                           <button onClick={()=>toggleFileSelection(file.id)}>
+                           {selectedFiles.has(file.id) ? <CheckSquare className="text-blue-500" /> : <FileIcon fileType={file.filename}  />}
+                           </button>
                          </div>
-                         <div className="truncate">
-                           <p className="text-sm font-medium truncate max-w-[150px] sm:max-w-none">
+                         <div className="truncate hover:cursor-pointer"
+                             onClick={async () => {
+                               const url = await getDownloadUrl(file.id);
+                               dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                               dispatch({
+                                 type: "SET_FIELD",
+                                 field: "previewFile",
+                                 value: {
+                                   url,
+                                   id: file.id,
+                                   name: file.filename,
+                                   is_public: file.is_public,
+                                   type: file.type,
+                                   uploaded_at: formatDate(file.uploaded_at),
+                                   size: formatBytes(file.size),
+                                 },
+                               });
+                             }}
+                           >
+                           <p className="text-sm font-medium truncate max-w-[200px] sm:max-w-none">
                              {file.filename}
                            </p>
-                           <p className="text-xs text-muted-foreground truncate max-w-[180px] sm:max-w-none">
+                           <p className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-none">
                              {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
                            </p>
                          </div>
@@ -510,7 +530,7 @@ export default function FileList() {
                          <Button
                            variant="ghost"
                            size="icon"
-                           className="h-8 w-8"
+                           className="h-8 hover:cursor-pointer w-8"
                            onClick={async () => {
                              const url = await getDownloadUrl(file.id);
                              if (url) copyToClipboard(url);
@@ -540,9 +560,6 @@ export default function FileList() {
                          >
                            <Trash2 className="w-4 h-4" />
                          </Button>
-                       </div>
-                       <div className="absolute top-2 right-2 text-blue-500">
-                         {selectedFiles.has(file.id) ? <CheckSquare /> : <Square />}
                        </div>
                      </div>
                    ))}
