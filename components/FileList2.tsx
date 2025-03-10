@@ -13,7 +13,7 @@ import FileViewer from "./FileViewer3";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Skeleton } from "./ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { VideoPlayer } from "./VideoPlayer3";
+import { VideoPlayer } from "./VideoPlayer4";
 
 type FileState = {
   files: any[];
@@ -402,9 +402,7 @@ export default function FileList() {
                             loading="lazy"
                           />
                         ) : file.is_public && (file.type.startsWith("video/") || file.filename?.match(/\.(mp4|webm|ogg|mov)$/)) ? (
-                        // <VideoProvider>
                           <VideoPlayer url={file.url} id={file.id}  />
-                        // </VideoProvider>
                         ) : (
                           <a
                             role="link"
@@ -492,7 +490,7 @@ export default function FileList() {
                    {state.files.map((file) => (
                      <div
                        key={file.id}
-                       className={`flex group justify-between items-center p-3 border rounded-lg hover:bg-muted/50 transition-colors ${selectedFiles.has(file.id) ? "border-blue-500" : "border-gray-300"}`}
+                       className={`flex group justify-between items-center p-3 rounded-lg hover:bg-muted/50 transition-colors ${selectedFiles.has(file.id) ? "border-1 border-blue-500" : "border border-muted"}`}
                        onClick={() => toggleFileSelection(file.id)}
                      >
                        <div className="flex items-center gap-3 truncate">
@@ -507,6 +505,41 @@ export default function FileList() {
                              {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
                            </p>
                          </div>
+                       </div>
+                       <div className="flex gap-1 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           className="h-8 w-8"
+                           onClick={async () => {
+                             const url = await getDownloadUrl(file.id);
+                             if (url) copyToClipboard(url);
+                           }}
+                         >
+                           <Copy className="w-4 h-4" />
+                         </Button>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           className="h-8 w-8"
+                           onClick={() => {
+                             dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                             dispatch({ type: "SET_MODAL", modal: "privacy", value: true });
+                           }}
+                         >
+                           {file.is_public ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                         </Button>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           className="h-8 w-8 text-destructive hover:text-destructive/80"
+                           onClick={() => {
+                             dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                             dispatch({ type: "SET_MODAL", modal: "delete", value: true });
+                           }}
+                         >
+                           <Trash2 className="w-4 h-4" />
+                         </Button>
                        </div>
                        <div className="absolute top-2 right-2 text-blue-500">
                          {selectedFiles.has(file.id) ? <CheckSquare /> : <Square />}
