@@ -4,13 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { formatBytes, formatDate } from "@/lib/utils";
-import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, Square, Trash2 } from "lucide-react";
+import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, Share, Square, Trash2 } from "lucide-react";
 import { useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmModal } from "./ConfirmModal";
 import FileIcon from "./FileIcon";
 import FileViewer from "./FileViewer3";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Skeleton } from "./ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { VideoPlayer } from "./VideoPlayer4";
@@ -87,32 +87,46 @@ export default function FileList() {
     });
   };
 
-    const togglePrivacyForSelected = async (isPublic:boolean) => {
+  const togglePrivacyForSelected = async (isPublic: boolean) => {
     if (selectedFiles.size === 0) return;
+
     try {
-      dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
-      const requests = Array.from(selectedFiles).map(async (fileId) => {
-        return fetch(`/api/files/privacy?bucket=${selectedBucket}`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            fileId,
-            isPublic: isPublic
-          }),
-        });
+      dispatch({ type: "SET_FIELD", field: "loading", value: true });
+
+      const fileIds = Array.from(selectedFiles); // Convert Set to array
+
+      const response = await fetch(`/api/files/privacy?bucket=${selectedBucket}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileIds,  // ✅ Send all file IDs in **one request**
+          isPublic,
+        }),
       });
 
-      await Promise.all(requests);
-      toast.success(`${selectedFiles.size} files are now ${isPublic ? 'public' : 'private'}`);
-      dispatch({ type: "SET_MODAL", modal: "multiprivate", value: false })
-      dispatch({ type: "SET_MODAL", modal: "multipublic", value: false })
-      fetchFiles();
-      setSelectedFiles(new Set()); // Clear selection after update
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update privacy");
+      }
+
+      toast.success(`${result.updatedCount} files are now ${isPublic ? "public" : "private"}`);
+
+      // ✅ Close modals only on success
+      dispatch({ type: "SET_MODAL", modal: "multiprivate", value: false });
+      dispatch({ type: "SET_MODAL", modal: "multipublic", value: false });
+
+      fetchFiles(); // ✅ Refresh file list
+      setSelectedFiles(new Set()); // ✅ Clear selection only after success
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update privacy");
     } finally {
-      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
+      dispatch({ type: "SET_FIELD", field: "loading", value: false });
     }
   };
+
 
   const deleteFiles = async () => {
     if (selectedFiles.size === 0) return;
@@ -120,18 +134,29 @@ export default function FileList() {
     try {
       dispatch({ type: "SET_FIELD", field: "loading", value: true });
 
-      const requests = Array.from(selectedFiles).map(async (fileId) => {
-        return fetch(`/api/files?bucket=${selectedBucket}`, {
-          method: "DELETE",
-          body: JSON.stringify({ fileId }),
-        });
+      const fileIds = Array.from(selectedFiles); // ✅ Convert Set to array
+
+      const response = await fetch(`/api/files?bucket=${selectedBucket}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileIds }), // ✅ Send all fileIds in **one request**
       });
 
-      await Promise.all(requests);
-      toast.success("Selected files deleted successfully");
-      dispatch({ type: "SET_MODAL", modal: "multidelete", value: false })
-      fetchFiles();
-      setSelectedFiles(new Set()); // Clear selection after deletion
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete files");
+      }
+
+      toast.success(`Deleted ${result.deletedCount} files successfully`);
+
+      // ✅ Close modal only on success
+      dispatch({ type: "SET_MODAL", modal: "multidelete", value: false });
+
+      fetchFiles(); // ✅ Refresh file list
+      setSelectedFiles(new Set()); // ✅ Clear selection only after success
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to delete files");
     } finally {
@@ -180,50 +205,80 @@ export default function FileList() {
 
   const deleteFile = async () => {
     if (!state.selectedFile) return;
+
     try {
-      dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
+      dispatch({ type: "SET_FIELD", field: "loading", value: true });
 
       const response = await fetch(`/api/files?bucket=${selectedBucket}`, {
         method: "DELETE",
-        body: JSON.stringify({ fileId: state.selectedFile.id })
+        headers: { "Content-Type": "application/json" }, // ✅ Proper headers
+        body: JSON.stringify({ fileIds: [state.selectedFile.id] }), // ✅ Uses consistent API structure
       });
 
-      const { message, error } = await response.json();
-      if (error) toast.error(error);
+      const result = await response.json();
 
-      toast.success(message);
-      fetchFiles();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to delete file");
+      }
+
+      toast.success(result.message);
+      fetchFiles(); // ✅ Refresh file list
+
+      // ✅ Close modal only on success
+      dispatch({ type: "SET_MODAL", modal: "delete", value: false });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete file');
+      toast.error(error instanceof Error ? error.message : "Failed to delete file");
     } finally {
-      dispatch({ type: 'SET_MODAL', modal: 'delete', value: false });
-      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
+      dispatch({ type: "SET_FIELD", field: "loading", value: false });
     }
   };
 
+
+  const shareFile = async (duration: number) => {
+    if (!state.selectedFile) return;
+    try{
+      const response = await fetch(`/api/files/share?bucket=${selectedBucket}`,{
+        method: "POST",
+        body: JSON.stringify({fileId: state.selectedFile.id, duration})
+      })
+      const { url, error } = await response.json();
+      if(error || !url) toast.error(error || 'Failed to generate shared url for file')
+      toast.success(`${state.selectedFile.filename} has been shared`,{ description: url })
+    } catch(error){
+      toast.error(error instanceof Error ? error.message : 'Failed to share the file')
+    } finally {
+      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
+    }
+  }
+
   const togglePrivacy = async () => {
     if (!state.selectedFile) return;
+
     try {
-      dispatch({ type: 'SET_FIELD', field: 'loading', value: true });
+      dispatch({ type: "SET_FIELD", field: "loading", value: true });
 
       const response = await fetch(`/api/files/privacy?bucket=${selectedBucket}`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" }, // ✅ Proper headers
         body: JSON.stringify({
-          fileId: state.selectedFile.id,
-          isPublic: !state.selectedFile.is_public
+          fileIds: [state.selectedFile.id], // ✅ Wrap in an array for API consistency
+          isPublic: !state.selectedFile.is_public,
         }),
       });
 
-      const { message, error } = await response.json();
-      if (error) toast.error(error);
+      const result = await response.json();
 
-      toast.success(message);
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update privacy");
+      }
+
+      toast.success(`File is now ${!state.selectedFile.is_public ? "public" : "private"}`);
       fetchFiles();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update privacy');
+      toast.error(error instanceof Error ? error.message : "Failed to update privacy");
     } finally {
-      dispatch({ type: 'SET_MODAL', modal: 'privacy', value: false });
-      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
+      dispatch({ type: "SET_MODAL", modal: "privacy", value: false });
+      dispatch({ type: "SET_FIELD", field: "loading", value: false });
     }
   };
 
@@ -634,8 +689,8 @@ export default function FileList() {
                                     <DropdownMenuContent align="end">
                                       <DropdownMenuItem
                                         onClick={async () => {
-                                          const url = await getDownloadUrl(file.id);
                                           dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                          const url = await getDownloadUrl(file.id);
                                           dispatch({
                                             type: "SET_FIELD",
                                             field: "previewFile",
@@ -648,6 +703,7 @@ export default function FileList() {
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         onClick={async () => {
+                                          dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
                                           const url = await getDownloadUrl(file.id);
                                           if (url) copyToClipboard(url);
                                         }}
@@ -655,6 +711,22 @@ export default function FileList() {
                                         <Copy className="mr-2 h-4 w-4" />
                                         Copy Link
                                       </DropdownMenuItem>
+                                      <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger><Share className="mr-2 h-4 w-4" /> Share file</DropdownMenuSubTrigger>
+                                        <DropdownMenuPortal>
+                                          <DropdownMenuSubContent>
+                                            <DropdownMenuItem onClick={async()=> {
+                                              dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                              shareFile(1)
+                                            }}>1 day</DropdownMenuItem>
+                                            <DropdownMenuItem>7 days</DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem>1 month</DropdownMenuItem>
+                                            <DropdownMenuItem>6 months</DropdownMenuItem>
+                                            <DropdownMenuItem>1 year</DropdownMenuItem>
+                                          </DropdownMenuSubContent>
+                                        </DropdownMenuPortal>
+                                      </DropdownMenuSub>
                                       <DropdownMenuItem
                                         onClick={() => {
                                           dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });

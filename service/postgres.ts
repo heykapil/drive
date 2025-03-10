@@ -32,9 +32,8 @@ const pool = new Pool({
     },
   })
 
-export type Primitive = string | number | boolean | undefined | null;
+export type Primitive = string | number | number[] | boolean | undefined | null;
 
-// @ts-ignore
 export const query = async <T extends QueryResultRow = any>(
   queryString: string,
   values: Primitive[] = [],

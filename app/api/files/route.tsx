@@ -59,31 +59,58 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { fileId } = await req.json();
-    if (!fileId) {
-      return NextResponse.json({ error: "File ID is required" }, { status: 400 });
+    const { fileIds } = await req.json(); // ✅ Expecting multiple fileIds in an array
+
+    if (!Array.isArray(fileIds) || fileIds.length === 0) {
+      return NextResponse.json({ error: "At least one file ID is required" }, { status: 400 });
     }
+
     const { searchParams } = new URL(req.url);
     const selectedBucket = searchParams.get("bucket");
-    if(!selectedBucket){
-      return NextResponse.json({error: 'No bucket selected'}, {status: 400})
-    }
-    const bucketConfig = buckets[selectedBucket]
-    if(!bucketConfig.name){
-      return NextResponse.json({error: 'Wrong bucket selected'}, {status: 400})
+
+    if (!selectedBucket) {
+      return NextResponse.json({ error: "No bucket selected" }, { status: 400 });
     }
 
-    const { rows } = await query("SELECT key FROM files WHERE id = $1 AND bucket = $2", [fileId, bucketConfig.name]);
-    if (!rows.length) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    const bucketConfig = buckets[selectedBucket];
+    if (!bucketConfig?.name) {
+      return NextResponse.json({ error: "Invalid bucket selection" }, { status: 400 });
     }
+
+    // ✅ Fetch all file keys in a **single query**
+    const { rows } = await query<{ key: string }>(
+      "SELECT key FROM files WHERE id = ANY($1::int[]) AND bucket = $2",
+      [fileIds, bucketConfig.name]
+    );
+
+    if (rows.length === 0) {
+      return NextResponse.json({ error: "No matching files found" }, { status: 404 });
+    }
+
     const client = await s3WithConfig(bucketConfig);
-    await client.send(new DeleteObjectCommand({ Bucket: bucketConfig.name, Key: rows[0].key }));
-    await query("DELETE FROM files WHERE id = $1 AND bucket = $2", [fileId, bucketConfig.name]);
 
-    return NextResponse.json({ message: "File deleted successfully" });
+    // ✅ Perform S3 deletions in **parallel**
+    const deleteResults = await Promise.allSettled(
+      rows.map(({ key }) =>
+        client.send(new DeleteObjectCommand({ Bucket: bucketConfig.name, Key: key }))
+      )
+    );
+
+    // ✅ Only delete from DB if S3 deletions were successful
+    const successfullyDeleted = deleteResults.filter(
+      (result) => result.status === "fulfilled"
+    ).length;
+
+    if (successfullyDeleted > 0) {
+      await query("DELETE FROM files WHERE id = ANY($1) AND bucket = $2", [fileIds, bucketConfig.name]);
+    }
+
+    return NextResponse.json({
+      message: `Deleted ${successfullyDeleted} files successfully`,
+      failedCount: fileIds.length - successfullyDeleted,
+    });
   } catch (error) {
-    console.error("Error deleting file:", error);
+    console.error("Error deleting files:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
