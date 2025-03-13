@@ -7,10 +7,15 @@ import { cookies } from 'next/headers';
 
 export async function testSystemHealth() {
   const storageErrors = await testS3Connections();
-  const postgresError = await testDBConnection();
+  const postgresErrors = await testDBConnection();
+
   return {
     storageErrors: storageErrors.filter(res => res.status === 'Error'),
-    postgresError: postgresError.status === 'Error' ? postgresError : null,
+    postgresErrors: postgresErrors
+      ? Object.entries(postgresErrors)
+          .filter(([_, res]) => res.status === 'Error')
+          .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
+      : null,
   };
 }
 

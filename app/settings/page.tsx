@@ -76,8 +76,9 @@ export default async function SettingsPage() {
               <CardContent className="flex flex-col">
                 <div className="rounded-md border-y p-4 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                      {health.postgresError ? (
+                    <div className="flex items-center">
+                      <div className="flex flex-row items-center gap-6">
+                      {health.postgresErrors && Object.keys(health.postgresErrors).length > 0 ? (
                         <AlertTriangle className="w-5 h-5 text-red-500" />
                       ) : (
                         <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -87,17 +88,34 @@ export default async function SettingsPage() {
                         <p className="text-sm text-gray-500">Database</p>
                       </div>
                     </div>
-                    {health.postgresError ? (
-                      <div className="flex items-start gap-2 px-6">
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
-                        <span className="text-sm text-red-500">{health.postgresError.message}</span>
-                      </div>
-                    ): (
-                      <div className="flex items-start gap-2 px-6">
-                        <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                        <span className="text-sm text-green-600 dark:text-green-400">Database is ready</span>
-                      </div>
-                    )}
+                  </div>
+
+                  {/* Database Health Details */}
+                  <div className="flex flex-col gap-2 px-6">
+                    {["mainDB", "fallbackDB"].map((dbName) => {
+                      const postgressErrors = health?.postgresErrors as  Record<string, { status: string; message?: string }> | null;
+                      const error = postgressErrors?.[dbName];
+                      return (
+                        <div key={dbName} className="flex items-center gap-2">
+                          {error ? (
+                            <>
+                              <AlertTriangle className="w-4 h-4 text-red-500" />
+                              <span className="text-sm text-red-500">
+                                {dbName === 'mainDB' ? 'Aiven Postgres' : 'NeonDB'}: {error.message || "Unknown error"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                              <span className="text-sm text-green-600 dark:text-green-400">
+                                {dbName === 'mainDB' ? 'Aiven Postgres' : 'NeonDB'} is healthy
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                   </div>
                 </div>
               </CardContent>

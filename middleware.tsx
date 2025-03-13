@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
   const production = process.env.NODE_ENV === 'production';
   const midResponse = NextResponse.next();
   if (production && !session_token) {
-   return NextResponse.redirect(new URL('/login?redirectTo='+ encodeURI(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
+   return NextResponse.redirect(new URL('/login?redirectTo='+ encodeURIComponent(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
   }
   if (production && session_token && !sessionData) {
     const { data: session } = await betterFetch<Session>('/api/auth/get-session', {

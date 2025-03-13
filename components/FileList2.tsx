@@ -725,7 +725,11 @@ export default function FileList() {
                                             {[1, 7, 30, 180, 365].map((days) => (
                                               <DropdownMenuItem
                                                 key={days}
-                                                onClick={() => handleShare(file, days)}
+                                                onClick={() => toast.promise(handleShare(file, days), {
+                                                  loading: "Generating share link...",
+                                                  success: "Link copied to clipboard",
+                                                  error: "Failed to share link",
+                                                })}
                                               >
                                                 {days === 1 ? "1 day" : days === 7 ? "7 days" : days === 30 ? "1 month" : days === 180 ? "6 months" : "1 year"}
                                               </DropdownMenuItem>

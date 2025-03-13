@@ -83,6 +83,7 @@ export async function DELETE(req: NextRequest) {
       [fileIds, bucketConfig.name]
     );
 
+
     if (rows.length === 0) {
       return NextResponse.json({ error: "No matching files found" }, { status: 404 });
     }

@@ -30,7 +30,6 @@ export default async function FilePage(props: {
   const id = searchParams.id;
   const token = searchParams.token;
   let error: { title: string; description: string; icon: React.ReactNode } | null = null;
-
   if (!id || !token) {
     error = {
       title: "Invalid Link",
