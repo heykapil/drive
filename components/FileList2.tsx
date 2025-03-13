@@ -68,31 +68,15 @@ function fileReducer(state: FileState, action: FileAction): FileState {
       return { ...initialState, view: state.view };
     default:
       return state;
-  }const handleShare = async (file: FileData, duration: number) => {
-    try {
-      const response = await fetch(`/api/files/share?bucket=${selectedBucket}`, {
-        method: "POST",
-        body: JSON.stringify({ fileId: file.id, duration })
-      });
-
-      const { url, error } = await response.json();
-      if (error || !url) {
-        toast.error(error || 'Failed to generate shared URL');
-        return;
-      }
-
-      toast.success(`${file.filename} has been shared`, { description: url });
-      navigator.clipboard.writeText(url);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to share file');
-    }
-  };
+  }
 }
-
 export default function FileList() {
   const { selectedBucket } = useBucketStore();
   const [state, dispatch] = useReducer(fileReducer, initialState);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+
+
+
   const toggleFileSelection = (fileId: string) => {
     setSelectedFiles((prev) => {
       const newSelection = new Set(prev);
@@ -252,7 +236,7 @@ export default function FileList() {
   };
 
 
-  const handleShare = async (file, duration: number) => {
+  const handleShare = async (file: any, duration: number) => {
     try {
       const response = await fetch(`/api/files/share?bucket=${selectedBucket}`, {
         method: "POST",
