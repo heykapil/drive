@@ -1,3 +1,4 @@
+import { QueryProvider } from "@/components/QueryProvider";
 import { ThemeProvider } from "@/hooks/theme-provider";
 import type { Metadata } from "next";
 import { Readex_Pro } from "next/font/google";
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${readexPro.className} antialiased bg-background text-neutral-900 dark:text-white`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <QueryProvider>
           <svg
                   className="pointer-events-none fixed top-0 left-0 isolate z-50 opacity-25 dark:opacity-[0.15] mix-blend-normal"
                    width="100%"
@@ -52,6 +54,7 @@ export default function RootLayout({
             {children}
           </main>
           <Toaster />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

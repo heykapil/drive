@@ -1,3 +1,4 @@
+import { SharedFile } from "@/app/shared/shared-files-table";
 import { signJWT } from "@/lib/helpers/jose";
 import { buckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
@@ -55,5 +56,75 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest){
+  try{
+    const { searchParams } = new URL(req.url);
+    const token = searchParams.get("token") || "";
+
+    if (!token) {
+      return NextResponse.json({ success: false, error: "Token not provided" });
+    }
+
+    await query(`DELETE from shared WHERE token = $1`, [token])
+    return NextResponse.json({success: true, message: 'Token deleted'})
+  } catch(error: any){
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page") || '1', 10);
+    const pageSize = parseInt(searchParams.get("pageSize") || '10', 10);
+
+    // Validate pagination parameters
+    if (isNaN(page) || isNaN(pageSize) || page < 0 || pageSize <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Invalid pagination parameters" },
+        { status: 400 }
+      );
+    }
+
+    // Calculate offset
+    const offset = page * pageSize;
+
+    // Get total count
+    const countQuery = "SELECT COUNT(*) FROM shared";
+    const countResult = await query<{ count: string }>(countQuery);
+    const totalCount = parseInt(countResult.rows[0].count, 10);
+
+    // Get paginated results
+    const dataQuery = `SELECT * FROM shared ORDER BY created_at DESC LIMIT $1 OFFSET $2`;
+
+    const dataResult = await query<SharedFile>(dataQuery, [pageSize, offset]);
+    // Convert dates to ISO strings
+    const files = dataResult.rows.map(row => ({
+      ...row,
+      expires: row.expires ? new Date(row.expires).toISOString() : null,
+      created_at: new Date(row.created_at).toISOString()
+    }));
+
+    // console.log({files, totalCount, countResult, offset, page, pageSize})
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        files,
+        totalCount
+      }
+    });
+
+  } catch (error: any) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

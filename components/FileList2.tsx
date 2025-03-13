@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { formatBytes, formatDate } from "@/lib/utils";
-import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, Share, Square, Trash2 } from "lucide-react";
+import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, Share2, Square, Trash2 } from "lucide-react";
 import { useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmModal } from "./ConfirmModal";
@@ -712,18 +712,23 @@ export default function FileList() {
                                         Copy Link
                                       </DropdownMenuItem>
                                       <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger><Share className="mr-2 h-4 w-4" /> Share file</DropdownMenuSubTrigger>
+                                        <DropdownMenuSubTrigger>
+                                          <Share2 className="mr-2 h-4 w-4" /> Share file
+                                        </DropdownMenuSubTrigger>
                                         <DropdownMenuPortal>
                                           <DropdownMenuSubContent>
-                                            <DropdownMenuItem onClick={async()=> {
-                                              dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
-                                              shareFile(1)
-                                            }}>1 day</DropdownMenuItem>
-                                            <DropdownMenuItem>7 days</DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem>1 month</DropdownMenuItem>
-                                            <DropdownMenuItem>6 months</DropdownMenuItem>
-                                            <DropdownMenuItem>1 year</DropdownMenuItem>
+                                            {[1, 7, 30, 180, 365].map((days) => (
+                                              <DropdownMenuItem
+                                                key={days}
+                                                onSelect={(event) => {
+                                                  event.preventDefault(); // Prevent menu from closing before execution
+                                                  dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                                  setTimeout(async() => await shareFile(days), 0); // Ensures execution after state update
+                                                }}
+                                              >
+                                                {days === 1 ? "1 day" : days === 7 ? "7 days" : days === 30 ? "1 month" : days === 180 ? "6 months" : "1 year"}
+                                              </DropdownMenuItem>
+                                            ))}
                                           </DropdownMenuSubContent>
                                         </DropdownMenuPortal>
                                       </DropdownMenuSub>

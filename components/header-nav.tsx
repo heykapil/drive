@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { setBucketCookie } from "@/lib/actions"
-import { FolderOpen, Menu, Moon, Settings, Sun, Upload } from "lucide-react"
+import { FolderOpen, Menu, Moon, Settings, Share2, Sun, Upload } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -79,6 +79,9 @@ export default function HeaderNav() {
           </Link>
           <Link href="/uploads" className="text-sm font-medium transition-colors hover:text-primary">
             My Files
+          </Link>
+          <Link href="/shared" className="text-sm font-medium transition-colors hover:text-primary">
+            Shared Files
           </Link>
           <Link href="/settings" className="text-sm font-medium transition-colors hover:text-primary">
             Settings
@@ -179,6 +182,13 @@ export default function HeaderNav() {
                               >
                                 <Upload className="h-5 w-5 text-muted-foreground" />
                                 My Uploads
+                              </Link>
+                              <Link
+                                href="/shared"
+                                className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors hover:bg-accent"
+                              >
+                                <Share2 className="h-5 w-5 text-muted-foreground" />
+                                Shared files
                               </Link>
                               <Link
                                 href="/settings"

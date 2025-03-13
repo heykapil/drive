@@ -243,3 +243,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media (max-width: 640px) {
+  .responsive-table {
+    th, td {
+      padding: 0.5rem;
+      font-size: 0.875rem;
+    }
+  }
+}

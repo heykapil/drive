@@ -8,14 +8,14 @@ import { formatBytes } from "@/lib/utils";
 import { buckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import {
-  AlertCircle,
-  Calendar,
-  Clock,
-  Download,
-  FileText,
-  FileX,
-  Link2Off,
-  Zap,
+    AlertCircle,
+    Calendar,
+    Clock,
+    Download,
+    FileText,
+    FileX,
+    Link2Off,
+    Zap,
 } from "lucide-react";
 
 type Params = Promise<{ slug: string }>
@@ -25,7 +25,7 @@ export default async function FilePage(props: {
   params: Params
   searchParams: SearchParams
 }) {
-  const params = await props.params
+  // const params = await props.params
   const searchParams = await props.searchParams
   const id = searchParams.id;
   const token = searchParams.token;
@@ -81,15 +81,13 @@ export default async function FilePage(props: {
   if (error) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-500/20 via-gray-900 to-black p-6">
-        <Alert className="max-w-lg w-full bg-card text-card-foreground shadow-lg rounded-xl p-4">
-          <div className="flex items-center space-x-4">
-            {error.icon}
-            <div>
-              <AlertTitle>{error.title}</AlertTitle>
-              <AlertDescription className="text-muted-foreground">
-                {error.description}
-              </AlertDescription>
-            </div>
+        <Alert className="max-w-lg w-full bg-card text-red-500 shadow-lg rounded-xl p-4 flex items-center space-x-4">
+          {error.icon}
+          <div className="flex-1">
+            <AlertTitle className="text-lg font-semibold text-red-500">{error.title}</AlertTitle>
+            <AlertDescription className="text-muted-foreground text-sm w-full">
+              {error.description}
+            </AlertDescription>
           </div>
         </Alert>
       </div>
