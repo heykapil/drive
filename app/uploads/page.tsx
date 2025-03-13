@@ -1,4 +1,4 @@
-import FileList2 from "@/components/FileList2";
+import FileList from "@/components/FileList2";
 import HeaderNav from "@/components/header-nav";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
@@ -18,7 +18,7 @@ export default async function HistoryPage() {
     <div className="w-full md:w-2xl lg:w-4xl mx-auto py-6 space-y-6">
       <h1 className="text-2xl font-bold px-4">My files</h1>
       {/* <FileUpload  /> */}
-      <FileList2 />
+      <FileList />
     </div>
     </main>
     </div>

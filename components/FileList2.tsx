@@ -68,7 +68,25 @@ function fileReducer(state: FileState, action: FileAction): FileState {
       return { ...initialState, view: state.view };
     default:
       return state;
-  }
+  }const handleShare = async (file: FileData, duration: number) => {
+    try {
+      const response = await fetch(`/api/files/share?bucket=${selectedBucket}`, {
+        method: "POST",
+        body: JSON.stringify({ fileId: file.id, duration })
+      });
+
+      const { url, error } = await response.json();
+      if (error || !url) {
+        toast.error(error || 'Failed to generate shared URL');
+        return;
+      }
+
+      toast.success(`${file.filename} has been shared`, { description: url });
+      navigator.clipboard.writeText(url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to share file');
+    }
+  };
 }
 
 export default function FileList() {
@@ -234,22 +252,25 @@ export default function FileList() {
   };
 
 
-  const shareFile = async (duration: number) => {
-    if (!state.selectedFile) return;
-    try{
-      const response = await fetch(`/api/files/share?bucket=${selectedBucket}`,{
+  const handleShare = async (file, duration: number) => {
+    try {
+      const response = await fetch(`/api/files/share?bucket=${selectedBucket}`, {
         method: "POST",
-        body: JSON.stringify({fileId: state.selectedFile.id, duration})
-      })
+        body: JSON.stringify({ fileId: file.id, duration })
+      });
+
       const { url, error } = await response.json();
-      if(error || !url) toast.error(error || 'Failed to generate shared url for file')
-      toast.success(`${state.selectedFile.filename} has been shared`,{ description: url })
-    } catch(error){
-      toast.error(error instanceof Error ? error.message : 'Failed to share the file')
-    } finally {
-      dispatch({ type: 'SET_FIELD', field: 'loading', value: false });
+      if (error || !url) {
+        toast.error(error || 'Failed to generate shared URL');
+        return;
+      }
+
+      toast.success(`${file.filename} has been shared`, { description: url });
+      navigator.clipboard.writeText(url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to share file');
     }
-  }
+  };
 
   const togglePrivacy = async () => {
     if (!state.selectedFile) return;
@@ -720,11 +741,7 @@ export default function FileList() {
                                             {[1, 7, 30, 180, 365].map((days) => (
                                               <DropdownMenuItem
                                                 key={days}
-                                                onSelect={(event) => {
-                                                  event.preventDefault(); // Prevent menu from closing before execution
-                                                  dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
-                                                  setTimeout(async() => await shareFile(days), 0); // Ensures execution after state update
-                                                }}
+                                                onClick={() => handleShare(file, days)}
                                               >
                                                 {days === 1 ? "1 day" : days === 7 ? "7 days" : days === 30 ? "1 month" : days === 180 ? "6 months" : "1 year"}
                                               </DropdownMenuItem>

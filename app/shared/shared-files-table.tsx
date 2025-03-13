@@ -4,13 +4,14 @@
 import { ColumnDef, ColumnFiltersState, flexRender, getCoreRowModel, getSortedRowModel, SortingState, useReactTable } from "@tanstack/react-table"
 import { format } from 'date-fns'
 import { MoreHorizontal } from "lucide-react"
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { DataTablePagination } from "@/components/data-table-pagination"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { formatBytes } from "@/lib/utils"
 
 export type SharedFile = {
   token: string
@@ -46,6 +47,8 @@ export function SharedFilesTable({
 }: SharedFilesTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [filenameFilter, setFilenameFilter] = useState('')
+  const [globalFilter, setGlobalFilter] = useState('')
 
   const columns: ColumnDef<SharedFile>[] = [
     {
@@ -55,7 +58,7 @@ export function SharedFilesTable({
     {
       accessorKey: "size",
       header: "Size",
-      cell: ({ row }) => formatFileSize(row.getValue("size")),
+      cell: ({ row }) => formatBytes(row.getValue("size")),
     },
     {
       accessorKey: "type",
@@ -111,15 +114,24 @@ export function SharedFilesTable({
     },
   ]
 
+  const filteredData = filenameFilter
+    ? data.filter((file) =>
+        file.filename.toLowerCase().includes(filenameFilter.toLowerCase())
+      )
+    : data;
+
+  // Update the table configuration
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     state: {
       sorting,
       columnFilters,
+      globalFilter,
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     manualPagination: true,
@@ -128,20 +140,28 @@ export function SharedFilesTable({
     rowCount,
   })
 
+
+  useEffect(() => {
+    setColumnFilters(
+      filenameFilter
+        ? [{ id: "filename", value: filenameFilter }]
+        : []
+    )
+  }, [filenameFilter])
+
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center flex-row justify-between">
+      <div className="flex justify-center flex-col">
         <div className="flex">
           <Input
             placeholder="Filter files..."
-            value={(table.getColumn("filename")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("filename")?.setFilterValue(event.target.value)
-            }
+            value={filenameFilter}
+            onChange={(event) => setFilenameFilter(event.target.value)}
             className="flex w-full max-w-sm"
           />
         </div>
-        <div className="flex">
+        <div className="flex mt-4">
           <DataTablePagination
             table={table}
             totalItems={rowCount}
@@ -153,7 +173,7 @@ export function SharedFilesTable({
         </div>
       </div>
 
-      <div className="rounded-md border overflow-x-auto">
+      <div className="rounded-md max-w-[95vw] lg:max-w-full border overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -195,18 +215,4 @@ export function SharedFilesTable({
       </div>
     </div>
   )
-}
-
-// Utility function to format file sizes
-function formatFileSize(bytes: number) {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let size = bytes
-  let unitIndex = 0
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-
-  return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`
 }
