@@ -11,8 +11,9 @@ import { CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu, Moon, 
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import { Card, CardContent } from "./ui/card"
 
 const navLinks = [
   { href: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5 text-muted-foreground" /> },
@@ -39,38 +40,57 @@ export default function HeaderNav({ session }: { session: Session }) {
   const { selectedBucket, setSelectedBucket } = useBucketStore();
   const router = useRouter();
   const path = usePathname();
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const tabRefs = useRef<(HTMLAnchorElement | null)[]>([])
+  const [activeStyle, setActiveStyle] = useState({ left: "0px", width: "0px" })
+
+  // Find active index based on current path
+  const activeIndex = navLinks.findIndex(link => link.href === path)
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    setIsNavigating(true);
-    const timeout = setTimeout(() => setIsNavigating(false), 300);
-    return () => clearTimeout(timeout);
+    const handleRouteChange = () => {
+      setIsNavigating(true);
+      const timeout = setTimeout(() => setIsNavigating(false), 300);
+      return () => clearTimeout(timeout);
+    };
+    handleRouteChange();
   }, [path]);
+
+  useEffect(() => {
+    const activeElement = tabRefs.current[activeIndex]
+    if (activeElement) {
+      const { offsetLeft, offsetWidth } = activeElement
+      setActiveStyle({
+        left: `${offsetLeft}px`,
+        width: `${offsetWidth}px`,
+      })
+    }
+  }, [activeIndex, path]) // Update when path changes
 
   const handleBucketChange = async (value: string) => {
     if (value === selectedBucket) return;
 
     const prevBucket = selectedBucket;
-    const success = toast.promise(
-      setBucketCookie(value, path)
-        .then(() => {
+    try {
+      await toast.promise(
+        setBucketCookie(value, path).then(() => {
           setSelectedBucket(value);
           localStorage.setItem("s3-bucket", value);
           router.refresh();
-          return true;
-        })
-        .catch(() => false),
-      {
-        loading: "Changing bucket...",
-        success: `Bucket set to ${value}!`,
-        error: "Failed to change bucket!",
-      }
-    );
-
-    if (!success) setSelectedBucket(prevBucket);
+        }),
+        {
+          loading: "Changing bucket...",
+          success: `Bucket set to ${value}!`,
+          error: "Failed to change bucket!",
+        }
+      );
+    } catch {
+      setSelectedBucket(prevBucket);
+    }
   };
 
   if (!isMounted) return null;
@@ -91,185 +111,197 @@ export default function HeaderNav({ session }: { session: Session }) {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1 mr-4">
-                {navLinks.map((link) => {
-                  const isActive = path === link.href
+          <div className={`justify-center hidden md:flex items-center w-full`}>
+            <Card className="w-full border-none shadow-none bg-transparent relative flex items-center justify-center">
+              <CardContent className="p-0">
+                <div className="relative">
+                  {/* Hover Highlight */}
+                  <div
+                    className="absolute top-1 h-[30px] transition-all duration-300 ease-out bg-[#0e0f1114] dark:bg-[#ffffff1a] rounded-[6px] flex items-center"
+                    style={{
+                      left: hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetLeft : undefined,
+                      width: hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetWidth : undefined,
+                      opacity: hoveredIndex !== null ? 1 : 0,
+                    }}
+                  />
 
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="relative px-3 py-2 rounded-md text-sm font-medium transition-colors hover:text-primary group"
-                    >
-                      {isActive && (
-                        <span
-                          className="absolute inset-0 rounded-md z-0"
+                  {/* Active Indicator */}
+                  <div
+                    className="absolute not-[]:6px] h-[2px] bg-[#0e0f11] dark:bg-white transition-all duration-300 ease-out"
+                    style={activeStyle}
+                  />
 
-                        />
-                      )}
-                      <span
-                        className={`relative z-10 ${
-                          isActive ? "text-blue-500 font-semibold" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {link.label}
-                      </span>
-                      {isActive && (
-                        <span
-                        className="absolute -bottom-4 left-0 right-0 h-0.5 bg-blue-500 rounded-full"
-                        />
-                      )}
-                    </Link>
-                  )
-                })}
-              </nav>
-
-          <div className="flex items-center gap-4">
-            {/* Bucket Selector */}
-            <div className="hidden sm:block">
-              <Select value={selectedBucket} onValueChange={handleBucketChange}>
-                <SelectTrigger className="w-[180px]">
-                  <FolderInputIcon className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder="Select bucket" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bucketOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Theme Toggle */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  <span className="sr-only">Toggle theme</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Mobile Menu */}
-                     <Sheet>
-                       <SheetTrigger asChild>
-                         <Button variant="outline" size="icon" className="md:hidden">
-                           <Menu className="h-5 w-5" />
-                           <SheetTitle className="sr-only">Toggle menu</SheetTitle>
-                         </Button>
-                       </SheetTrigger>
-                       <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0">
-                         <div className="flex flex-col h-full">
-                           <div className="border-b p-4 flex items-center justify-between">
-                             <div className="flex items-center gap-2">
-                               <Upload className="h-5 w-5 text-primary" />
-                               <span className="font-bold">kapil.app</span>
-                             </div>
-                           </div>
-
-                           <div className="flex-1 overflow-auto py-2">
-                             <nav className="flex flex-col gap-1 px-2">
-                               {navLinks.map((link) => (
-                                 <Link
-                                   key={link.href}
-                                   href={link.href}
-                                   className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors ${
-                                     path === link.href ? 'bg-accent' : 'hover:bg-accent'
-                                   }`}
-                                 >
-                                   {link.icon}
-                                   {link.label}
-                                 </Link>
-                               ))}
-                             </nav>
-
-                             <div className="px-4 py-5 mt-2">
-                               <div className="space-y-1">
-                                 <h3 className="text-sm font-medium">Theme</h3>
-                                 <div className="flex items-center gap-2 mt-2">
-                                   <Button
-                                     variant={theme === "light" ? "default" : "outline"}
-                                     size="sm"
-                                     onClick={() => setTheme("light")}
-                                     className="flex-1 justify-start"
-                                   >
-                                     <Sun className="mr-2 h-4 w-4" />
-                                     Light
-                                   </Button>
-                                   <Button
-                                     variant={theme === "dark" ? "default" : "outline"}
-                                     size="sm"
-                                     onClick={() => setTheme("dark")}
-                                     className="flex-1 justify-start"
-                                   >
-                                     <Moon className="mr-2 h-4 w-4" />
-                                     Dark
-                                   </Button>
-                                 </div>
-                               </div>
-                             </div>
-
-                             <div className="border-t mt-2 px-4 py-5">
-                               <h3 className="text-sm font-medium mb-3">Storage Bucket</h3>
-                               <Select value={selectedBucket} onValueChange={handleBucketChange}>
-                                 <SelectTrigger className="w-full">
-                                   <FolderOpen className="mr-2 h-4 w-4 text-muted-foreground" />
-                                   <SelectValue placeholder="Select bucket" />
-                                 </SelectTrigger>
-                                 <SelectContent>
-                                   {bucketOptions.map((option) => (
-                                     <SelectItem key={option.value} value={option.value}>
-                                       {option.label}
-                                     </SelectItem>
-                                   ))}
-                                 </SelectContent>
-                               </Select>
-                             </div>
-                           </div>
-                           {/* Mobile Session Popover */}
-                           <div className="border-t p-4">
-                             {session ? (
-                               <DropdownMenu>
-                                 <DropdownMenuTrigger asChild>
-                                   <Button variant="ghost" className="w-full justify-start">
-                                     <div className="flex flex-col items-start">
-                                       <span className="font-medium">{session.user?.name}</span>
-                                       <span className="text-xs text-muted-foreground">{session.user?.email}</span>
-                                     </div>
-                                   </Button>
-                                 </DropdownMenuTrigger>
-                                 <DropdownMenuContent className="w-[calc(100vw-2rem)] sm:w-full">
-                                   <DropdownMenuItem onSelect={() => router.push('/profile')}>
-                                     Profile
-                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onSelect={() => router.push('/settings')}>
-                                     Settings
-                                   </DropdownMenuItem>
-                                   <DropdownMenuItem onSelect={() => {/* Add logout logic */}}>
-                                     Logout
-                                   </DropdownMenuItem>
-                                 </DropdownMenuContent>
-                               </DropdownMenu>
-                             ) : (
-                               <Button variant="default" className="w-full" onClick={() => router.push('/login')}>
-                                 Login
-                               </Button>
-                             )}
-                           </div>
-                         </div>
-                       </SheetContent>
-                     </Sheet>
+                  {/* Tabs */}
+                  <div className="relative flex space-x-[6px] items-center">
+                    {navLinks.map((link, index) => {
+                      const isActive = path === link.href
+                      return (
+                        <Link
+                          // @ts-ignore
+                          ref={(el) => (tabRefs.current[index] = el)}
+                          key={link.href}
+                          href={link.href}
+                          onMouseEnter={() => setHoveredIndex(index)}
+                          onMouseLeave={() => setHoveredIndex(null)}
+                          className={`px-3 py-2 cursor-pointer transition-colors duration-300 h-fit ${
+                            isActive ? "text-black dark:text-white" : "text-[#0e0f1199] dark:text-[#ffffff99]"
+                          }`}
+                        >
+                          {link.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </div>
-    </header>
-  );
+          <div className="flex items-center gap-4">
+                      {/* Bucket Selector */}
+                      <div className="hidden sm:block">
+                        <Select value={selectedBucket} onValueChange={handleBucketChange}>
+                          <SelectTrigger className="w-[180px]">
+                            <FolderInputIcon className="mr-2 h-4 w-4" />
+                            <SelectValue placeholder="Select bucket" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {bucketOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Theme Toggle */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon">
+                            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                            <span className="sr-only">Toggle theme</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      {/* Mobile Menu */}
+                               <Sheet>
+                                 <SheetTrigger asChild>
+                                   <Button variant="outline" size="icon" className="md:hidden">
+                                     <Menu className="h-5 w-5" />
+                                     <SheetTitle className="sr-only">Toggle menu</SheetTitle>
+                                   </Button>
+                                 </SheetTrigger>
+                                 <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0">
+                                   <div className="flex flex-col h-full">
+                                     <div className="border-b p-4 flex items-center justify-between">
+                                       <div className="flex items-center gap-2">
+                                         <Upload className="h-5 w-5 text-primary" />
+                                         <span className="font-bold">kapil.app</span>
+                                       </div>
+                                     </div>
+
+                                     <div className="flex-1 overflow-auto py-2">
+                                       <nav className="flex flex-col gap-1 px-2">
+                                         {navLinks.map((link) => (
+                                           <Link
+                                             key={link.href}
+                                             href={link.href}
+                                             className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors ${
+                                               path === link.href ? 'bg-accent' : 'hover:bg-accent'
+                                             }`}
+                                           >
+                                             {link.icon}
+                                             {link.label}
+                                           </Link>
+                                         ))}
+                                       </nav>
+
+                                       <div className="px-4 py-5 mt-2">
+                                         <div className="space-y-1">
+                                           <h3 className="text-sm font-medium">Theme</h3>
+                                           <div className="flex items-center gap-2 mt-2">
+                                             <Button
+                                               variant={theme === "light" ? "default" : "outline"}
+                                               size="sm"
+                                               onClick={() => setTheme("light")}
+                                               className="flex-1 justify-start"
+                                             >
+                                               <Sun className="mr-2 h-4 w-4" />
+                                               Light
+                                             </Button>
+                                             <Button
+                                               variant={theme === "dark" ? "default" : "outline"}
+                                               size="sm"
+                                               onClick={() => setTheme("dark")}
+                                               className="flex-1 justify-start"
+                                             >
+                                               <Moon className="mr-2 h-4 w-4" />
+                                               Dark
+                                             </Button>
+                                           </div>
+                                         </div>
+                                       </div>
+
+                                       <div className="border-t mt-2 px-4 py-5">
+                                         <h3 className="text-sm font-medium mb-3">Storage Bucket</h3>
+                                         <Select value={selectedBucket} onValueChange={handleBucketChange}>
+                                           <SelectTrigger className="w-full">
+                                             <FolderOpen className="mr-2 h-4 w-4 text-muted-foreground" />
+                                             <SelectValue placeholder="Select bucket" />
+                                           </SelectTrigger>
+                                           <SelectContent>
+                                             {bucketOptions.map((option) => (
+                                               <SelectItem key={option.value} value={option.value}>
+                                                 {option.label}
+                                               </SelectItem>
+                                             ))}
+                                           </SelectContent>
+                                         </Select>
+                                       </div>
+                                     </div>
+                                     {/* Mobile Session Popover */}
+                                     <div className="border-t p-4">
+                                       {session ? (
+                                         <DropdownMenu>
+                                           <DropdownMenuTrigger asChild>
+                                             <Button variant="ghost" className="w-full justify-start">
+                                               <div className="flex flex-col items-start">
+                                                 <span className="font-medium">{session.user?.name}</span>
+                                                 <span className="text-xs text-muted-foreground">{session.user?.email}</span>
+                                               </div>
+                                             </Button>
+                                           </DropdownMenuTrigger>
+                                           <DropdownMenuContent className="w-[calc(100vw-2rem)] sm:w-full">
+                                             <DropdownMenuItem onSelect={() => router.push('/profile')}>
+                                               Profile
+                                             </DropdownMenuItem>
+                                             <DropdownMenuItem onSelect={() => router.push('/settings')}>
+                                               Settings
+                                             </DropdownMenuItem>
+                                             <DropdownMenuItem onSelect={() => {/* Add logout logic */}}>
+                                               Logout
+                                             </DropdownMenuItem>
+                                           </DropdownMenuContent>
+                                         </DropdownMenu>
+                                       ) : (
+                                         <Button variant="default" className="w-full" onClick={() => router.push('/login')}>
+                                           Login
+                                         </Button>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </SheetContent>
+                               </Sheet>
+                    </div>
+                  </div>
+                </div>
+              </header>
+            );
 }
