@@ -18,7 +18,7 @@ export default async function SettingsPage() {
   const usage = await getS3StorageUsage();
   return (
     <Suspense>
-    <HeaderNav />
+    <HeaderNav session={session} />
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">
     <main className="flex flex-col gap-2 row-start-2 items-center sm:items-start">
     <div className="w-full md:w-2xl lg:w-4xl mx-auto py-6 px-2 md:px-0 space-y-6">
@@ -101,14 +101,14 @@ export default async function SettingsPage() {
                             <>
                               <AlertTriangle className="w-4 h-4 text-red-500" />
                               <span className="text-sm text-red-500">
-                                {dbName === 'mainDB' ? 'Aiven Postgres' : 'NeonDB'}: {error.message || "Unknown error"}
+                                {dbName === 'mainDB' ? 'AivenDB' : 'NeonDB'}: {error.message || "Unknown error"}
                               </span>
                             </>
                           ) : (
                             <>
                               <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                               <span className="text-sm text-green-600 dark:text-green-400">
-                                {dbName === 'mainDB' ? 'Aiven Postgres' : 'NeonDB'} is healthy
+                                {dbName === 'mainDB' ? 'AivenDB' : 'NeonDB'} is healthy
                               </span>
                             </>
                           )}

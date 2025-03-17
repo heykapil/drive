@@ -314,7 +314,7 @@ export default function FileList() {
   const LoadingSkeleton = () => (
     <div className="space-y-4">
       {Array.from({ length: state.limit }).map((_, i) => (
-        <Skeleton key={i} className="h-[26px] w-full rounded-lg" />
+        <Skeleton key={i} className="h-[26px] min-w-[93vw] w-full rounded-lg" />
       ))}
     </div>
   );
@@ -432,7 +432,13 @@ export default function FileList() {
       </div>
 
       {state.loading ? (
+        <>
+          <p className="text-sm h-6 rounded-lg w-1/2 text-muted-foreground">
+          Loading files...
+          </p>
+
         <LoadingSkeleton />
+        </>
       ) : state.error ? (
         <div className="text-center py-8 text-destructive">
           {state.error}
