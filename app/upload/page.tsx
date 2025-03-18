@@ -1,4 +1,4 @@
-import FileUpload from "@/components/FileUpload2";
+import FileUpload from "@/components/FileUpload3";
 import HeaderNav from "@/components/header-nav";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";

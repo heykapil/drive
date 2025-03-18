@@ -244,9 +244,9 @@ export default function FileUpload() {
       });
 
       const { url } = await presignRes.json();
-
+      console.log(url)
       // Upload chunk with progress tracking
-      await axios.put(url, chunk, {
+      const response = await axios.put(url, chunk, {
         signal: controller.signal,
         onUploadProgress: (progressEvent) => {
           setState(prev => ({
@@ -262,6 +262,10 @@ export default function FileUpload() {
         },
       });
 
+      // Get ETag from headers and clean it
+      const eTag = response.headers.etag?.replace(/"/g, '') || '';
+      if (!eTag) throw new Error(`Missing ETag for part ${partNumber}`);
+
       // Mark part as fully uploaded
       setState(prev => ({
         ...prev,
@@ -274,7 +278,7 @@ export default function FileUpload() {
         },
       }));
 
-      return { PartNumber: partNumber, ETag: 'etag' };
+      return { PartNumber: partNumber, ETag: eTag };
     } catch (error: any) {
       if (error.name !== 'AbortError') throw error;
       return { PartNumber: partNumber, ETag: 'aborted' };
@@ -380,10 +384,10 @@ export default function FileUpload() {
                     {progress.toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-xs text-gray-500">
-                  {getFileType(file)} | {formatBytes(file.size)} |
-                  <span> Parts: {uploadedParts}</span> |
-                  <span> {formatBytes(totalUploaded)}</span>
+                <p className="text-xs text-primary/70">
+                  {getFileType(file)}
+                  <span> Uploaded:  {formatBytes(totalUploaded)} of {formatBytes(file.size)}
+                    (Parts: {uploadedParts})</span>
                 </p>
               </div>
             </div>
