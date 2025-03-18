@@ -5,7 +5,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
-import { setBucketCookie } from "@/lib/actions"
 import { Session } from "@/lib/auth"
 import { CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu, Moon, Settings, Share2, Sun, Upload } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -76,12 +75,11 @@ export default function HeaderNav({ session }: { session: Session }) {
 
     const prevBucket = selectedBucket;
     try {
-      await toast.promise(
-        setBucketCookie(value, path).then(() => {
-          setSelectedBucket(value);
-          localStorage.setItem("s3-bucket", value);
-          router.refresh();
-        }),
+      toast.promise(
+
+        async () => {
+          setSelectedBucket(value)
+        },
         {
           loading: "Changing bucket...",
           success: `Bucket set to ${value}!`,
@@ -107,7 +105,7 @@ export default function HeaderNav({ session }: { session: Session }) {
         <div className="container flex h-16 items-center justify-between py-4">
           <Link href="/" className="flex items-center gap-2">
             <Upload className="h-6 w-6" />
-            <span className="hidden font-bold sm:inline-block">kapil.app</span>
+            <span className="hidden font-semibold sm:inline-block">kapil.app</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -143,7 +141,7 @@ export default function HeaderNav({ session }: { session: Session }) {
                           href={link.href}
                           onMouseEnter={() => setHoveredIndex(index)}
                           onMouseLeave={() => setHoveredIndex(null)}
-                          className={`px-3 py-2 cursor-pointer transition-colors duration-300 h-fit ${
+                          className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${
                             isActive ? "text-black dark:text-white" : "text-[#0e0f1199] dark:text-[#ffffff99]"
                           }`}
                         >
@@ -203,7 +201,7 @@ export default function HeaderNav({ session }: { session: Session }) {
                                      <div className="border-b p-4 flex items-center justify-between">
                                        <div className="flex items-center gap-2">
                                          <Upload className="h-5 w-5 text-primary" />
-                                         <span className="font-bold">kapil.app</span>
+                                         <span className="font-semibold">kapil.app</span>
                                        </div>
                                      </div>
 
@@ -272,7 +270,7 @@ export default function HeaderNav({ session }: { session: Session }) {
                                          <DropdownMenu>
                                            <DropdownMenuTrigger asChild>
                                              <Button variant="ghost" className="w-full justify-start">
-                                               <div className="flex flex-col items-start">
+                                               <div className="flex flex-col items-start border p-2 rounded-lg">
                                                  <span className="font-medium">{session.user?.name}</span>
                                                  <span className="text-xs text-muted-foreground">{session.user?.email}</span>
                                                </div>
