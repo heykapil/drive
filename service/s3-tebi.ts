@@ -67,12 +67,10 @@ export async function getS3StorageUsage() {
   for (const [name, config] of Object.entries(buckets)) {
     try {
       const s3 = await s3WithConfig(config);
+
       // Check if the bucket exists
-      const response = await s3.send(new HeadBucketCommand({ Bucket: config.name }));
-      console.log({
-        name: config.name,
-        metadata: response.$metadata
-      })
+      await s3.send(new HeadBucketCommand({ Bucket: config.name }));
+
       let totalSize = 0;
       let continuationToken: string | undefined = undefined;
 
@@ -103,7 +101,6 @@ export async function getS3StorageUsage() {
         availableCapacityGB: availableStorageGB + " GB",
       });
     } catch (error: any) {
-      console.log(error?.$metadata)
       results.push({
         bucket: name,
         status: "Error",
@@ -111,6 +108,5 @@ export async function getS3StorageUsage() {
       });
     }
   }
-  console.log(results)
   return results;
 }
