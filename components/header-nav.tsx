@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { Session } from "@/lib/auth"
+import { bucketOptions } from "@/service/bucket.config"
 import { BellIcon, CloudUpload, CreditCardIcon, FolderInputIcon, FolderOpen, LayoutDashboard, LogOutIcon, Menu, Moon, MoreVerticalIcon, Settings, Share2, Sun, Upload, UserCircleIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
@@ -22,15 +23,6 @@ const navLinks = [
   { href: '/uploads', label: 'My Files', icon: <FolderOpen className="h-5 w-5 text-muted-foreground" /> },
   { href: '/shared', label: 'Shared Files', icon: <Share2 className="h-5 w-5 text-muted-foreground" /> },
   { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5 text-muted-foreground" /> },
-];
-
-const bucketOptions = [
-  { value: "default", label: "Default Bucket" },
-  { value: "photos", label: "Photos" },
-  { value: "docs", label: "Documents" },
-  { value: "notes", label: "Notes" },
-  { value: "archives", label: "Archives" },
-  { value: "videos", label: "Videos" },
 ];
 
 export default function HeaderNav({ session }: { session: Session }) {

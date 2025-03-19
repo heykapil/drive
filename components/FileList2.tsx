@@ -75,8 +75,6 @@ export default function FileList() {
   const [state, dispatch] = useReducer(fileReducer, initialState);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
-
-
   const toggleFileSelection = (fileId: string) => {
     setSelectedFiles((prev) => {
       const newSelection = new Set(prev);
@@ -381,7 +379,7 @@ export default function FileList() {
             value={String(state.limit)}
             onValueChange={(val) => dispatch({ type: 'SET_FIELD', field: 'limit', value: Number(val) })}
           >
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Items per page" />
             </SelectTrigger>
             <SelectContent>

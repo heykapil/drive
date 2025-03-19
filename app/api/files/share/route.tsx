@@ -1,8 +1,7 @@
 import { SharedFile } from "@/app/shared/shared-files-table";
-import { signJWT } from "@/lib/helpers/jose";
+import { generateToken } from "@/lib/helpers/token";
 import { buckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
-import { JWTPayload } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -39,14 +38,11 @@ export async function POST(req: NextRequest) {
 
     const { id, filename, size, type } = rows[0];
 
-    // ✅ Generate the token
-    const payload = { id: fileId, duration, bucket } as JWTPayload;
-    const token = await signJWT(payload, `${duration} d`);
-
     const expires = new Date(Date.now() + duration * 24 * 60 * 60 * 1000);
+    const token = generateToken(duration)
+
     const url = `${process.env.NEXT_PUBLIC_APP_URL}/file?id=${fileId}&token=${token}`;
 
-    // ✅ Insert into the shared table
     await query(
       "INSERT INTO shared (token, id, filename, size, type, bucket, expires, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
       [token, id, filename, size, type, bucketConfig.name, expires, new Date()]

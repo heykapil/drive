@@ -88,16 +88,23 @@ export default function SettingsContent() {
     fetchData();
   }, []);
 
-  // Helper function to get bucket usage data
+  // Helper function to get bucket usage data.
+  // If the bucket's status is "Error", include the error message.
   const getBucketData = (bucketId: string) => {
     const data = usage.find(u => u.bucket === bucketId);
-    if (data?.status === "Success") {
+    if (!data) {
+      return { storageUsedGB: 0, availableCapacityGB: 0 };
+    }
+    if (data.status === "Error") {
+      return { error: data.message, storageUsedGB: 0, availableCapacityGB: 0 };
+    }
+    if (data.status === "Success") {
       return {
         storageUsedGB: data.storageUsedGB,
         availableCapacityGB: data.availableCapacityGB
       };
     }
-    return { storageUsedGB: 0, availableCapacityGB: 25 }; // Default values
+    return { storageUsedGB: 0, availableCapacityGB: 0 };
   };
 
   return (
@@ -118,35 +125,44 @@ export default function SettingsContent() {
           </div>
         ) : (
           Object.entries(buckets).map(([bucketId, config]) => {
-            const error = health?.storageErrors.find(e => e.bucket === bucketId);
-            const { storageUsedGB, availableCapacityGB } = getBucketData(bucketId);
+            // Check if there's an error from health or from the bucket usage data.
+            const healthError = health?.storageErrors.find(e => e.bucket === bucketId);
+            const bucketData = getBucketData(bucketId);
+            const hasError = !!healthError || !!bucketData.error;
 
             return (
               <div key={bucketId} className="border-y px-2 py-1 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    {error ? (
-                      <AlertTriangle className="w-5 h-5 text-red-500" />
-                    ) : (
-                      <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    )}
-                    <div>
-                      <p>{config.name}</p>
-                      <p className="text-sm text-gray-500">ID: {bucketId}</p>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-6">
+                      {hasError ? (
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                      ) : (
+                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      )}
+                      <div>
+                        <p>{config.name}</p>
+                        <p className="text-sm text-gray-500">ID: {bucketId}</p>
+                      </div>
                     </div>
+                    {!hasError && (
+                      <p className="text-sm text-gray-600 ml-11">
+                        Used: {bucketData.storageUsedGB} GB / Available: {bucketData.availableCapacityGB} GB
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-4">
-                    {error ? (
+                    {hasError ? (
                       <div className="flex items-center gap-2 px-6">
                         <AlertTriangle className="w-4 h-4 text-red-500" />
                         <span className="text-sm text-red-500">
-                          {error.message}
+                          {healthError ? healthError.message : bucketData.error}
                         </span>
                       </div>
                     ) : (
                       <StorageChart
-                        storageUsedGB={storageUsedGB}
-                        availableCapacityGB={availableCapacityGB}
+                        storageUsedGB={bucketData.storageUsedGB}
+                        availableCapacityGB={bucketData.availableCapacityGB}
                       />
                     )}
                   </div>

@@ -5,7 +5,7 @@ function parseJWK(envVar?: string) {
   if (!envVar) throw new Error("❌ Missing JWK key in environment variables.");
   try {
     return JSON.parse(envVar); // Convert string to JSON object
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Invalid JSON in environment variable:", envVar);
     throw new Error("❌ Failed to parse JWK. Check your .env formatting.");
   }

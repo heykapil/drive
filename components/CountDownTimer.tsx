@@ -74,10 +74,6 @@ export function CountdownTimer({ targetDate, onExpire }: CountdownTimerProps) {
     return () => clearInterval(interval)
   }, [targetDate, onExpire])
 
-  const formatNumber = (num: number): string => {
-    return num < 10 ? `0${num}` : `${num}`
-  }
-
   return (
     <div className="grid grid-cols-4 gap-2">
       <TimeUnit value={timeRemaining.days} label="Days" />

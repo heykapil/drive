@@ -59,8 +59,7 @@ export async function testS3Connections() {
   return results;
 }
 
-const MAX_BUCKET_CAPACITY_GB = 25; // 25GB limit
-const MAX_BUCKET_CAPACITY_BYTES = MAX_BUCKET_CAPACITY_GB * 1024 * 1024 * 1024; // Convert to bytes
+const DEFAULT_MAX_BUCKET_CAPACITY_GB = 25; // 25GB limit
 
 export async function getS3StorageUsage() {
   const results = [];
@@ -68,10 +67,12 @@ export async function getS3StorageUsage() {
   for (const [name, config] of Object.entries(buckets)) {
     try {
       const s3 = await s3WithConfig(config);
-
       // Check if the bucket exists
-      await s3.send(new HeadBucketCommand({ Bucket: config.name }));
-
+      const response = await s3.send(new HeadBucketCommand({ Bucket: config.name }));
+      console.log({
+        name: config.name,
+        metadata: response.$metadata
+      })
       let totalSize = 0;
       let continuationToken: string | undefined = undefined;
 
@@ -86,9 +87,11 @@ export async function getS3StorageUsage() {
         totalSize += response.Contents?.reduce((sum: number, obj: any) => +sum + (obj.Size || 0), 0) || 0;
         continuationToken = response.NextContinuationToken;
       } while (continuationToken);
+     ; // Convert to bytes
 
-      // Calculate available storage
-      const availableStorageBytes = Math.max(MAX_BUCKET_CAPACITY_BYTES - totalSize, 0);
+      const TotalAvailableSizeGB = config.availableCapacity || DEFAULT_MAX_BUCKET_CAPACITY_GB;
+      const TotalAvailableSizeBytes = TotalAvailableSizeGB * 1024 * 1024 * 1024;
+      const availableStorageBytes = Math.max(TotalAvailableSizeBytes - totalSize, 0);
       const availableStorageGB = (availableStorageBytes / (1024 * 1024 * 1024)).toFixed(2);
 
       results.push({
@@ -100,6 +103,7 @@ export async function getS3StorageUsage() {
         availableCapacityGB: availableStorageGB + " GB",
       });
     } catch (error: any) {
+      console.log(error?.$metadata)
       results.push({
         bucket: name,
         status: "Error",
@@ -107,6 +111,6 @@ export async function getS3StorageUsage() {
       });
     }
   }
-
+  console.log(results)
   return results;
 }
