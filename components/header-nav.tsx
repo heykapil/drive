@@ -266,22 +266,22 @@ export default function HeaderNav({ session }: { session: Session }) {
                                        </div>
                                      </div>
                                      {/* Mobile Session Popover */}
-                                     <div className="border-t p-4">
+                                     <div className="border-t p-2">
                                        {session ? (
                                          <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                               <Button
-                                                className="w-full"
+                                                className="w-full bg-background text-primary"
                                               >
                                                 <Avatar className="h-8 w-8 rounded-lg">
                                                   <AvatarImage src={session.user.image!} alt={session?.user.name} />
                                                   <AvatarFallback className="rounded-lg">KC</AvatarFallback>
                                                 </Avatar>
-                                                <div className="grid flex-1 text-left text-sm leading-tight">
+                                                <div className="grid flex-1 text-left text-pretty text-primary text-sm leading-tight">
                                                   <span className="truncate font-medium">{session?.user.name}</span>
-                                                  <span className="truncate text-xs text-muted-foreground">
+                                                  {/* <span className="truncate text-xs">
                                                     {session?.user.email}
-                                                  </span>
+                                                  </span> */}
                                                 </div>
                                                 <MoreVerticalIcon className="ml-auto size-4" />
                                               </Button>
@@ -295,7 +295,7 @@ export default function HeaderNav({ session }: { session: Session }) {
                                                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                                                   <Avatar className="h-8 w-8 rounded-lg">
                                                     <AvatarImage src={session.user.image!} alt={session?.user.name} />
-                                                    <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                                                    <AvatarFallback className="rounded-lg">KC</AvatarFallback>
                                                   </Avatar>
                                                   <div className="grid flex-1 text-left text-sm leading-tight">
                                                     <span className="truncate font-medium">{session.user.name}</span>
