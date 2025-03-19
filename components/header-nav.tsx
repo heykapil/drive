@@ -271,9 +271,9 @@ export default function HeaderNav({ session }: { session: Session }) {
                                          <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                               <Button
-                                                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full"
+                                                className="w-full"
                                               >
-                                                <Avatar className="h-8 w-8 rounded-lg grayscale">
+                                                <Avatar className="h-8 w-8 rounded-lg">
                                                   <AvatarImage src={session.user.image!} alt={session?.user.name} />
                                                   <AvatarFallback className="rounded-lg">KC</AvatarFallback>
                                                 </Avatar>
