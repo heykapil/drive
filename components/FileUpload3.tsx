@@ -243,8 +243,9 @@ export default function FileUpload() {
       signal: controller.signal,
     });
     const simRes = await response.json();
+    console.log(simRes)
     if (!simRes.success) {
-      throw new Error(simRes.error);
+      toast.error(simRes.error);
     }
   };
 

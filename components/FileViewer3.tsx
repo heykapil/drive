@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getFileTypeFromFilename } from "@/lib/utils";
 import { Download } from "lucide-react";
 import { VideoPlayer } from "./VideoPlayer4";
 
@@ -20,7 +21,7 @@ interface FileViewerProps {
 
 export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
   const { name, url, type, uploaded_at, size, id, is_public } = previewFile;
-  const fileType = type.split("/")[0];
+  const fileType = getFileTypeFromFilename(name).split("/")[0] || type.split("/")[0];
   const isImage = fileType === "image" || name.match(/\.(jpeg|jpg|gif|png)$/);
   const isVideo = fileType === "video" || name.match(/\.(mp4|webm|ogg|mov)$/);
   return (
