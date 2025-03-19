@@ -314,7 +314,7 @@ export default function FileList() {
   const LoadingSkeleton = () => (
     <div className="space-y-4">
       {Array.from({ length: state.limit }).map((_, i) => (
-        <Skeleton key={i} className="h-[26px] min-w-[93vw] w-full rounded-lg" />
+        <Skeleton key={i} className="h-[26px] min-w-[93vw] md:min-w-xl lg:min-w-2xl w-full rounded-lg" />
       ))}
     </div>
   );
@@ -724,7 +724,10 @@ export default function FileList() {
                                       </DropdownMenuItem>
                                       <DropdownMenuSub>
                                         <DropdownMenuSubTrigger>
-                                          <Share2 className="mr-2 h-4 w-4" /> Share file
+                                          <span className="flex flex-row">
+                                          <Share2 className="mr-4 text-primary/50 h-4 w-4" />
+                                          Share File
+                                          </span>
                                         </DropdownMenuSubTrigger>
                                         <DropdownMenuPortal>
                                           <DropdownMenuSubContent>

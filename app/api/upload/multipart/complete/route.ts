@@ -18,8 +18,9 @@ export async function POST(req: NextRequest) {
     }
 
     const { uploadId, key, parts, filename, size, type } = await req.json();
-    if (!uploadId || !key || !parts || !filename || !size || !type) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
+    const contentType = type ? type : "application/octet-stream";
+    if (!uploadId || !key || !parts || !filename || !size) {
+      return NextResponse.json({ success: false, error: "Missing required fields"}, { status: 400 });
     }
 
     const command = new CompleteMultipartUploadCommand({
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     const client = await s3WithConfig(bucketConfig);
     await client.send(command).then( async () =>
     await query("INSERT INTO files (filename, key, size, type, bucket) VALUES ($1, $2, $3, $4, $5)", [
-      filename, key, size, type, bucketConfig.name
+      filename, key, size, contentType, bucketConfig.name
     ]));
 
     return NextResponse.json({ success: true });

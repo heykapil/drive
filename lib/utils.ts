@@ -102,3 +102,12 @@ export const getFileType = (file: File) => {
   const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
   return mimeTypeMap[extension] || file.type || "application/octet-stream";
 };
+
+export const getFileTypeFromFilename = (filename: string): string => {
+  const dotIndex = filename.lastIndexOf(".");
+  if (dotIndex === -1) {
+    return "application/octet-stream";
+  }
+  const extension = filename.slice(dotIndex).toLowerCase();
+  return mimeTypeMap[extension] || "application/octet-stream";
+};

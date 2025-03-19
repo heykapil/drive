@@ -1,18 +1,20 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { Session } from "@/lib/auth"
-import { CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu, Moon, Settings, Share2, Sun, Upload } from "lucide-react"
+import { BellIcon, CloudUpload, CreditCardIcon, FolderInputIcon, FolderOpen, LayoutDashboard, LogOutIcon, Menu, Moon, MoreVerticalIcon, Settings, Share2, Sun, Upload, UserCircleIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { Card, CardContent } from "./ui/card"
+import { SidebarMenuButton } from "./ui/sidebar"
 
 const navLinks = [
   { href: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5 text-muted-foreground" /> },
@@ -268,26 +270,65 @@ export default function HeaderNav({ session }: { session: Session }) {
                                      <div className="border-t p-4">
                                        {session ? (
                                          <DropdownMenu>
-                                           <DropdownMenuTrigger asChild>
-                                             <Button variant="ghost" className="w-full justify-start">
-                                               <div className="flex flex-col items-start border p-2 rounded-lg">
-                                                 <span className="font-medium">{session.user?.name}</span>
-                                                 <span className="text-xs text-muted-foreground">{session.user?.email}</span>
-                                               </div>
-                                             </Button>
-                                           </DropdownMenuTrigger>
-                                           <DropdownMenuContent className="w-[calc(100vw-2rem)] sm:w-full">
-                                             <DropdownMenuItem onSelect={() => router.push('/profile')}>
-                                               Profile
-                                             </DropdownMenuItem>
-                                             <DropdownMenuItem onSelect={() => router.push('/settings')}>
-                                               Settings
-                                             </DropdownMenuItem>
-                                             <DropdownMenuItem onSelect={() => {/* Add logout logic */}}>
-                                               Logout
-                                             </DropdownMenuItem>
-                                           </DropdownMenuContent>
-                                         </DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <SidebarMenuButton
+                                                size="lg"
+                                                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                              >
+                                                <Avatar className="h-8 w-8 rounded-lg grayscale">
+                                                  <AvatarImage src={session.user.image!} alt={session?.user.name} />
+                                                  <AvatarFallback className="rounded-lg">KC</AvatarFallback>
+                                                </Avatar>
+                                                <div className="grid flex-1 text-left text-sm leading-tight">
+                                                  <span className="truncate font-medium">{session?.user.name}</span>
+                                                  <span className="truncate text-xs text-muted-foreground">
+                                                    {session?.user.email}
+                                                  </span>
+                                                </div>
+                                                <MoreVerticalIcon className="ml-auto size-4" />
+                                              </SidebarMenuButton>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent
+                                              className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                                              align="end"
+                                              sideOffset={4}
+                                            >
+                                              <DropdownMenuLabel className="p-0 font-normal">
+                                                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                                                  <Avatar className="h-8 w-8 rounded-lg">
+                                                    <AvatarImage src={session.user.image!} alt={session?.user.name} />
+                                                    <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                                                  </Avatar>
+                                                  <div className="grid flex-1 text-left text-sm leading-tight">
+                                                    <span className="truncate font-medium">{session.user.name}</span>
+                                                    <span className="truncate text-xs text-muted-foreground">
+                                                      {session.user.email}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              </DropdownMenuLabel>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuGroup>
+                                                <DropdownMenuItem>
+                                                  <UserCircleIcon />
+                                                  Account
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem>
+                                                  <CreditCardIcon />
+                                                  Billing
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem>
+                                                  <BellIcon />
+                                                  Notifications
+                                                </DropdownMenuItem>
+                                              </DropdownMenuGroup>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem>
+                                                <LogOutIcon />
+                                                Log out
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
                                        ) : (
                                          <Button variant="default" className="w-full" onClick={() => router.push('/login')}>
                                            Login
