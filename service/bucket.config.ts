@@ -6,6 +6,7 @@ export interface BucketConfig {
   region: string
   endpoint: string
   availableCapacity?: number
+  private?: boolean
   cdnUrl?: string
 }
 
@@ -17,6 +18,7 @@ export const buckets: Record<string, BucketConfig> = {
     region: process.env.AWS_REGION as string,
     endpoint: process.env.AWS_ENDPOINT as string,
     cdnUrl: 'https://cdn.kapil.app',
+    private: false,
   },
   'photos': {
     name: 'photos.kapil.app',
@@ -26,6 +28,7 @@ export const buckets: Record<string, BucketConfig> = {
     endpoint: process.env.AWS_ENDPOINT as string,
     cdnUrl: 'https://photos.kapil.app',
     availableCapacity: 12,
+    private: false,
   },
   'documents': {
     name: 'docs.kapil.app',
@@ -33,7 +36,8 @@ export const buckets: Record<string, BucketConfig> = {
     secretKey: process.env.AWS_SECRET_ACCESS_KEY_4 as string,
     region: process.env.AWS_REGION as string,
     endpoint: process.env.AWS_ENDPOINT as string,
-    cdnUrl: 'https://docs.kapil.app'
+    cdnUrl: 'https://docs.kapil.app',
+    private: false,
   },
   'notes': {
     name: 'notes.kapil.app',
@@ -42,7 +46,8 @@ export const buckets: Record<string, BucketConfig> = {
     region: process.env.AWS_REGION as string,
     endpoint: process.env.AWS_ENDPOINT as string,
     availableCapacity: 12,
-    cdnUrl: 'https://notes.kapil.app'
+    cdnUrl: 'https://notes.kapil.app',
+    private: false,
   },
   'archives' : {
     name: 'archives',
@@ -50,6 +55,7 @@ export const buckets: Record<string, BucketConfig> = {
     secretKey: process.env.AWS_SECRET_ACCESS_KEY_2 as string,
     region: process.env.AWS_REGION as string,
     endpoint: process.env.AWS_ENDPOINT as string,
+    private: true,
   },
   'videos': {
     name: 'terabox',
@@ -57,6 +63,7 @@ export const buckets: Record<string, BucketConfig> = {
     secretKey: process.env.AWS_SECRET_ACCESS_KEY_3 as string,
     region: process.env.AWS_REGION as string,
     endpoint: process.env.AWS_ENDPOINT as string,
+    private: true,
   },
   'videos 2': {
     name: 'elle',
@@ -65,6 +72,7 @@ export const buckets: Record<string, BucketConfig> = {
     region: process.env.AWS_REGION_5 as string,
     endpoint: process.env.AWS_ENDPOINT_5 as string,
     availableCapacity: 15,
+    private: true,
   },
   'videos 3': {
     name: 'kap',
@@ -73,6 +81,7 @@ export const buckets: Record<string, BucketConfig> = {
     region: process.env.AWS_REGION_6 as string,
     endpoint: process.env.AWS_ENDPOINT_6 as string,
     availableCapacity: 15,
+    private: true,
   },
   'videos 4': {
     name: 'kch',
@@ -81,6 +90,25 @@ export const buckets: Record<string, BucketConfig> = {
     region: process.env.AWS_REGION_7 as string,
     endpoint: process.env.AWS_ENDPOINT_7 as string,
     availableCapacity: 15,
+    private: true,
+  },
+  'videos 5': {
+    name: 'tbox',
+    accessKey: process.env.AWS_ACCESS_KEY_ID_8 as string,
+    secretKey: process.env.AWS_SECRET_ACCESS_KEY_8 as string,
+    region: process.env.AWS_REGION_8 as string,
+    endpoint: process.env.AWS_ENDPOINT_8 as string,
+    availableCapacity: 15,
+    private: true,
+  },
+  'videos 6': {
+    name: 'tbox2',
+    accessKey: process.env.AWS_ACCESS_KEY_ID_9 as string,
+    secretKey: process.env.AWS_SECRET_ACCESS_KEY_9 as string,
+    region: process.env.AWS_REGION_9 as string,
+    endpoint: process.env.AWS_ENDPOINT_9 as string,
+    availableCapacity: 15,
+    private: true,
   }
 }
 
@@ -135,7 +163,26 @@ export function getbucketId(bucket: string) {
   }
 }
 
-export const bucketOptions = Object.keys(buckets).map((key) => ({
-  value: key,
-  label: key.charAt(0).toUpperCase() + key.slice(1), // Capitalizing the first letter
-}));
+export const getPublicBuckets = (): BucketConfig[] => {
+  return Object.values(buckets).filter((bucket) => bucket.private === false);
+};
+
+export const publicbucketOptions = Object.entries(buckets)
+  .filter(([_, bucket]) => bucket.private === false) // Filter only public buckets
+  .map(([key]) => ({
+    value: key,
+    label: key.charAt(0).toUpperCase() + key.slice(1), // Capitalizing the first letter
+  }));
+
+export const privatebucketOptions = Object.entries(buckets)
+  .filter(([_, bucket]) => bucket.private === true) // Filter only public buckets
+  .map(([key]) => ({
+    value: key,
+    label: key.charAt(0).toUpperCase() + key.slice(1), // Capitalizing the first letter
+  }));
+
+export const bucketOptions = Object.entries(buckets)
+  .map(([key]) => ({
+    value: key,
+    label: key.charAt(0).toUpperCase() + key.slice(1), // Capitalizing the first letter
+  }));

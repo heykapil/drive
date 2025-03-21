@@ -1,6 +1,5 @@
 import { CountdownTimer } from "@/components/CountDownTimer";
 import FileIcon from "@/components/FileIcon";
-import { Button } from "@/components/ui/button";
 import { verifyToken } from "@/lib/helpers/token";
 import { formatBytes } from "@/lib/utils";
 import { buckets } from "@/service/bucket.config";
@@ -82,7 +81,7 @@ export default async function FilePage(props: {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-red-500 to-red-700 p-4">
+      <div className="min-h-screen flex w-full items-center justify-center bg-gradient-to-r from-red-500 to-red-700 p-4">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <div className="flex items-center space-x-3 animate-pulse">
             {error.icon}
@@ -100,7 +99,6 @@ export default async function FilePage(props: {
 
   const file = rows[0];
   const href = await getDownloadUrl(file.id, file.bucket);
-
   return (
     <div className="min-h-screen flex items-center w-full justify-center bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600 p-4">
       <div className="max-w-lg w-full bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden transform hover:scale-105 transition duration-300">
@@ -133,12 +131,10 @@ export default async function FilePage(props: {
               <Calendar className="w-5 h-5 text-gray-500" />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Expires:{" "}
-                {new Date(file.expires).toLocaleString("en-IN", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                  hour: "numeric",
-                  minute: "numeric",
+                {new Date(file.expires).toLocaleString('en-IN',{
+                  timeZone: 'Asia/Kolkata',
+                  dateStyle: 'full',
+                  timeStyle: 'long'
                 })}
               </span>
             </div>
@@ -148,12 +144,12 @@ export default async function FilePage(props: {
             </div>
           </div>
           <div className="mt-6">
-            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors">
-              <a href={href || "#"} download className="flex items-center justify-center space-x-2">
+            <button className="w-full p-2 bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors">
+              <a href={href} download className="flex items-center justify-center space-x-2" target="_blank">
                 <Download className="w-5 h-5" />
                 <span className="text-lg font-semibold">Download Now</span>
               </a>
-            </Button>
+            </button>
           </div>
         </div>
       </div>

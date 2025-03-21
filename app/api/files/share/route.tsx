@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { fileId, duration } = body;
 
-    if (!fileId || typeof duration !== "number") {
+    if (!fileId || typeof duration !== "number" || typeof fileId !== "number") {
       return NextResponse.json({ error: "Invalid request parameters" }, { status: 400 });
     }
 
@@ -37,9 +37,8 @@ export async function POST(req: NextRequest) {
     }
 
     const { id, filename, size, type } = rows[0];
-
     const expires = new Date(Date.now() + duration * 24 * 60 * 60 * 1000);
-    const token = generateToken(duration)
+    const token = generateToken(fileId, duration)
 
     const url = `${process.env.NEXT_PUBLIC_APP_URL}/file?id=${fileId}&token=${token}`;
 

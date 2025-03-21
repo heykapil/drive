@@ -1,6 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { calculateChunkSize } from "@/lib/helpers/chunk-size";
 import { runPromisePool } from "@/lib/helpers/promise-pool";
@@ -10,7 +17,6 @@ import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { FileRow } from "./FileRow";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 const FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
 const MAX_RETRY_ATTEMPTS = 3;
@@ -32,7 +38,7 @@ interface UploadPart {
   ETag: string;
 }
 
-export default function FileUpload() {
+export default function FileUploadServer() {
   const { selectedBucket } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
@@ -44,14 +50,10 @@ export default function FileUpload() {
     uploadStatus: {},
   });
 
-  // Concurrency states.
   const [maxConcurrentFiles, setMaxConcurrentFiles] = useState<number>(3);
   const [maxConcurrentChunks, setMaxConcurrentChunks] = useState<number>(3);
-  const [maxSize, setMaxSize] = useState<number>(1)
-  // Abort controllers for canceling uploads.
   const abortControllers = useRef<Record<string, AbortController[]>>({});
 
-  // Helper: update upload status.
   const updateUploadStatus = (fileName: string, status: string) => {
     setState((prev) => ({
       ...prev,
@@ -74,7 +76,6 @@ export default function FileUpload() {
     }));
   };
 
-  // Handle file drop (or paste) events.
   const onDrop = (acceptedFiles: File[]) => {
     setState((prev) => {
       const newFileNames = acceptedFiles.reduce((acc, file) => {
@@ -92,168 +93,117 @@ export default function FileUpload() {
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     multiple: true,
-    maxSize: maxSize * 1024 * 1024 * 1024,
+    // maxSize: 1024 * 1024 * 1024,
   });
 
-  // Allow pasting files.
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (!e.clipboardData) return;
-      const items = e.clipboardData.items;
-      const files: File[] = [];
-      for (const item of items) {
-        if (item.kind === "file") {
-          const file = item.getAsFile();
-          if (file) files.push(file);
-        }
-      }
+      const files = Array.from(e.clipboardData.items)
+        .filter(item => item.kind === "file")
+        .map(item => item.getAsFile())
+        .filter((file): file is File => file !== null);
+
       if (files.length > 0) {
         e.preventDefault();
         onDrop(files);
       }
-      // Clean up blob URLs for images.
-      files.forEach((file) => {
-        if (file.type.startsWith("image/")) {
-          URL.revokeObjectURL(URL.createObjectURL(file));
-        }
-      });
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
   }, []);
 
-  // Update file name and corresponding state.
   const handleFileNameChange = (oldName: string, newName: string) => {
     if (!newName || newName === oldName) return;
     const ext = oldName.split(".").pop();
     const newFileName = newName.includes(".") ? newName : `${newName}.${ext}`;
+
     setState((prev) => {
       const updatedFiles = prev.files.map((file) =>
         file.name === oldName
           ? new File([file], newFileName, { type: file.type || DEFAULT_CONTENT_TYPE })
           : file
       );
-      const updatedFileNames = { ...prev.fileNames };
-      delete updatedFileNames[oldName];
-      updatedFileNames[newFileName] = newFileName;
 
-      const updatedUploadProgress = { ...prev.uploadProgress };
-      if (oldName in updatedUploadProgress) {
-        updatedUploadProgress[newFileName] = updatedUploadProgress[oldName];
-        delete updatedUploadProgress[oldName];
-      }
-      const updatedTotalParts = { ...prev.totalParts };
-      if (oldName in updatedTotalParts) {
-        updatedTotalParts[newFileName] = updatedTotalParts[oldName];
-        delete updatedTotalParts[oldName];
-      }
-      const updatedChunkSizes = { ...prev.chunkSizes };
-      if (oldName in updatedChunkSizes) {
-        updatedChunkSizes[newFileName] = updatedChunkSizes[oldName];
-        delete updatedChunkSizes[oldName];
-      }
-      const updatedUploadStatus = { ...prev.uploadStatus };
-      if (oldName in updatedUploadStatus) {
-        updatedUploadStatus[newFileName] = updatedUploadStatus[oldName];
-        delete updatedUploadStatus[oldName];
-      }
-      const updatedUploadingFiles = { ...prev.uploadingFiles };
-      if (oldName in updatedUploadingFiles) {
-        updatedUploadingFiles[newFileName] = updatedUploadingFiles[oldName];
-        delete updatedUploadingFiles[oldName];
-      }
       return {
         ...prev,
         files: updatedFiles,
-        fileNames: updatedFileNames,
-        uploadProgress: updatedUploadProgress,
-        totalParts: updatedTotalParts,
-        chunkSizes: updatedChunkSizes,
-        uploadStatus: updatedUploadStatus,
-        uploadingFiles: updatedUploadingFiles,
+        fileNames: { ...prev.fileNames, [newFileName]: newFileName },
+        uploadProgress: updateObjectKey(prev.uploadProgress, oldName, newFileName),
+        totalParts: updateObjectKey(prev.totalParts, oldName, newFileName),
+        chunkSizes: updateObjectKey(prev.chunkSizes, oldName, newFileName),
+        uploadStatus: updateObjectKey(prev.uploadStatus, oldName, newFileName),
+        uploadingFiles: updateObjectKey(prev.uploadingFiles, oldName, newFileName),
       };
     });
   };
 
-  // Cancel upload and remove file from state.
   const handleCancel = (fileName: string) => {
-    if (abortControllers.current[fileName]) {
-      abortControllers.current[fileName].forEach((controller) => controller.abort());
-      delete abortControllers.current[fileName];
-    }
+    abortControllers.current[fileName]?.forEach(controller => controller.abort());
+    delete abortControllers.current[fileName];
+
     setState((prev) => ({
       ...prev,
       files: prev.files.filter((f) => f.name !== fileName),
-      fileNames: Object.fromEntries(Object.entries(prev.fileNames).filter(([key]) => key !== fileName)),
-      uploadProgress: Object.fromEntries(Object.entries(prev.uploadProgress).filter(([key]) => key !== fileName)),
-      totalParts: Object.fromEntries(Object.entries(prev.totalParts).filter(([key]) => key !== fileName)),
-      chunkSizes: Object.fromEntries(Object.entries(prev.chunkSizes).filter(([key]) => key !== fileName)),
-      uploadStatus: Object.fromEntries(Object.entries(prev.uploadStatus).filter(([key]) => key !== fileName)),
-      uploadingFiles: Object.fromEntries(Object.entries(prev.uploadingFiles).filter(([key]) => key !== fileName)),
+      fileNames: omitKey(prev.fileNames, fileName),
+      uploadProgress: omitKey(prev.uploadProgress, fileName),
+      totalParts: omitKey(prev.totalParts, fileName),
+      chunkSizes: omitKey(prev.chunkSizes, fileName),
+      uploadStatus: omitKey(prev.uploadStatus, fileName),
+      uploadingFiles: omitKey(prev.uploadingFiles, fileName),
     }));
   };
 
-
-
-  // Main file upload function.
   const uploadFiles = async () => {
     const fileTasks = state.files.map((file) => async () => {
       handleFileUploadStart(file.name);
       updateUploadStatus(file.name, "Initiating upload...");
       try {
-        if (file.size <= FILE_SIZE_THRESHOLD) {
-          await uploadSimple(file);
-        } else {
-          await uploadMultipart(file);
-        }
+        file.size <= FILE_SIZE_THRESHOLD
+          ? await uploadSimple(file)
+          : await uploadMultipart(file);
         toast.success(`${file.name} uploaded successfully!`);
       } catch (error: any) {
-        const errorMessage =
-          error.name === "AbortError" ? "Upload cancelled" : error.message;
-        toast.error(`Failed to upload ${file.name}: ${errorMessage}`);
+        const message = error.name === "AbortError" ? "Upload cancelled" : error.message;
+        toast.error(`Failed to upload ${file.name}: ${message}`);
       } finally {
         handleFileUploadEnd(file.name);
         handleCancel(file.name);
       }
     });
+
     try {
       await runPromisePool(fileTasks, maxConcurrentFiles);
     } catch (error: any) {
-      toast.error(error?.message || "An unexpected error occurred during upload");
+      toast.error(error?.message || "Upload failed");
     }
   };
 
-  // Simple upload for small files.
   const uploadSimple = async (file: File) => {
-    const fileName = file.name;
-    updateUploadStatus(fileName, "Uploading file...");
     const controller = new AbortController();
-    abortControllers.current[fileName] = [controller];
+    abortControllers.current[file.name] = [controller];
+
     const formData = new FormData();
     formData.append("file", file);
-    const response = await fetch(`/api/upload/simple?bucket=${selectedBucket}`, {
+
+    await fetch(`/api/upload/simple?bucket=${selectedBucket}`, {
       method: "POST",
       body: formData,
       signal: controller.signal,
     });
-    const simRes = await response.json();
-    console.log(simRes)
-    if (!simRes.success) {
-      toast.error(simRes.error);
-    }
   };
 
-  // Multipart upload for large files.
   const uploadMultipart = async (file: File) => {
     const fileName = file.name;
-    const contentType = getFileType(file) || file.type || getFileTypeFromFilename(fileName) || DEFAULT_CONTENT_TYPE;
+    const contentType = getFileType(file) || getFileTypeFromFilename(fileName) || DEFAULT_CONTENT_TYPE;
 
     const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filename: fileName, contentType }),
     });
-    if (!initRes.ok) throw new Error("Failed to initiate upload");
+
+    if (!initRes.ok) throw new Error("Initiation failed");
     const { uploadId, key } = await initRes.json();
 
     const chunkSize = calculateChunkSize(file.size);
@@ -265,24 +215,21 @@ export default function FileUpload() {
       chunkSizes: { ...prev.chunkSizes, [fileName]: chunkSize },
       uploadProgress: {
         ...prev.uploadProgress,
-        [fileName]: Array.from({ length: totalParts }, (_, i) => i + 1).reduce<Record<number, number>>(
+        [fileName]: Array.from({ length: totalParts }, (_, i) => i + 1).reduce(
           (acc, part) => ({ ...acc, [part]: 0 }),
           {}
         ),
       },
     }));
 
-    const chunkTasks = [];
-    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
-      chunkTasks.push(() =>
-        uploadChunk(file, partNumber, totalParts, chunkSize, uploadId, key, fileName)
-      );
-    }
-    const parts: UploadPart[] = await runPromisePool(chunkTasks, maxConcurrentChunks);
-    await completeMultipartUpload(file, uploadId, key,  contentType, parts, fileName);
+    const chunkTasks = Array.from({ length: totalParts }, (_, i) => i + 1).map((partNumber) =>
+      () => uploadChunk(file, partNumber, totalParts, chunkSize, uploadId, key, fileName)
+    );
+
+    const parts = await runPromisePool(chunkTasks, maxConcurrentChunks);
+    await completeMultipartUpload(file, uploadId, key, contentType, parts, fileName);
   };
 
-  // Upload a single chunk with retry logic.
   const uploadChunk = async (
     file: File,
     partNumber: number,
@@ -293,79 +240,73 @@ export default function FileUpload() {
     fileName: string
   ): Promise<UploadPart> => {
     const controller = new AbortController();
-    if (!abortControllers.current[fileName]) {
-      abortControllers.current[fileName] = [];
-    }
-    abortControllers.current[fileName].push(controller);
-    updateUploadStatus(fileName, `Uploading chunk ${partNumber} of ${totalParts}...`);
+    abortControllers.current[fileName] = [...(abortControllers.current[fileName] || []), controller];
+
     let attempt = 0;
     while (attempt < MAX_RETRY_ATTEMPTS) {
       try {
         const start = (partNumber - 1) * chunkSize;
         const end = Math.min(start + chunkSize, file.size);
         const chunk = file.slice(start, end);
-        const presignRes = await fetch(`/api/upload/multipart/presign?bucket=${selectedBucket}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uploadId, key, partNumber }),
-        });
-        const { url } = await presignRes.json();
-        const response = await axios.put(url, chunk, {
-          signal: controller.signal,
-          onUploadProgress: (progressEvent) => {
-            setState((prev) => ({
-              ...prev,
-              uploadProgress: {
-                ...prev.uploadProgress,
-                [fileName]: {
-                  ...prev.uploadProgress[fileName],
-                  [partNumber]: progressEvent.loaded,
+
+        const formData = new FormData();
+        formData.append("uploadId", uploadId);
+        formData.append("key", key);
+        formData.append("partNumber", partNumber.toString());
+        formData.append("chunk", new Blob([chunk]));
+
+        const { data } = await axios.post(
+          `/api/upload/multipart/chunk?bucket=${selectedBucket}`,
+          formData,
+          {
+            signal: controller.signal,
+            onUploadProgress: (progressEvent) => {
+              setState(prev => ({
+                ...prev,
+                uploadProgress: {
+                  ...prev.uploadProgress,
+                  [fileName]: {
+                    ...prev.uploadProgress[fileName],
+                    [partNumber]: progressEvent.loaded,
+                  },
                 },
-              },
-            }));
-          },
-        });
-        const eTag = response.headers.etag?.replace(/"/g, "") || "";
-        if (!eTag) throw new Error(`Missing ETag for part ${partNumber}`);
-        setState((prev) => ({
+              }));
+            },
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        if (!data.success) throw new Error(data.error || "Chunk upload failed");
+
+        setState(prev => ({
           ...prev,
           uploadProgress: {
             ...prev.uploadProgress,
             [fileName]: { ...prev.uploadProgress[fileName], [partNumber]: chunk.size },
           },
         }));
-        return { PartNumber: partNumber, ETag: eTag };
+
+        return { PartNumber: partNumber, ETag: data.ETag };
       } catch (error: any) {
         if (error.name === "AbortError") throw error;
-        attempt++;
-        if (attempt >= MAX_RETRY_ATTEMPTS) {
-          throw new Error(`Part ${partNumber} upload failed after ${MAX_RETRY_ATTEMPTS} attempts`);
-        }
-        const delay = RETRY_DELAY * Math.pow(2, attempt) + Math.random() * 500;
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        setState((prev) => ({
-          ...prev,
-          uploadProgress: {
-            ...prev.uploadProgress,
-            [fileName]: { ...prev.uploadProgress[fileName], [partNumber]: 0 },
-          },
-        }));
+        if (++attempt >= MAX_RETRY_ATTEMPTS) throw error;
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, attempt)));
       }
     }
-    throw new Error(`Part ${partNumber} upload failed after ${MAX_RETRY_ATTEMPTS} attempts`);
+    throw new Error(`Part ${partNumber} failed after ${MAX_RETRY_ATTEMPTS} attempts`);
   };
 
-  // Complete multipart upload.
   const completeMultipartUpload = async (
     file: File,
     uploadId: string,
     key: string,
-    type: string,
+    contentType: string,
     parts: UploadPart[],
     fileName: string
   ) => {
-    const contentType = getFileType(file) || type || file.type || DEFAULT_CONTENT_TYPE;
-    const finalRes = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucket}`, {
+    const res = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucket}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -377,29 +318,29 @@ export default function FileUpload() {
         type: contentType,
       }),
     });
-    const result = await finalRes.json();
-    console.log("Complete upload response:", result);
-    if (!finalRes.ok || !result.success) {
-      throw new Error(result.error || "Unknown error");
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || "Completion failed");
     }
   };
 
-  // Calculate upload progress for a file.
   const getUploadProgress = (file: File) => {
     const fileName = file.name;
     const totalParts = state.totalParts[fileName] || 0;
     const chunkSize = state.chunkSizes[fileName] || 0;
     const progressData = state.uploadProgress[fileName] || {};
+
     const totalUploaded = Object.values(progressData).reduce((sum, bytes) => sum + bytes, 0);
-    const progress = (totalUploaded / file.size) * 100;
-    const completedParts = Object.entries(progressData).reduce((count, [partStr, bytes]) => {
-      const partNumber = parseInt(partStr);
-      const isLastPart = partNumber === totalParts;
-      const partSize = isLastPart ? file.size - chunkSize * (partNumber - 1) : chunkSize;
-      return count + (bytes >= partSize ? 1 : 0);
+    const completedParts = Object.entries(progressData).reduce((count, [part, bytes]) => {
+      const partNum = parseInt(part);
+      const isLast = partNum === totalParts;
+      const expected = isLast ? file.size - (totalParts - 1) * chunkSize : chunkSize;
+      return count + (bytes >= expected ? 1 : 0);
     }, 0);
+
     return {
-      progress: Math.min(100, progress),
+      progress: Math.min(100, (totalUploaded / file.size) * 100),
       uploadedParts: `${completedParts}/${totalParts}`,
       totalUploaded,
     };
@@ -407,30 +348,30 @@ export default function FileUpload() {
 
   return (
     <div className="space-y-4 p-4 lg:ml-4 border rounded-lg">
+
       <div
         {...getRootProps()}
         className="border-dashed border-2 px-6 py-36 text-center cursor-pointer bg-background rounded-lg"
       >
         <input {...getInputProps()} />
-        <p>Drag & drop files here, or click to select (Ctrl/Cmd+V to paste)</p>
+        <p>Drag & drop files here, or click/paste to upload</p>
       </div>
-      {/* File List */}
+
       <div className="space-y-2">
         {state.files.map((file) => (
           <FileRow
             key={file.name}
             file={file}
-            displayName={state.fileNames[file.name] || file.name}
+            displayName={state.fileNames[file.name]}
             progressData={getUploadProgress(file)}
             fileType={getFileType(file) || DEFAULT_CONTENT_TYPE}
             uploadStatus={state.uploadStatus[file.name]}
-            isUploading={state.uploadingFiles[file.name] || false}
+            isUploading={!!state.uploadingFiles[file.name]}
             onFileNameChange={(newName) => handleFileNameChange(file.name, newName)}
             onCancel={() => handleCancel(file.name)}
           />
         ))}
       </div>
-      {/* Concurrency Options */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 items-center">
         <div className="flex flex-row space-x-2 items-center">
           <label className="block text-sm font-medium mb-1">
@@ -470,36 +411,30 @@ export default function FileUpload() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-row space-x-2 items-center">
-          <label className="block text-sm font-medium mb-1">
-            Max File size
-          </label>
-          <Select
-            value={maxSize.toString()}
-            onValueChange={(value) => setMaxSize(parseInt(value))}
-          >
-            <SelectTrigger className="w-auto">
-              <SelectValue placeholder="Select max file size" />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((num) => (
-                <SelectItem key={num} value={num.toString()}>
-                  {num} GB
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
       </div>
+
+
 
       <Button
         onClick={uploadFiles}
-        disabled={state.files.length === 0 || Object.values(state.uploadingFiles).some(Boolean)}
+        disabled={!state.files.length || Object.values(state.uploadingFiles).some(Boolean)}
+        className="w-full"
       >
         {Object.values(state.uploadingFiles).some(Boolean)
           ? "Uploading..."
-          : `Upload to ${selectedBucket}`}
+          : `Upload ${state.files.length} file(s) to ${selectedBucket}`}
       </Button>
     </div>
   );
 }
+
+// Helper functions
+const updateObjectKey = <T extends object>(obj: T, oldKey: keyof T, newKey: string) => {
+  const { [oldKey]: value, ...rest } = obj;
+  return { ...rest, [newKey]: value } as T;
+};
+
+const omitKey = <T extends object>(obj: T, key: keyof T) => {
+  const { [key]: _, ...rest } = obj;
+  return rest as Omit<T, keyof T>;
+};

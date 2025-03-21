@@ -65,11 +65,10 @@ export default function HeaderNav({ session }: { session: Session }) {
 
   const handleBucketChange = async (value: string) => {
     if (value === selectedBucket) return;
-
     const prevBucket = selectedBucket;
+
     try {
       toast.promise(
-
         async () => {
           setSelectedBucket(value)
         },
@@ -83,9 +82,7 @@ export default function HeaderNav({ session }: { session: Session }) {
       setSelectedBucket(prevBucket);
     }
   };
-
   if (!isMounted) return null;
-
   return (
     <header className="sticky top-0 z-50 w-full px-4 sm:px-8 md:px-16 lg:px-20 border-b backdrop-blur-lg bg-background/10">
       {isNavigating && (
