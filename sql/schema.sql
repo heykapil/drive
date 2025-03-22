@@ -4,8 +4,9 @@ CREATE TABLE files (
     key TEXT NOT NULL UNIQUE,
     size BIGINT NOT NULL,
     type TEXT NOT NULL,
-    uploaded_at TIMESTAMP DEFAULT NOW(),
+    uploaded_at TIMESTAMPTZ DEFAULT NOW(),
     is_public BOOLEAN DEFAULT FALSE,
+    liked BOOLEAN NOT NULL DEFAULT FALSE,
     bucket VARCHAR(50) DEFAULT 'cdn.kapil.app'
 );
 

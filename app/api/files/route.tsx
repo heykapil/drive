@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     const orderBy = sortOptions[sort] || "uploaded_at DESC";
 
     const { rows } = await query(
-      `SELECT id, filename, key, size, type, uploaded_at, is_public, bucket
+      `SELECT id, filename, key, size, type, uploaded_at, is_public, bucket, liked
        FROM files
        WHERE bucket = $4 AND filename ILIKE $1
        ORDER BY ${orderBy}

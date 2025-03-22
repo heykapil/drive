@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { formatBytes, formatDate } from "@/lib/utils";
-import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, Share2, Square, Trash2 } from "lucide-react";
+import {  ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Download, Eye, EyeOff, FileText, Fullscreen, Grid, Heart, HeartOff, List, RefreshCw, Share2, Square, Trash2 } from "lucide-react";
 import { useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmModal } from "./ConfirmModal";
@@ -28,6 +28,7 @@ type FileState = {
   previewFile: any | null;
   modals: {
     delete: boolean;
+    rename: boolean;
     privacy: boolean;
     multidelete: boolean;
     multipublic: boolean;
@@ -53,7 +54,7 @@ const initialState: FileState = {
   view: 'list',
   selectedFile: null,
   previewFile: null,
-  modals: { delete: false, privacy: false, multidelete: false, multipublic: false, multiprivate: false },
+  modals: { delete: false, rename: false, privacy: false, multidelete: false, multipublic: false, multiprivate: false },
   loading: false,
   error: null,
 };
@@ -74,7 +75,7 @@ export default function FileList() {
   const { selectedBucket } = useBucketStore();
   const [state, dispatch] = useReducer(fileReducer, initialState);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-
+  // const production = process.env.NODE_ENV === 'production';
   const toggleFileSelection = (fileId: string) => {
     setSelectedFiles((prev) => {
       const newSelection = new Set(prev);
@@ -164,9 +165,66 @@ export default function FileList() {
     }
   };
 
+  // const handleDownloadAsZip = async () => {
+  //   try {
+  //     if (selectedFiles.size === 0) return;
+  //     const fileIds = Array.from(selectedFiles);
+  //     const urlResponse = await fetch('/api/files/urls', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({
+  //         fileIds,
+  //         bucket: selectedBucket,
+  //         expiresIn: 600 // Optional, defaults to 300 (5 minutes)
+  //       }),
+  //     });
+
+  //     if (!urlResponse.ok) {
+  //       throw new Error('Failed to fetch presigned URLs');
+  //     }
+
+  //     const data = await urlResponse.json();
+
+  //     const response = await fetch('/api/files/zip', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         presignedUrls: data.presignedUrls.map(u => u.url)
+  //       })
+  //     });
+
+  //     if (!response.body) throw new Error('No response body');
+
+  //     // Stream directly to the browser
+  //     const reader = response.body.getReader();
+  //     const chunks: Uint8Array[] = [];
+
+  //     while (true) {
+  //       const { done, value } = await reader.read();
+  //       if (done) break;
+  //       if (value) chunks.push(value);
+  //     }
+
+  //     const blob = new Blob(chunks, { type: 'application/zip' });
+  //     const url = window.URL.createObjectURL(blob);
+  //     const a = document.createElement('a');
+  //     a.href = url;
+  //     a.download = 'files.zip';
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     window.URL.revokeObjectURL(url);
+  //     document.body.removeChild(a);
+  //   } catch (error) {
+  //     console.error('Download error:', error);
+  //   }
+  // };
+
+
 
   useEffect(() => {
-    if (selectedBucket) {
+    if (!!selectedBucket) {
       fetchFiles();
     } else {
       dispatch({ type: 'RESET' });
@@ -254,6 +312,34 @@ export default function FileList() {
     }
   };
 
+  const updateFile = async({ id, rename, liked }: { id: number, rename?: string, liked?: boolean }) => {
+    const url = `/api/files/edit?bucket=${selectedBucket}`;
+    try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fileId: id,
+            ...(rename && { rename }),
+            ...(typeof liked === 'boolean' && { liked })
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          toast.error(errorData.error || 'Failed to update file');
+        }
+        toast.success('File updated successfully');
+      } catch (error) {
+        console.error('Update failed:', error);
+        toast.error('Failed to update file');
+      } finally {
+        fetchFiles();
+      }
+  }
+
   const togglePrivacy = async () => {
     if (!state.selectedFile) return;
 
@@ -318,7 +404,7 @@ export default function FileList() {
   );
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-4 w-full">
       <div className="flex flex-col gap-4 md:flex-row md:justify-between">
         <Input
           placeholder="Search files..."
@@ -421,6 +507,10 @@ export default function FileList() {
               variant="outline">
                <Eye /> <span className="sr-only lg:not-sr-only"> Make public ({selectedFiles.size} files)</span>
             </Button>
+            {/* {!production && (
+              <Button onClick={() => handleDownloadAsZip()} variant="default">
+                <Download />  <span className="sr-only lg:not-sr-only">Archive ({selectedFiles.size} files)</span>
+              </Button>)} */}
             <Button onClick={() => {
               dispatch({ type: "SET_MODAL", modal: "multidelete", value: true })}} variant="destructive">
               <Trash2 />  <span className="sr-only lg:not-sr-only">Delete ({selectedFiles.size} files)</span>
@@ -632,7 +722,7 @@ export default function FileList() {
 
           {/* List view */}
           {state.view === "list" && (
-                      <div className="rounded-md border overflow-x-auto">
+                      <div className="rounded-md border w-full overflow-x-auto">
                         <Table className="w-full table">
                           <TableHeader>
                             <TableRow>
@@ -720,6 +810,15 @@ export default function FileList() {
                                         <Copy className="mr-2 h-4 w-4" />
                                         Copy Link
                                       </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={async () => {
+                                          dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                          await updateFile({ id: file.id, liked: !file.liked });
+                                        }}
+                                      >
+                                        {file.liked ? <HeartOff className="mr-2 h-4 w-4 text-red-500" /> : <Heart className="mr-2 h-4 w-4 text-red-500" />}
+                                        {file.liked ? 'Unlike' : 'Like'}
+                                      </DropdownMenuItem>
                                       <DropdownMenuSub>
                                         <DropdownMenuSubTrigger>
                                           <span className="flex flex-row">
@@ -759,7 +858,7 @@ export default function FileList() {
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem
-                                        className="text-destructive"
+                                        className="text-red-500"
                                         onClick={() => {
                                           dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
                                           dispatch({ type: "SET_MODAL", modal: "delete", value: true });
