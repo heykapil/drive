@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { MoreHorizontal } from "lucide-react"
 import { useEffect, useState } from 'react'
 
-import { DataTablePagination } from "@/components/data-table-pagination"
+import { DataTablePagination } from "@/components/data/data-table-pagination"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"

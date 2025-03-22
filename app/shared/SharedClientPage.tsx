@@ -4,8 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import type { SharedFile } from './shared-files-table'
-import { SharedFilesTable } from './shared-files-table'
+import type { SharedFile } from '../../components/data/shared-files-table'
+import { SharedFilesTable } from '../../components/data/shared-files-table'
 
 interface ApiResponse {
   files: SharedFile[]

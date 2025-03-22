@@ -1,5 +1,5 @@
 import { CountdownTimer } from "@/components/CountDownTimer";
-import FileIcon from "@/components/FileIcon";
+import FileIcon from "@/components/data/FileIcon";
 import { verifyToken } from "@/lib/helpers/token";
 import { formatBytes } from "@/lib/utils";
 import { buckets } from "@/service/bucket.config";

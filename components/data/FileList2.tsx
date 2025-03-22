@@ -9,11 +9,11 @@ import { useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmModal } from "./ConfirmModal";
 import FileIcon from "./FileIcon";
-import FileViewer from "./FileViewer3";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { Skeleton } from "./ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { VideoPlayer } from "./VideoPlayer4";
+import FileViewer from "@/components/viewer/FileViewer3";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Skeleton } from "../ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { VideoPlayer } from "../viewer/VideoPlayer4";
 
 type FileState = {
   files: any[];

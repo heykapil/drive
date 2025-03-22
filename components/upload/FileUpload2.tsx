@@ -4,35 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useBucketStore } from "@/hooks/use-bucket-store";
-import { calculateChunkSize } from "@/lib/helpers/chunk-size";
 import { cn, formatBytes, getFileType } from "@/lib/utils";
-import axios from 'axios';
 import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
-import FileIcon from "./FileIcon";
+import FileIcon from "../data/FileIcon";
 
 const FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
 const PREVIEW_SIZE_LIMIT = 10 * 1024 * 1024; // 10MB
 
 interface FileState {
   files: File[];
+  progress: Record<string, number>;
   uploading: boolean;
   fileNames: Record<string, string>;
-  uploadProgress: Record<string, Record<number, number>>;
-  totalParts: Record<string, number>;
-  chunkSizes: Record<string, number>;
 }
 
 export default function FileUpload() {
   const { selectedBucket } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
+    progress: {},
     uploading: false,
     fileNames: {},
-    uploadProgress: {},
-    totalParts: {},
-    chunkSizes: {},
   });
   const abortControllers = useRef<Record<string, AbortController[]>>({});
 
@@ -64,10 +58,10 @@ export default function FileUpload() {
     setState(prev => ({
       ...prev,
       files: [...prev.files, ...acceptedFiles],
-      fileNames: acceptedFiles.reduce((acc, file) => ({
-        ...acc,
-        [file.name]: file.name
-      }), prev.fileNames),
+      fileNames: acceptedFiles.reduce((acc, file) => {
+        acc[file.name] = file.name;
+        return acc;
+      }, { ...prev.fileNames }),
     }));
   };
 
@@ -88,6 +82,7 @@ export default function FileUpload() {
   };
 
   const handleCancel = (fileName: string) => {
+    // Abort ongoing uploads
     if (abortControllers.current[fileName]) {
       abortControllers.current[fileName].forEach(controller => controller.abort());
       delete abortControllers.current[fileName];
@@ -96,17 +91,11 @@ export default function FileUpload() {
     setState(prev => ({
       ...prev,
       files: prev.files.filter(f => f.name !== fileName),
+      progress: Object.fromEntries(
+        Object.entries(prev.progress).filter(([key]) => key !== fileName)
+      ),
       fileNames: Object.fromEntries(
         Object.entries(prev.fileNames).filter(([key]) => key !== fileName)
-      ),
-      uploadProgress: Object.fromEntries(
-        Object.entries(prev.uploadProgress).filter(([key]) => key !== fileName)
-      ),
-      totalParts: Object.fromEntries(
-        Object.entries(prev.totalParts).filter(([key]) => key !== fileName)
-      ),
-      chunkSizes: Object.fromEntries(
-        Object.entries(prev.chunkSizes).filter(([key]) => key !== fileName)
       ),
     }));
   };
@@ -114,22 +103,37 @@ export default function FileUpload() {
   const uploadFiles = async () => {
     setState(prev => ({ ...prev, uploading: true }));
 
-    try {
-      await Promise.all(state.files.map(async (file) => {
-        if (!state.files.some(f => f.name === file.name)) return;
-        const updatedFileName = state.fileNames[file.name] || file.name;
-        const renamedFile = new File([file], updatedFileName, { type: file.type });
+    const filesToUpload = [...state.files];
 
+    for (const file of filesToUpload) {
+      // Check if file still exists in state
+      if (!state.files.some(f => f.name === file.name)) continue;
+      const updatedFileName = state.fileNames[file.name] || file.name;
+      const renamedFile = new File([file], updatedFileName, { type: file.type });
+
+      setState(prev => ({
+            ...prev,
+            progress: {
+              ...prev.progress,
+              [renamedFile.name]: 0,
+            },
+          }));
+
+      try {
         if (renamedFile.size <= FILE_SIZE_THRESHOLD) {
           await uploadSimple(renamedFile);
         } else {
           await uploadMultipart(renamedFile);
         }
-        handleCancel(file.name);
-      }));
-    } finally {
-      setState(prev => ({ ...prev, uploading: false }));
+      } catch (error) {
+        console.error('Upload error:', error);
+        continue;
+      }
+
+      handleCancel(file.name);
     }
+
+    setState(prev => ({ ...prev, uploading: false }));
   };
 
   const uploadSimple = async (file: File) => {
@@ -148,11 +152,14 @@ export default function FileUpload() {
       });
 
       const simRes = await response.json();
-      if (!simRes.success) throw new Error(simRes.error);
+      if (!simRes.success) {
+        toast.error(`Error: ${simRes.error}`);
+        throw new Error(simRes.error);
+      }
       toast.success(`${file.name} uploaded successfully!`);
     } catch (e: any) {
       if (e.name !== 'AbortError') {
-        toast.error(`Failed to upload ${file.name}: ${e.message}`);
+        toast.error("Failed to upload file");
         throw e;
       }
     }
@@ -163,6 +170,9 @@ export default function FileUpload() {
     const controllers: AbortController[] = [];
 
     try {
+      toast.info('Preparing for multipart upload of the file...', {
+        description: file.name
+      })
       // Initiate upload
       const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
         method: "POST",
@@ -171,45 +181,34 @@ export default function FileUpload() {
 
       ({ uploadId, key } = await initRes.json());
       if (!uploadId) throw new Error("Failed to initiate upload");
-
-      // Calculate chunk size and total parts
+      toast.info('Preparing for presigned urls..',{
+        description: file.name
+      })
+      // Dynamic chunk sizing
       const chunkSize = calculateChunkSize(file.size);
       const totalParts = Math.ceil(file.size / chunkSize);
+      const parts: { PartNumber: number; ETag: string }[] = [];
 
-      // Initialize progress tracking
-      setState(prev => ({
-        ...prev,
-        totalParts: { ...prev.totalParts, [file.name]: totalParts },
-        chunkSizes: { ...prev.chunkSizes, [file.name]: chunkSize },
-        uploadProgress: {
-          ...prev.uploadProgress,
-          [file.name]: Array.from({ length: totalParts }, (_, i) => i + 1).reduce((acc, part) => {
-            acc[part] = 0;
-            return acc;
-          }, {} as Record<number, number>),
-        },
-      }));
-
-      // Upload parts with concurrency control
+      // Upload chunks with controlled concurrency
       const concurrentUploads = 3;
-      const uploadQueue: Promise<{ PartNumber: number; ETag: string }>[] = [];
+      const uploadQueue: Promise<void>[] = [];
 
       for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
         if (uploadQueue.length >= concurrentUploads) {
           await Promise.all(uploadQueue);
           uploadQueue.length = 0;
+          await new Promise(resolve => setTimeout(resolve, 0)); // Yield to UI
         }
 
         uploadQueue.push(
-          uploadChunk(file, partNumber, chunkSize, uploadId, key)
+          uploadChunk(file, partNumber, chunkSize, uploadId, key, parts, totalParts)
         );
       }
 
-      const parts = await Promise.all(uploadQueue);
+      await Promise.all(uploadQueue);
 
       // Complete upload
       await completeMultipartUpload(file, uploadId, key, parts);
-      toast.success(`${file.name} uploaded successfully!`);
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         toast.error(`Upload failed: ${error.message}`);
@@ -226,7 +225,9 @@ export default function FileUpload() {
     chunkSize: number,
     uploadId: string,
     key: string,
-  ): Promise<{ PartNumber: number; ETag: string }> => {
+    parts: any[],
+    totalParts: number
+  ) => {
     const controller = new AbortController();
     if (!abortControllers.current[file.name]) {
       abortControllers.current[file.name] = [];
@@ -245,40 +246,32 @@ export default function FileUpload() {
       });
 
       const { url } = await presignRes.json();
-
-      // Upload chunk with progress tracking
-      await axios.put(url, chunk, {
+      if (!url) toast.error(`Failed to get presigned URL for part ${partNumber}`);
+      // toast.success('Presigned url generated for ' + partNumber)
+      // Upload chunk
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        body: chunk,
         signal: controller.signal,
-        onUploadProgress: (progressEvent) => {
-          setState(prev => ({
-            ...prev,
-            uploadProgress: {
-              ...prev.uploadProgress,
-              [file.name]: {
-                ...prev.uploadProgress[file.name],
-                [partNumber]: progressEvent.loaded,
-              }
-            },
-          }));
-        },
       });
 
-      // Mark part as fully uploaded
+      if (!uploadRes.ok) toast.error(`Upload failed for part ${partNumber}`);
+      const eTag = uploadRes.headers.get("ETag")?.replace(/"/g, "") || '';
+      toast.success( `Chunk uploaded for ${file.name}`, {
+        description: `Chunk: ${partNumber}/${totalParts}`
+      })
+      parts.push({ PartNumber: partNumber, ETag: eTag });
+
+      // Update progress
       setState(prev => ({
         ...prev,
-        uploadProgress: {
-          ...prev.uploadProgress,
-          [file.name]: {
-            ...prev.uploadProgress[file.name],
-            [partNumber]: chunk.size,
-          }
+        progress: {
+          ...prev.progress,
+          [file.name]: Math.round((parts.length / totalParts) * 100),
         },
       }));
-
-      return { PartNumber: partNumber, ETag: 'etag' };
     } catch (error: any) {
       if (error.name !== 'AbortError') throw error;
-      return { PartNumber: partNumber, ETag: 'aborted' };
     }
   };
 
@@ -286,7 +279,7 @@ export default function FileUpload() {
     file: File,
     uploadId: string,
     key: string,
-    parts: { PartNumber: number; ETag: string }[]
+    parts: any[]
   ) => {
     const finalRes = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucket}`, {
       method: "POST",
@@ -305,30 +298,6 @@ export default function FileUpload() {
     }
   };
 
-  const getUploadProgress = (file: File) => {
-    const totalParts = state.totalParts[file.name] || 0;
-    const chunkSize = state.chunkSizes[file.name] || 0;
-    const progressData = state.uploadProgress[file.name] || {};
-
-    // Calculate total uploaded bytes
-    const totalUploaded = Object.values(progressData).reduce((sum, bytes) => sum + bytes, 0);
-    const progress = (totalUploaded / file.size) * 100;
-
-    // Calculate completed parts
-    const completedParts = Object.entries(progressData).reduce((count, [partStr, bytes]) => {
-      const partNumber = parseInt(partStr);
-      const isLastPart = partNumber === totalParts;
-      const partSize = isLastPart ? file.size - (chunkSize * (partNumber - 1)) : chunkSize;
-      return count + (bytes >= partSize ? 1 : 0);
-    }, 0);
-
-    return {
-      progress: Math.min(100, progress),
-      uploadedParts: `${completedParts}/${totalParts}`,
-      totalUploaded,
-    };
-  };
-
   return (
     <div className="space-y-4 p-4 lg:ml-4 border rounded-lg">
       <div {...getRootProps()} className="border-dashed border-2 px-6 py-36 text-center cursor-pointer bg-background rounded-lg">
@@ -338,8 +307,6 @@ export default function FileUpload() {
       <div className="space-y-2">
         {state.files.map((file) => {
           const displayName = state.fileNames[file.name] || file.name;
-          const { progress, uploadedParts, totalUploaded } = getUploadProgress(file);
-
           return (
             <div key={file.name} className="flex items-center gap-2 p-2 border rounded-lg">
               {file.size <= PREVIEW_SIZE_LIMIT && file.type.startsWith('image/') ? (
@@ -371,20 +338,16 @@ export default function FileUpload() {
                 </div>
                 <div className="w-full flex items-center gap-2">
                   <Progress
-                    value={progress}
+                    value={state.progress[displayName] || 0}
                     className={cn(
                       "h-2 w-full rounded-lg transition-all",
-                      "after:bg-blue-500 dark:after:bg-blue-400"
+                      "after:bg-blue-500 dark:after:bg-blue-400" // Progress bar color
                     )}
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {progress.toFixed(0)}%
-                  </span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{state.progress[displayName] || 0}%</span>
                 </div>
                 <p className="text-xs text-gray-500">
-                  {getFileType(file)} | {formatBytes(file.size)} |
-                  <span> Parts: {uploadedParts}</span> |
-                  <span> {formatBytes(totalUploaded)}</span>
+                  {getFileType(file)} | {formatBytes(file.size)}
                 </p>
               </div>
             </div>
@@ -399,4 +362,14 @@ export default function FileUpload() {
       </Button>
     </div>
   );
+}
+
+function calculateChunkSize(fileSize: number): number {
+  const chunkSizeMap = [
+    { limit: 100 * 1024 * 1024, size: 5 * 1024 * 1024 },
+    { limit: 500 * 1024 * 1024, size: 15 * 1024 * 1024 },
+    { limit: 1024 * 1024 * 1024, size: 25 * 1024 * 1024 },
+  ];
+
+  return chunkSizeMap.find(({ limit }) => fileSize < limit)?.size || 50 * 1024 * 1024;
 }

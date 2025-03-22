@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { Readex_Pro } from "next/font/google";
 import { Toaster } from 'sonner';
 import "./globals.css";
+import { HydrationZustand } from "@/hooks/use-bucket-store";
+import { ProgressProviders } from "@/components/ProgressBarProvider";
 
 const readexPro = Readex_Pro({
   subsets: ["latin"],
@@ -34,6 +36,7 @@ export default function RootLayout({
       <body className={`${readexPro.className} antialiased bg-background text-neutral-900 dark:text-white`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>
+            <ProgressProviders>
           <svg
                   className="pointer-events-none fixed top-0 left-0 isolate z-50 opacity-25 dark:opacity-[0.15] mix-blend-normal"
                    width="100%"
@@ -50,10 +53,12 @@ export default function RootLayout({
                    </filter>
                    <rect width="100%" height="100%" filter="url(#pedroduarteisalegend)"></rect>
                  </svg>
+                 <HydrationZustand />
           <main className="min-h-screen flex flex-col items-center p-0">
             {children}
           </main>
           <Toaster />
+            </ProgressProviders>
           </QueryProvider>
         </ThemeProvider>
       </body>

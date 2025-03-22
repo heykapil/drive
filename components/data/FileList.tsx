@@ -8,8 +8,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmModal } from "./ConfirmModal";
 import FileIcon from "./FileIcon";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 export default function FileList() {
   const { selectedBucket } = useBucketStore();
   const [state, setState] = useState<Record<string, any>>({

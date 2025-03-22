@@ -6,9 +6,9 @@ import { useBucketStore } from "@/hooks/use-bucket-store";
 import { sanitizeFileName } from "@/lib/helpers/sanitize-file-name";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Card, CardContent } from "./ui/card";
-import { Input } from "./ui/input";
-import { Switch } from "./ui/switch";
+import { Card, CardContent } from "../ui/card";
+import { Input } from "../ui/input";
+import { Switch } from "../ui/switch";
 
 export default function RemoteUpload() {
   const [useProxy, setUseProxy] = useState(false);

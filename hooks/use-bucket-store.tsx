@@ -1,14 +1,36 @@
+'use client'
+import { useEffect } from 'react';
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
-// Define types for the Zustand store
 interface BucketStore {
   selectedBucket: string;
   setSelectedBucket: (newBucket: string) => void;
+  // accessCode: string | null;
+  // setAccessCode: (code: string) => void;
+  // clearSession: () => void;
 }
 
+export const useBucketStore = create<BucketStore>()(
+  persist(
+    (set) => ({
+      selectedBucket: 'default',
+      setSelectedBucket: (newBucket: string) => set({ selectedBucket: newBucket }),
+      // accessCode: null,
+      // setAccessCode: (code: string) => set({ accessCode: code }),
+      // clearSession: () => set({  accessCode: null })
+    }),
+    {
+      name: 'bucket-store', // Unique name for the storage
+      storage: createJSONStorage(() => sessionStorage), // Use sessionStorage
+    }
+  )
+);
 
-// Define Zustand store for bucket state
-export const useBucketStore = create<BucketStore>( (set) => ({
-  selectedBucket: 'default',
-  setSelectedBucket: (newBucket: string) => set({ selectedBucket: newBucket }),
-}));
+export function HydrationZustand() {
+  useEffect(() => {
+    useBucketStore.persist.rehydrate();
+  }, []);
+
+  return null;
+}

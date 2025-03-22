@@ -1,4 +1,4 @@
-import FileList from "@/components/FileList2";
+import FileList from "@/components/data/FileList2";
 import HeaderNav from "@/components/header-nav";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";

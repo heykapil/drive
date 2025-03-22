@@ -1,6 +1,6 @@
 "use client";
 
-import { StorageChart } from "@/components/StoragePieChart";
+import { StorageChart } from "@/components/data/StoragePieChart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { testSystemHealth } from "@/lib/actions";

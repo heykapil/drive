@@ -1,4 +1,4 @@
-import { SharedFile } from "@/app/shared/shared-files-table";
+import { SharedFile } from "@/components/data/shared-files-table";
 import { generateToken } from "@/lib/helpers/token";
 import { buckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";

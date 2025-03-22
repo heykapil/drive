@@ -27,7 +27,6 @@ const navLinks = [
 
 export default function HeaderNav({ session }: { session: Session }) {
   const [isMounted, setIsMounted] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
   const { theme, setTheme } = useTheme();
   const { selectedBucket, setSelectedBucket } = useBucketStore();
   const router = useRouter();
@@ -42,15 +41,6 @@ export default function HeaderNav({ session }: { session: Session }) {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  useEffect(() => {
-    const handleRouteChange = () => {
-      setIsNavigating(true);
-      const timeout = setTimeout(() => setIsNavigating(false), 300);
-      return () => clearTimeout(timeout);
-    };
-    handleRouteChange();
-  }, [path]);
 
   useEffect(() => {
     const activeElement = tabRefs.current[activeIndex]
@@ -85,12 +75,6 @@ export default function HeaderNav({ session }: { session: Session }) {
   if (!isMounted) return null;
   return (
     <header className="sticky top-0 z-50 w-full px-4 sm:px-8 md:px-16 lg:px-20 border-b backdrop-blur-lg bg-background/10">
-      {isNavigating && (
-        <div className="absolute top-16 left-0 right-0 h-[2px] bg-background">
-          <div className="h-full animate-pulse bg-blue-500 w-1/2" />
-        </div>
-      )}
-
       <div className="flex flex-row items-center justify-center mx-auto">
         <div className="container flex h-16 items-center justify-between py-4">
           <Link href="/" className="flex items-center gap-2">

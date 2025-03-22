@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { FileRow } from "./FileRow";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 const FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
 const MAX_RETRY_ATTEMPTS = 3;

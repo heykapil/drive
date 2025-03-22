@@ -1,5 +1,5 @@
 import HeaderNav from "@/components/header-nav";
-import RemoteUploadForm from "@/components/RemoteUpload2";
+import RemoteUploadForm from "@/components/upload/RemoteUpload2";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";

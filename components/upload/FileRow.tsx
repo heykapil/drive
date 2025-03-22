@@ -1,9 +1,9 @@
 'use client'
 import { cn, formatBytes } from "@/lib/utils";
 import { useState } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Progress } from "./ui/progress";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Progress } from "../ui/progress";
 
 
 interface FileRowProps {
