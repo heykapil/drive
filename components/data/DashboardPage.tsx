@@ -13,9 +13,7 @@ import {
   // X,
 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useEffect, useState } from "react"
@@ -23,6 +21,9 @@ import { useBucketStore } from "@/hooks/use-bucket-store"
 import FileIcon from "./FileIcon"
 import { getSingleBucketStorageUsage } from "@/service/s3-tebi"
 import { StorageProgress } from "./StorageProgress"
+import { formatDistanceToNow } from "date-fns"
+import Link from "next/link"
+import { Button } from "../ui/button"
 
 type Stats = {
   total_files: number
@@ -42,7 +43,10 @@ export default function DashboardPage() {
   const { selectedBucket } = useBucketStore()
   const [stats, setStats] = useState<Stats| null>(null);
    const [storage, setStorage] = useState<any|null>(null);
-   const [recentFiles, setRecentFiles] = useState([]);
+   const [recentFiles, setRecentFiles] = useState<any[]>([]);
+   const [recentImages, setRecentImages] = useState<any[]>([]);
+   const [recentVideos, setRecentVideos] = useState<any[]>([]);
+   const [recentDocs, setRecentDocs] = useState<any[]>([]);
    const [activeTab, setActiveTab] = useState("all");
    useEffect(() => {
        // Fetch statistics
@@ -54,17 +58,32 @@ export default function DashboardPage() {
        fetchStorageUsage(selectedBucket)
        // Fetch recent files
        fetchRecentFiles('all');
+       fetchRecentFiles('images')
+       fetchRecentFiles('videos')
+       fetchRecentFiles('documents')
      }, [selectedBucket]);
 
-  const fetchRecentFiles = (type: string) => {
-      let url = `/api/files?bucket=${selectedBucket}&recent=true&sort=uploaded_at_desc&limit=5`;
-      if (type !== 'all') url += `&typeGroup=${type}`;
 
-      fetch(url)
-        .then(res => res.json())
-        .then(data => setRecentFiles(data.files));
-    };
+   const fetchRecentFiles = async (type: string) => {
+     try {
+       const url = `/api/files?bucket=${selectedBucket}&recent=true&sort=uploaded_at_desc&limit=15`;
+       const response = await fetch(url);
+       const data = await response.json();
 
+       // Set all files
+       setRecentFiles(data.files);
+
+       // Filter and set categories
+       setRecentImages(data.files.filter(f => f.type.startsWith('image/')));
+       setRecentVideos(data.files.filter(f => f.type.startsWith('video/')));
+       setRecentDocs(data.files.filter(f =>
+         f.type.startsWith('application/') ||
+         f.type.startsWith('text/')
+       ));
+     } catch (error) {
+       console.error('Error fetching recent files:', error);
+     }
+   };
   const fetchStorageUsage = async (bucketId: string) => {
   const usage =   await getSingleBucketStorageUsage(bucketId)
     setStorage(usage)
@@ -145,7 +164,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Recent Uploads</CardTitle>
-              <CardDescription>You've uploaded 24 files in the last 7 days.</CardDescription>
+              <CardDescription>You've uploaded {stats?.last_week_files || 0} files in the last 7 days.</CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="all">
@@ -167,41 +186,20 @@ export default function DashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">presentation.pdf</TableCell>
-                          <TableCell className="hidden md:table-cell">PDF</TableCell>
-                          <TableCell className="hidden md:table-cell">2.4 MB</TableCell>
-                          <TableCell>Just now</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">vacation-photo.jpg</TableCell>
-                          <TableCell className="hidden md:table-cell">JPG</TableCell>
-                          <TableCell className="hidden md:table-cell">3.2 MB</TableCell>
-                          <TableCell>2 hours ago</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">project-demo.mp4</TableCell>
-                          <TableCell className="hidden md:table-cell">MP4</TableCell>
-                          <TableCell className="hidden md:table-cell">24.8 MB</TableCell>
-                          <TableCell>Yesterday</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">budget-2023.xlsx</TableCell>
-                          <TableCell className="hidden md:table-cell">XLSX</TableCell>
-                          <TableCell className="hidden md:table-cell">1.8 MB</TableCell>
-                          <TableCell>Yesterday</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">profile-picture.png</TableCell>
-                          <TableCell className="hidden md:table-cell">PNG</TableCell>
-                          <TableCell className="hidden md:table-cell">0.8 MB</TableCell>
-                          <TableCell>2 days ago</TableCell>
-                        </TableRow>
+                        {recentFiles.map((file: any) => (
+                          <TableRow key={file?.id}>
+                            <TableCell className="font-medium">{file?.filename}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {file?.type.split('/')[1].toUpperCase()}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">{file?.size}</TableCell>
+                            <TableCell>
+                              {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
-                  </div>
-                  <div className="mt-4 flex justify-center">
-                    <Button variant="outline">View All Files</Button>
                   </div>
                 </TabsContent>
                 <TabsContent value="images" className="m-0">
@@ -216,18 +214,18 @@ export default function DashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">vacation-photo.jpg</TableCell>
-                          <TableCell className="hidden md:table-cell">JPG</TableCell>
-                          <TableCell className="hidden md:table-cell">3.2 MB</TableCell>
-                          <TableCell>2 hours ago</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">profile-picture.png</TableCell>
-                          <TableCell className="hidden md:table-cell">PNG</TableCell>
-                          <TableCell className="hidden md:table-cell">0.8 MB</TableCell>
-                          <TableCell>2 days ago</TableCell>
-                        </TableRow>
+                        {recentImages.map((file: any) => (
+                          <TableRow key={file?.id}>
+                            <TableCell className="font-medium">{file?.filename}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {file?.type.split('/')[1].toUpperCase()}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">{file?.size}</TableCell>
+                            <TableCell>
+                              {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </div>
@@ -244,18 +242,18 @@ export default function DashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">presentation.pdf</TableCell>
-                          <TableCell className="hidden md:table-cell">PDF</TableCell>
-                          <TableCell className="hidden md:table-cell">2.4 MB</TableCell>
-                          <TableCell>Just now</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">budget-2023.xlsx</TableCell>
-                          <TableCell className="hidden md:table-cell">XLSX</TableCell>
-                          <TableCell className="hidden md:table-cell">1.8 MB</TableCell>
-                          <TableCell>Yesterday</TableCell>
-                        </TableRow>
+                        {recentDocs.map((file: any) => (
+                          <TableRow key={file?.id}>
+                            <TableCell className="font-medium">{file?.filename}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {file?.type.split('/')[1].toUpperCase()}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">{file?.size}</TableCell>
+                            <TableCell>
+                              {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </div>
@@ -272,17 +270,26 @@ export default function DashboardPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <TableRow>
-                          <TableCell className="font-medium">project-demo.mp4</TableCell>
-                          <TableCell className="hidden md:table-cell">MP4</TableCell>
-                          <TableCell className="hidden md:table-cell">24.8 MB</TableCell>
-                          <TableCell>Yesterday</TableCell>
-                        </TableRow>
+                        {recentVideos.map((file: any) => (
+                          <TableRow key={file?.id}>
+                            <TableCell className="font-medium">{file?.filename}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {file?.type.split('/')[1].toUpperCase()}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">{file?.size}</TableCell>
+                            <TableCell>
+                              {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </div>
                 </TabsContent>
               </Tabs>
+              <div className="mt-4 flex justify-center">
+                <Link href='/uploads'><Button variant={'outline'}> View All Files</Button></Link>
+              </div>
             </CardContent>
           </Card>
         </div>
