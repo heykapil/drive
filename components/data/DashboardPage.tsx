@@ -24,6 +24,9 @@ import { StorageProgress } from "./StorageProgress"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 import { Button } from "../ui/button"
+import { formatBytes } from "@/lib/utils"
+import { Skeleton } from "../ui/skeleton"
+import { toast } from "sonner"
 
 type Stats = {
   total_files: number
@@ -48,16 +51,24 @@ export default function DashboardPage() {
    const [recentVideos, setRecentVideos] = useState<any[]>([]);
    const [recentDocs, setRecentDocs] = useState<any[]>([]);
    const [activeTab, setActiveTab] = useState("all");
+  const [loading, setLoading] = useState<boolean>(false);
    useEffect(() => {
-       // Fetch statistics
+     try {
+       setLoading(true)
+      Promise.all([
        fetch(`/api/files/stats?bucket=${selectedBucket}`)
          .then(res => res.json())
-         .then(setStats);
-
+         .then(setStats),
        // Fetch storage usage
-       fetchStorageUsage(selectedBucket)
+       fetchStorageUsage(selectedBucket),
        // Fetch recent files
-       fetchRecentFiles('all');
+       fetchRecentFiles('all')])
+
+     } catch(e: any){
+       toast.error(e)
+     } finally {
+       setLoading(false)
+     }
      }, [selectedBucket]);
 
 
@@ -85,6 +96,12 @@ export default function DashboardPage() {
   const usage =   await getSingleBucketStorageUsage(bucketId)
     setStorage(usage)
   }
+
+  if (loading) {
+     return <div className="animate-pulse">Loading...</div>;
+   }
+
+
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <div className="flex-1 overflow-auto md:p-6">
@@ -188,7 +205,7 @@ export default function DashboardPage() {
                             <TableCell className="hidden md:table-cell">
                               {file?.type.split('/')[1].toUpperCase()}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">{file?.size}</TableCell>
+                            <TableCell className="hidden md:table-cell">{formatBytes(file?.size)}</TableCell>
                             <TableCell>
                               {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
                             </TableCell>
@@ -216,7 +233,7 @@ export default function DashboardPage() {
                             <TableCell className="hidden md:table-cell">
                               {file?.type.split('/')[1].toUpperCase()}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">{file?.size}</TableCell>
+                            <TableCell className="hidden md:table-cell">{formatBytes(file?.size)}</TableCell>
                             <TableCell>
                               {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
                             </TableCell>
@@ -244,7 +261,7 @@ export default function DashboardPage() {
                             <TableCell className="hidden md:table-cell">
                               {file?.type.split('/')[1].toUpperCase()}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">{file?.size}</TableCell>
+                            <TableCell className="hidden md:table-cell">{formatBytes(file?.size)}</TableCell>
                             <TableCell>
                               {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
                             </TableCell>
@@ -272,7 +289,7 @@ export default function DashboardPage() {
                             <TableCell className="hidden md:table-cell">
                               {file?.type.split('/')[1].toUpperCase()}
                             </TableCell>
-                            <TableCell className="hidden md:table-cell">{file?.size}</TableCell>
+                            <TableCell className="hidden md:table-cell">{formatBytes(file?.size)}</TableCell>
                             <TableCell>
                               {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
                             </TableCell>
@@ -292,4 +309,93 @@ export default function DashboardPage() {
       </div>
     </div>
   )
+}
+export function DashboardSkeleton() {
+  return (
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <div className="flex-1 overflow-auto md:p-6">
+        <div className="mx-auto max-w-6xl space-y-6">
+          {/* Overview Text */}
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-4 w-64" />
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="p-4 border rounded shadow-sm">
+                <div className="flex items-center justify-between pb-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-6 rounded" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Storage Usage Card */}
+          <div className="border rounded p-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-60" />
+            </div>
+            <div className="mt-4">
+              <Skeleton className="h-4 w-full" />
+              <div className="mt-2 space-y-1">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Uploads Card */}
+          <div className="border rounded p-4">
+            <div className="space-y-2 mb-4">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <div className="overflow-auto">
+              <div className="min-w-full">
+                {/* Table header */}
+                <div className="border-b">
+                  <div className="flex">
+                    {["Name", "Type", "Size", "Uploaded"].map((header, index) => (
+                      <div key={index} className={`px-4 py-2 ${index > 0 ? "hidden md:block" : ""}`}>
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Table rows */}
+                <div className="space-y-2 mt-4">
+                  {Array.from({ length: 4 }).map((_, rowIndex) => (
+                    <div key={rowIndex} className="flex items-center">
+                      <div className="px-4 py-2 flex-1">
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <div className="px-4 py-2 flex-1 hidden md:block">
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                      <div className="px-4 py-2 flex-1 hidden md:block">
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                      <div className="px-4 py-2 flex-1">
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-center">
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

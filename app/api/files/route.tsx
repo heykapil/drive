@@ -109,10 +109,7 @@ export async function GET(req: NextRequest) {
     const totalPages = Math.ceil(totalFiles / limit);
 
     return NextResponse.json({
-      files: rows.map(file => ({
-        ...file,
-        size: (file.size / 1024 / 1024).toFixed(1) + " MB" // Convert bytes to MB
-      })),
+      files: rows,
       total: totalFiles,
       page,
       totalPages,

@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { Card, CardContent } from "./ui/card"
+import { Skeleton } from "./ui/skeleton"
 
 const navLinks = [
   { href: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5 text-muted-foreground" /> },
@@ -314,4 +315,32 @@ export default function HeaderNav({ session }: { session: Session }) {
                 </div>
               </header>
             );
+}
+
+export function HeaderSkeleton() {
+  return (
+    <header className="sticky top-0 z-50 w-full px-4 sm:px-8 md:px-16 lg:px-20 border-b backdrop-blur-lg bg-background/10">
+      <div className="flex flex-row items-center justify-center mx-auto">
+        <div className="container flex h-16 items-center justify-between py-4">
+          {/* Logo & Title Skeleton */}
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-6 w-6 rounded" />
+            <Skeleton className="hidden sm:inline-block h-4 w-24" />
+          </div>
+          {/* Desktop Navigation Skeleton */}
+          <div className="hidden md:flex items-center justify-center w-full">
+            <Skeleton className="w-full h-8" />
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Bucket Selector Skeleton */}
+            <Skeleton className="hidden sm:block w-[180px] h-10 rounded" />
+            {/* Theme Toggle Skeleton */}
+            <Skeleton className="w-10 h-10 rounded" />
+            {/* Mobile Menu Skeleton */}
+            <Skeleton className="md:hidden w-10 h-10 rounded" />
+          </div>
+        </div>
+      </div>
+    </header>
+  );
 }
