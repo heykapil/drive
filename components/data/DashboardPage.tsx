@@ -58,9 +58,6 @@ export default function DashboardPage() {
        fetchStorageUsage(selectedBucket)
        // Fetch recent files
        fetchRecentFiles('all');
-       fetchRecentFiles('images')
-       fetchRecentFiles('videos')
-       fetchRecentFiles('documents')
      }, [selectedBucket]);
 
 
