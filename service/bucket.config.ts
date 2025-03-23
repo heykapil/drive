@@ -186,3 +186,8 @@ export const bucketOptions = Object.entries(buckets)
     value: key,
     label: key.charAt(0).toUpperCase() + key.slice(1), // Capitalizing the first letter
   }));
+
+export const bucketNames = Object.entries(buckets).map(([key, config]) => ({
+  value: config.name, // Use the actual database name
+  label: key.charAt(0).toUpperCase() + key.slice(1)
+}));

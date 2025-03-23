@@ -6,6 +6,7 @@ import { Toaster } from 'sonner';
 import "./globals.css";
 import { HydrationZustand } from "@/hooks/use-bucket-store";
 import { ProgressProviders } from "@/components/ProgressBarProvider";
+import { Check, CircleAlert } from "lucide-react";
 
 const readexPro = Readex_Pro({
   subsets: ["latin"],
@@ -57,7 +58,7 @@ export default function RootLayout({
           <main className="min-h-screen flex flex-col items-center p-0">
             {children}
           </main>
-          <Toaster />
+          <Toaster theme="system" expand richColors />
             </ProgressProviders>
           </QueryProvider>
         </ThemeProvider>

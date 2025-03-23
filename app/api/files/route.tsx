@@ -9,16 +9,29 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
     const sort = searchParams.get("sort") || "uploaded_at_desc";
-    const selectedBucket = searchParams.get("bucket");
+    const selectedBucketsParam = searchParams.get("bucket");
+    // If limit is not provided, then fetch all files.
+    const allFiles = !searchParams.get("limit") ? true : false;
     const limit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10));
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const offset = (page - 1) * limit;
-    if(!selectedBucket){
-      return NextResponse.json({error: 'No bucket selected'}, {status: 400})
+
+    if (!selectedBucketsParam) {
+      return NextResponse.json({ error: "No bucket selected" }, { status: 400 });
     }
-    const bucketConfig = buckets[selectedBucket]
-    if(!bucketConfig.name){
-      return NextResponse.json({error: 'Wrong bucket selected'}, {status: 400})
+
+    // Split and validate buckets.
+    const selectedBuckets = selectedBucketsParam
+      .split(",")
+      .map(b => b.trim())
+      .filter(b => b);
+
+    const validBuckets = selectedBuckets
+      .filter(b => buckets[b] && buckets[b].name)
+      .map(b => buckets[b].name);
+
+    if (validBuckets.length === 0) {
+      return NextResponse.json({ error: "No valid bucket selected" }, { status: 400 });
     }
 
     const sortOptions: Record<string, string> = {
@@ -33,18 +46,25 @@ export async function GET(req: NextRequest) {
     };
     const orderBy = sortOptions[sort] || "uploaded_at DESC";
 
-    const { rows } = await query(
-      `SELECT id, filename, key, size, type, uploaded_at, is_public, bucket, liked
-       FROM files
-       WHERE bucket = $4 AND filename ILIKE $1
-       ORDER BY ${orderBy}
-       LIMIT $2 OFFSET $3`,
-      [`%${search}%`, limit, offset, bucketConfig.name]
-    );
+    const { rows } = allFiles
+      ? await query(
+          `SELECT id, filename, key, size, type, uploaded_at, is_public, bucket, liked
+           FROM files
+           WHERE bucket = ANY($1)`,
+          [validBuckets]
+        )
+      : await query(
+          `SELECT id, filename, key, size, type, uploaded_at, is_public, bucket, liked
+           FROM files
+           WHERE bucket = ANY($4) AND filename ILIKE $1
+           ORDER BY ${orderBy}
+           LIMIT $2 OFFSET $3`,
+          [`%${search}%`, limit, offset, validBuckets]
+        );
 
     const { rows: countRows } = await query(
-      "SELECT COUNT(*)::int AS total FROM files WHERE bucket = $2 AND filename ILIKE $1",
-      [`%${search}%`, bucketConfig.name]
+      "SELECT COUNT(*)::int AS total FROM files WHERE bucket = ANY($2) AND filename ILIKE $1",
+      [`%${search}%`, validBuckets]
     );
 
     const totalFiles = countRows[0]?.total || 0;
@@ -59,7 +79,7 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const { fileIds } = await req.json(); // ✅ Expecting multiple fileIds in an array
+    const { fileIds } = await req.json(); // Expecting multiple fileIds
 
     if (!Array.isArray(fileIds) || fileIds.length === 0) {
       return NextResponse.json({ error: "At least one file ID is required" }, { status: 400 });
@@ -77,12 +97,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Invalid bucket selection" }, { status: 400 });
     }
 
-    // ✅ Fetch all file keys in a **single query**
+    // Fetch all file keys in a single query.
     const { rows } = await query<{ key: string }>(
       "SELECT key FROM files WHERE id = ANY($1::int[]) AND bucket = $2",
       [fileIds, bucketConfig.name]
     );
-
 
     if (rows.length === 0) {
       return NextResponse.json({ error: "No matching files found" }, { status: 404 });
@@ -90,14 +109,14 @@ export async function DELETE(req: NextRequest) {
 
     const client = await s3WithConfig(bucketConfig);
 
-    // ✅ Perform S3 deletions in **parallel**
+    // Perform S3 deletions in parallel.
     const deleteResults = await Promise.allSettled(
       rows.map(({ key }) =>
         client.send(new DeleteObjectCommand({ Bucket: bucketConfig.name, Key: key }))
       )
     );
 
-    // ✅ Only delete from DB if S3 deletions were successful
+    // Delete from DB only for successfully deleted items.
     const successfullyDeleted = deleteResults.filter(
       (result) => result.status === "fulfilled"
     ).length;
