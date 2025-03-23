@@ -18,8 +18,58 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useEffect, useState } from "react"
+import { useBucketStore } from "@/hooks/use-bucket-store"
+import FileIcon from "./FileIcon"
+import { getSingleBucketStorageUsage } from "@/service/s3-tebi"
+import { StorageProgress } from "./StorageProgress"
+
+type Stats = {
+  total_files: number
+  last_week_files: number
+  total_images: number
+  total_documents: number
+  total_videos: number
+  images_percent: number
+  documents_percent: number
+  videos_percent: number
+  images_size_gb: number
+  documents_size_gb: number
+  videos_size_gb: number
+}
 
 export default function DashboardPage() {
+  const { selectedBucket } = useBucketStore()
+  const [stats, setStats] = useState<Stats| null>(null);
+   const [storage, setStorage] = useState<any|null>(null);
+   const [recentFiles, setRecentFiles] = useState([]);
+   const [activeTab, setActiveTab] = useState("all");
+   useEffect(() => {
+       // Fetch statistics
+       fetch(`/api/files/stats?bucket=${selectedBucket}`)
+         .then(res => res.json())
+         .then(setStats);
+
+       // Fetch storage usage
+       fetchStorageUsage(selectedBucket)
+       // Fetch recent files
+       fetchRecentFiles('all');
+     }, [selectedBucket]);
+
+  const fetchRecentFiles = (type: string) => {
+      let url = `/api/files?bucket=${selectedBucket}&recent=true&sort=uploaded_at_desc&limit=5`;
+      if (type !== 'all') url += `&typeGroup=${type}`;
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => setRecentFiles(data.files));
+    };
+
+  const fetchStorageUsage = async (bucketId: string) => {
+  const usage =   await getSingleBucketStorageUsage(bucketId)
+    setStorage(usage)
+  }
+  console.log({ storage })
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <div className="flex-1 overflow-auto md:p-6">
@@ -33,41 +83,41 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Total Files</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <FileIcon fileType="document.txt" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">1,284</div>
-                <p className="text-xs text-muted-foreground">+24 files from last week</p>
+                <div className="text-2xl font-bold">{stats?.total_files || 0}</div>
+                <p className="text-xs text-muted-foreground">+{stats?.last_week_files || 0} files from last week</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Images</CardTitle>
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                <FileIcon fileType="image.jpg" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">684</div>
-                <p className="text-xs text-muted-foreground">53% of total files</p>
+                <div className="text-2xl font-bold">{stats?.total_images || 0}</div>
+                <p className="text-xs text-muted-foreground">{stats?.images_percent || 0}% of total files</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Documents</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+                <FileIcon fileType="document.pdf" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">492</div>
-                <p className="text-xs text-muted-foreground">38% of total files</p>
+                <div className="text-2xl font-bold">{stats?.total_documents || 0}</div>
+                <p className="text-xs text-muted-foreground">{stats?.documents_percent || 0}% of total files</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Videos</CardTitle>
-                <Film className="h-4 w-4 text-muted-foreground" />
+                <FileIcon fileType="video.mp4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">108</div>
-                <p className="text-xs text-muted-foreground">9% of total files</p>
+                <div className="text-2xl font-bold">{stats?.total_videos || 0}</div>
+                <p className="text-xs text-muted-foreground">{stats?.videos_percent|| 0}% of total files</p>
               </CardContent>
             </Card>
           </div>
@@ -76,33 +126,18 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Storage Usage</CardTitle>
-              <CardDescription>You've used 68% of your storage (6.8 GB of 10 GB)</CardDescription>
+              <CardDescription>You've used {((storage?.storageUsedGB || 0)*100 / (storage?.totalStorage || 25)).toFixed(2) || 0} % of your storage ({storage?.storageUsedGB || 0} GB out of {storage?.totalStorage || 0} GB)</CardDescription>
             </CardHeader>
             <CardContent>
-              <Progress value={68} className="h-2" />
-              <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-1">
-                    <div className="h-3 w-3 rounded-full bg-primary"></div>
-                    <span>Images</span>
-                  </div>
-                  <span className="font-medium">3.4 GB</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-1">
-                    <div className="h-3 w-3 rounded-full bg-blue-500"></div>
-                    <span>Documents</span>
-                  </div>
-                  <span className="font-medium">1.2 GB</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-1">
-                    <div className="h-3 w-3 rounded-full bg-amber-500"></div>
-                    <span>Videos</span>
-                  </div>
-                  <span className="font-medium">2.2 GB</span>
-                </div>
-              </div>
+              <StorageProgress
+                used={storage?.storageUsedGB || 0}
+                total={storage?.totalStorage || 25}
+                breakdown={{
+                  images_size_gb: stats?.images_size_gb || 0,
+                  documents_size_gb: stats?.documents_size_gb || 0,
+                  videos_size_gb: stats?.videos_size_gb || 0
+                }}
+              />
             </CardContent>
           </Card>
 

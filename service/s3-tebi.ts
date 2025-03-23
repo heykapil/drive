@@ -110,3 +110,98 @@ export async function getS3StorageUsage() {
   }
   return results;
 }
+
+export async function getBucketStorageUsage(bucketName: string) {
+  const config = buckets[bucketName];
+  if (!config) {
+    throw new Error("Invalid bucket");
+  }
+
+  try {
+    const s3 = await s3WithConfig(config);
+    // Check if the bucket exists.
+    await s3.send(new HeadBucketCommand({ Bucket: config.name }));
+
+    let totalSize = 0;
+    let continuationToken: string | undefined = undefined;
+
+    do {
+      const response: any = await s3.send(
+        new ListObjectsV2Command({
+          Bucket: config.name,
+          ContinuationToken: continuationToken,
+        })
+      );
+      totalSize += response.Contents?.reduce((sum: number, obj: any) => sum + (obj.Size || 0), 0) || 0;
+      continuationToken = response.NextContinuationToken;
+    } while (continuationToken);
+
+    const totalAvailableSizeGB = config.availableCapacity || DEFAULT_MAX_BUCKET_CAPACITY_GB;
+    const totalAvailableSizeBytes = totalAvailableSizeGB * 1024 * 1024 * 1024;
+    const availableStorageBytes = Math.max(totalAvailableSizeBytes - totalSize, 0);
+    const availableStorageGB = (availableStorageBytes / (1024 * 1024 * 1024)).toFixed(2);
+
+    return {
+      bucket: bucketName,
+      status: "Success",
+      storageUsed: totalSize,
+      storageUsedMB: (totalSize / (1024 * 1024)).toFixed(2) + " MB",
+      storageUsedGB: (totalSize / (1024 * 1024 * 1024)).toFixed(2) + " GB",
+      availableCapacityGB: availableStorageGB + " GB",
+    };
+  } catch (error: any) {
+    return {
+      bucket: bucketName,
+      status: "Error",
+      message: error.message,
+    };
+  }
+}
+
+export async function getSingleBucketStorageUsage(bucketId: string) {
+  const config = buckets[bucketId];
+  if (!config) {
+    throw new Error("Invalid bucket");
+  }
+
+  try {
+    const s3 = await s3WithConfig(config);
+    // Check if the bucket exists.
+    await s3.send(new HeadBucketCommand({ Bucket: config.name }));
+
+    let totalSize = 0;
+    let continuationToken: string | undefined = undefined;
+
+    do {
+      const response: any = await s3.send(
+        new ListObjectsV2Command({
+          Bucket: config.name,
+          ContinuationToken: continuationToken,
+        })
+      );
+      totalSize += response.Contents?.reduce((sum: number, obj: any) => sum + (obj.Size || 0), 0) || 0;
+      continuationToken = response.NextContinuationToken;
+    } while (continuationToken);
+
+    const totalAvailableSizeGB = config.availableCapacity || DEFAULT_MAX_BUCKET_CAPACITY_GB;
+    const totalAvailableSizeBytes = totalAvailableSizeGB * 1024 * 1024 * 1024;
+    const availableStorageBytes = Math.max(totalAvailableSizeBytes - totalSize, 0);
+    const availableStorageGB = (availableStorageBytes / (1024 * 1024 * 1024)).toFixed(2);
+
+    return {
+      bucket: bucketId,
+      status: "Success",
+      storageUsed: +totalSize,
+      storageUsedMB: +(totalSize / (1024 * 1024)).toFixed(2),
+      storageUsedGB: +(totalSize / (1024 * 1024 * 1024)).toFixed(2),
+      availableCapacityGB: +availableStorageGB,
+      totalStorage: +availableStorageGB + +(totalSize / (1024 * 1024 * 1024)).toFixed(2)
+    };
+  } catch (error: any) {
+    return {
+      bucket: bucketId,
+      status: "Error",
+      message: error.message,
+    };
+  }
+}

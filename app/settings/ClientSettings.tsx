@@ -25,14 +25,14 @@ type HealthData = {
   postgresErrors: Record<string, PostgresError>;
 };
 
-type BucketUsageSuccess = {
+ type BucketUsageSuccess = {
   bucket: string;
   status: "Success";
   storageUsedGB: number;
   availableCapacityGB: number;
 };
 
-type BucketUsageError = {
+ type BucketUsageError = {
   bucket: string;
   status: "Error";
   message: string;
