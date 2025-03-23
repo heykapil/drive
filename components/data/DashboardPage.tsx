@@ -74,9 +74,9 @@ export default function DashboardPage() {
        setRecentFiles(data.files);
 
        // Filter and set categories
-       setRecentImages(data.files.filter(f => f.type.startsWith('image/')));
-       setRecentVideos(data.files.filter(f => f.type.startsWith('video/')));
-       setRecentDocs(data.files.filter(f =>
+       setRecentImages(data.files.filter((f: any) => f.type.startsWith('image/')));
+       setRecentVideos(data.files.filter((f: any) => f.type.startsWith('video/')));
+       setRecentDocs(data.files.filter((f:any) =>
          f.type.startsWith('application/') ||
          f.type.startsWith('text/')
        ));
@@ -88,7 +88,6 @@ export default function DashboardPage() {
   const usage =   await getSingleBucketStorageUsage(bucketId)
     setStorage(usage)
   }
-  console.log({ storage })
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <div className="flex-1 overflow-auto md:p-6">
