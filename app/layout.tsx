@@ -6,9 +6,10 @@ import { Toaster } from 'sonner';
 import "./globals.css";
 import { HydrationZustand } from "@/hooks/use-bucket-store";
 import { ProgressProviders } from "@/components/ProgressBarProvider";
-import HeaderNav from "@/components/header-nav";
+import HeaderNav, { HeaderSkeleton } from "@/components/header-nav";
 import { getSession } from "@/lib/auth";
 import TransitionLayout from "@/components/TransitionLayout";
+import { Suspense } from "react";
 
 const readexPro = Readex_Pro({
   subsets: ["latin"],
@@ -159,7 +160,9 @@ export default async function RootLayout({
             </svg>
             <HydrationZustand />
             <main className="min-h-screen flex flex-col items-center p-0">
+              <Suspense fallback={<HeaderSkeleton />}>
               <HeaderNav session={session} />
+              </Suspense>
                <TransitionLayout>
                  {children}
                </TransitionLayout>
