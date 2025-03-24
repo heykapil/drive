@@ -8,6 +8,7 @@ import { HydrationZustand } from "@/hooks/use-bucket-store";
 import { ProgressProviders } from "@/components/ProgressBarProvider";
 import HeaderNav from "@/components/header-nav";
 import { getSession } from "@/lib/auth";
+import TransitionLayout from "@/components/TransitionLayout";
 
 const readexPro = Readex_Pro({
   subsets: ["latin"],
@@ -159,7 +160,9 @@ export default async function RootLayout({
             <HydrationZustand />
             <main className="min-h-screen flex flex-col items-center p-0">
               <HeaderNav session={session} />
-              {children}
+               <TransitionLayout>
+                 {children}
+               </TransitionLayout>
             </main>
           <Toaster theme="system" expand richColors />
             </ProgressProviders>

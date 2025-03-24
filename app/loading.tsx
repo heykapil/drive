@@ -1,7 +1,5 @@
-import { HeaderSkeleton } from "@/components/header-nav";
-
 export default function Loading() {
   return (
-    <HeaderSkeleton />
+    <span className="mt-10">Loading...</span>
   );
 }
