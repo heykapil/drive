@@ -100,7 +100,7 @@ export default function HeaderNav({ session }: { session: Session }) {
 
                   {/* Active Indicator */}
                   <div
-                    className="absolute not-[]:6px] h-[2px] bg-[#0e0f11] dark:bg-white transition-all duration-300 ease-out"
+                    className="absolute bottom-0 not-[]:6px] h-[1px] bg-[#0e0f11] dark:bg-white transition-all duration-300 ease-out"
                     style={activeStyle}
                   />
 
