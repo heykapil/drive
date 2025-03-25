@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal
 import { Skeleton } from "../ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { VideoPlayer } from "../viewer/VideoPlayer4";
+import { formatDistanceToNow } from "date-fns";
 
 type FileState = {
   files: any[];
@@ -573,7 +574,7 @@ export default function FileList() {
                                   name: file.filename,
                                   is_public: file.is_public,
                                   type: file.type,
-                                  uploaded_at: formatDate(file.uploaded_at),
+                                  uploaded_at: formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true }),
                                   size: formatBytes(file.size),
                                 },
                               });
@@ -627,7 +628,7 @@ export default function FileList() {
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
+                          {formatBytes(file.size)} • {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
                         </p>
                       </div>
                       <div className="absolute top-2 right-2 text-blue-500"
@@ -666,7 +667,7 @@ export default function FileList() {
                                    name: file.filename,
                                    is_public: file.is_public,
                                    type: file.type,
-                                   uploaded_at: formatDate(file.uploaded_at),
+                                   uploaded_at: formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true }),
                                    size: formatBytes(file.size),
                                  },
                                });
@@ -676,7 +677,7 @@ export default function FileList() {
                              {file.filename}
                            </p>
                            <p className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-none">
-                             {formatBytes(file.size)} • {formatDate(file.uploaded_at)}
+                             {formatBytes(file.size)} • {formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}
                            </p>
                          </div>
                        </div>
@@ -760,8 +761,8 @@ export default function FileList() {
                                   {file.filename}
                                 </TableCell>
                                 <TableCell>{formatBytes(file.size)}</TableCell>
-                                <TableCell className="sr-only lg:not-sr-only">{formatDate(file.uploaded_at)}</TableCell>
-                                <TableCell className="sr-only lg:not-sr-only text-right">
+                                <TableCell className="sr-only lg:not-sr-only">{formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true })}</TableCell>
+                                <TableCell className="sr-only lg:not-sr-only">
                                   {file.is_public ? "Public" : "Private"}
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -793,7 +794,7 @@ export default function FileList() {
                                           dispatch({
                                             type: "SET_FIELD",
                                             field: "previewFile",
-                                            value: { url, name: file.filename, type: file.type, uploaded_at: formatDate(file.uploaded_at), size: formatBytes(file.size) },
+                                            value: { url, name: file.filename, type: file.type, uploaded_at: formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true }), size: formatBytes(file.size) },
                                           });
                                         }}
                                       >

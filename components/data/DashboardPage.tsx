@@ -14,6 +14,7 @@ import { Button } from "../ui/button"
 import { formatBytes } from "@/lib/utils"
 import { Skeleton } from "../ui/skeleton"
 import { toast } from "sonner"
+import IncompleteUploads from "./IncompleteUploads"
 
 type Stats = {
   total_files: number
@@ -283,6 +284,15 @@ export default function DashboardPage() {
               <div className="mt-4 flex justify-center">
                 <Link href='/uploads'><Button variant={'outline'}> View All Files</Button></Link>
               </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Incomplete Multipart Uploads</CardTitle>
+              {/* <CardDescription>You've uploaded {stats?.last_week_files || 0} files in the last 7 days.</CardDescription> */}
+            </CardHeader>
+            <CardContent>
+              <IncompleteUploads />
             </CardContent>
           </Card>
         </div>

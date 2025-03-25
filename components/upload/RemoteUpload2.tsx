@@ -11,6 +11,7 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { getFileTypeFromFilename } from "@/lib/utils";
 import { calculateChunkSize } from "@/lib/helpers/chunk-size";
+import axios from "axios";
 
 export default function RemoteUpload() {
   const [useProxy, setUseProxy] = useState(true);
@@ -135,39 +136,55 @@ export default function RemoteUpload() {
   );
 }
 
-export const uploadMultipart = async (fileUrl: string, selectedBucket: string, setProgress: any, proxy?: string) => {
-  try {
-    toast.info('Uploading file from url:', {
-      description: fileUrl
-    })
 
-    // 0. Use proxy
-    const proxyDomain = proxy ? proxy : (process.env.NODE_ENV === "development" ? "/api/proxy" : "https://stream.kapil.app")
+interface ProgressState {
+  [fileUrl: string]: number;
+}
+
+interface MultipartInitResponse {
+  uploadId: string;
+  key: string;
+}
+
+interface PresignResponse {
+  url: string;
+}
+
+type SetProgress = React.Dispatch<React.SetStateAction<ProgressState>>;
+
+export const uploadMultipart = async (
+  fileUrl: string,
+  selectedBucket: string,
+  setProgress: SetProgress,
+  proxy?: string
+): Promise<void> => {
+  try {
+    toast.info('Uploading file from url:', { description: fileUrl });
+
+    // 0. Define proxy domain and URL
+    const proxyDomain =
+      proxy || (process.env.NODE_ENV === "development" ? "/api/proxy" : "https://stream.kapil.app");
     const proxyUrl = `${proxyDomain}?url=${encodeURIComponent(fileUrl)}`;
-    toast.info('Using proxy', {
-      description: proxyDomain
-    })
+    toast.info('Using proxy', { description: proxyDomain });
 
     // 1. Get file metadata
-
-    const headRes = await fetch(proxyUrl, {
-      method: "HEAD",
-    });
-    if (!headRes.ok) toast.error("Failed to fetch file metadata");
+    const headRes = await fetch(proxyUrl, { method: "HEAD" });
+    if (!headRes.ok) {
+      toast.error("Failed to fetch file metadata");
+      throw new Error("Failed to fetch file metadata");
+    }
 
     // 2. Extract metadata
     const contentLength = headRes.headers.get("content-length");
-    const fileSize = parseInt(contentLength as string, 10);
-    const fileName = sanitizeFileName(fileUrl.split("/").pop() || `file-${Date.now()}`);
-    const contentType = headRes.headers.get("content-type") || getFileTypeFromFilename(fileName) || "application/octet-stream";
     if (!contentLength) {
-      toast.error('Could not determine file size')
-      throw new Error("Could not determine file size")
-    } else {
-      toast.info('Fetched file url..', {
-        description: fileUrl
-      })
+      toast.error('Could not determine file size');
+      throw new Error("Could not determine file size");
     }
+    const fileSize = parseInt(contentLength, 10);
+    const fileName = sanitizeFileName(fileUrl.split("/").pop() || `file-${Date.now()}`);
+    const contentType =
+      headRes.headers.get("content-type") || getFileTypeFromFilename(fileName) || "application/octet-stream";
+    toast.info('Fetched file url..', { description: fileUrl });
 
     // 3. Initiate multipart upload
     const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
@@ -175,79 +192,104 @@ export const uploadMultipart = async (fileUrl: string, selectedBucket: string, s
       body: JSON.stringify({ filename: fileName, contentType }),
       headers: { "Content-Type": "application/json" },
     });
-    const { uploadId, key } = await initRes.json();
+    const { uploadId, key }: MultipartInitResponse = await initRes.json();
     if (!uploadId) {
-      toast.error('Failed to initiate upload')
-      throw new Error("Failed to initiate upload.")
-    } else{
-      toast.info('Preparing for upload...', { description: 'Generating presign urls for chunks!' })
+      toast.error('Failed to initiate upload');
+      throw new Error("Failed to initiate upload.");
     }
-
+    toast.info('Preparing for upload...', { description: 'Generating presign urls for chunks!' });
 
     // 4. Upload configuration
-    const chunkSize = calculateChunkSize(fileSize)
+    const chunkSize = calculateChunkSize(fileSize);
     const totalParts = Math.ceil(fileSize / chunkSize);
     const concurrentUploads = 3;
     const parts: { PartNumber: number; ETag: string }[] = [];
 
-    // 5. Fetch file stream
+    // 5. Fetch file stream using proxy
     const fileRes = await fetch(`${proxyDomain}?url=${encodeURIComponent(fileUrl)}`);
-
     if (!fileRes.ok) {
-      toast.error('Failed to fetch file')
-      throw new Error("Failed to fetch file")
+      toast.error('Failed to fetch file');
+      throw new Error("Failed to fetch file");
     }
     const reader = fileRes.body?.getReader();
     if (!reader) {
-      toast.error('Failed to read stream')
-      throw new Error("Failed to read file stream")
+      toast.error('Failed to read stream');
+      throw new Error("Failed to read file stream");
     }
 
     // 6. Stream processing variables
     let buffer = new Uint8Array(0);
     let currentPart = 1;
     const uploadQueue: Promise<void>[] = [];
+    let completedPartsSize = 0;
+    const inProgressParts: { [key: number]: number } = {};
 
-    // 7. Upload chunk function
-    const uploadChunk = async (partNumber: number, chunk: Uint8Array) => {
+    // 7. Function to upload a single chunk
+    const uploadChunk = async (partNumber: number, chunk: Uint8Array): Promise<void> => {
+      // Get presigned URL
+      const presignRes = await fetch(`/api/upload/multipart/presign?bucket=${selectedBucket}`, {
+        method: "POST",
+        body: JSON.stringify({ uploadId, key, partNumber }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const { url }: PresignResponse = await presignRes.json();
+      if (!url) {
+        toast.error(`Presigned URL missing for part ${partNumber}`);
+        throw new Error(`Presigned URL missing for part ${partNumber}`);
+      }
+
+      // Add part to inProgress tracking
+      inProgressParts[partNumber] = 0;
+
       try {
-        // Get presigned URL
-        const presignRes = await fetch(`/api/upload/multipart/presign?bucket=${selectedBucket}`, {
-          method: "POST",
-          body: JSON.stringify({ uploadId, key, partNumber }),
-          headers: { "Content-Type": "application/json" },
+        // Upload chunk with Axios
+        const response = await axios.put(url, chunk, {
+          headers: { 'Content-Type': 'application/octet-stream' },
+          onUploadProgress: (progressEvent) => {
+            const loaded = progressEvent.loaded;
+            inProgressParts[partNumber] = loaded;
+
+            // Calculate total uploaded bytes
+            const totalUploaded = completedPartsSize +
+              Object.values(inProgressParts).reduce((acc, curr) => acc + curr, 0);
+
+            // Update progress
+            const percent = Math.round((totalUploaded / fileSize) * 100);
+            setProgress(prev => ({
+              ...prev,
+              [fileUrl]: percent,
+            }));
+          },
         });
 
-        const { url } = await presignRes.json();
-        if (!url) {
-          toast.error(`Presigned URL missing for part ${partNumber}`)
-          throw new Error(`Presigned URL missing for part ${partNumber}`)
+        if (response.status !== 200) {
+          throw new Error(`Part ${partNumber} upload failed (${response.status})`);
         }
 
-        // Upload chunk
-        const uploadRes = await fetch(url, { method: "PUT", body: chunk });
-        if (!uploadRes.ok) {
-          toast.error(`Part ${partNumber} upload failed (${uploadRes.status})`)
-          throw new Error(`Part ${partNumber} upload failed (${uploadRes.status})`)
-        } else {
-          toast.info('Uploading...', { description: `Part ${partNumber} of ${totalParts} uploaded` })
-        }
-
-        // Store ETag
-        const eTag = uploadRes.headers.get("ETag")?.replace(/"/g, "");
+        // Store ETag and update completion tracking
+        const eTag = response.headers.etag?.replace(/"/g, "");
         if (!eTag) {
-          toast.error(`Etag missing for part ${partNumber}`)
-          throw new Error(`ETag missing for part ${partNumber}`)
-        };
+          throw new Error(`ETag missing for part ${partNumber}`);
+        }
         parts.push({ PartNumber: partNumber, ETag: eTag });
 
-        // Update progress
-        setProgress((prev: any) => ({
+        // Update completed parts size
+        completedPartsSize += chunk.byteLength;
+        delete inProgressParts[partNumber];
+
+        // Final progress update after completion
+        const totalUploaded = completedPartsSize +
+          Object.values(inProgressParts).reduce((acc, curr) => acc + curr, 0);
+        const percent = Math.round((totalUploaded / fileSize) * 100);
+        setProgress(prev => ({
           ...prev,
-          [fileUrl]: Math.round((parts.length / totalParts) * 100)
+          [fileUrl]: percent,
         }));
+
+        toast.info('Uploading...', { description: `Part ${partNumber} of ${totalParts} uploaded` });
       } catch (error) {
-        throw new Error(`Part ${partNumber} failed: ${error instanceof Error ? error.message : String(error)}`);
+        delete inProgressParts[partNumber];
+        throw error;
       }
     };
 
