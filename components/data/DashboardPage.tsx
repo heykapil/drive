@@ -1,18 +1,5 @@
 "use client"
 
-import {
-  FileText,
-  Film,
-  ImageIcon,
-  // LayoutDashboard,
-  // Menu,
-  // Plus,
-  // Settings,
-  // Upload,
-  // Users,
-  // X,
-} from "lucide-react"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -50,11 +37,9 @@ export default function DashboardPage() {
    const [recentImages, setRecentImages] = useState<any[]>([]);
    const [recentVideos, setRecentVideos] = useState<any[]>([]);
    const [recentDocs, setRecentDocs] = useState<any[]>([]);
-   const [activeTab, setActiveTab] = useState("all");
-  const [loading, setLoading] = useState<boolean>(false);
+   // const [activeTab, setActiveTab] = useState("all");
    useEffect(() => {
      try {
-       setLoading(true)
       Promise.all([
        fetch(`/api/files/stats?bucket=${selectedBucket}`)
          .then(res => res.json())
@@ -67,7 +52,6 @@ export default function DashboardPage() {
      } catch(e: any){
        toast.error(e)
      } finally {
-       setLoading(false)
      }
      }, [selectedBucket]);
 
@@ -89,17 +73,13 @@ export default function DashboardPage() {
          f.type.startsWith('text/')
        ));
      } catch (error) {
-       console.error('Error fetching recent files:', error);
+       toast.error('Error fetching recent files:'+ error);
      }
    };
   const fetchStorageUsage = async (bucketId: string) => {
   const usage =   await getSingleBucketStorageUsage(bucketId)
     setStorage(usage)
   }
-
-  if (loading) {
-     return <div className="animate-pulse">Loading...</div>;
-   }
 
 
   return (

@@ -9,9 +9,11 @@ import { toast } from "sonner";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
+import { getFileTypeFromFilename } from "@/lib/utils";
+import { calculateChunkSize } from "@/lib/helpers/chunk-size";
 
 export default function RemoteUpload() {
-  const [useProxy, setUseProxy] = useState(false);
+  const [useProxy, setUseProxy] = useState(true);
   const [proxyUrl, setProxyUrl] = useState("https://stream.kapil.app");
   const [urls, setUrls] = useState("");
   const [progress, setProgress] = useState<Record<string, number>>({});
@@ -40,6 +42,7 @@ export default function RemoteUpload() {
     const proxy = useProxy ? proxyUrl : undefined;
     if (urlList.length === 0) return toast.error("No URLs found");
     setProgress(Object.fromEntries(urlList.map((url) => [url, 0])));
+    setIsUploading(true)
     for (const [index, url] of urlList.entries()) {
       toast.promise(uploadMultipart(url, selectedBucket, setProgress, proxy), {
         loading: `Uploading... ${index + 1} of ${urlList.length}`,
@@ -50,16 +53,16 @@ export default function RemoteUpload() {
   };
 
   return (
-  <div className="w-full mx-auto space-y-6 p-2">
-        <Card className="">
-          <CardContent className="space-y-4">
-            <div className="relative w-full mx-auto">
+  <div className="w-full mx-auto lg:ml-4 space-y-6 px-0 py-2">
+        <Card className="p-0 mb-0 border-none outline-none shadow-none">
+          <CardContent className="p-0 mt-0 outline-none border-none shadow-none">
+            <div className="relative w-full border rounded-md border-muted mx-auto">
                   <div className="flex">
                     {/* Line Numbers (Now Scrollable & Perfectly Aligned) */}
                     <div
                       ref={lineNumbersRef}
-                      className="absolute left-0 top-0 bottom-0 w-8 bg-secondary text-primary
-                               flex flex-col items-end pr-2 pt-3 rounded-lg text-xs overflow-hidden"
+                      className="absolute left-0 top-0 bottom-0 w-fit min-w-6 bg-secondary text-primary
+                               flex flex-col items-end pr-2 pt-1 rounded-md text-xs overflow-hidden"
                       style={{ overflowY: "hidden" }}
                     >
                       {urls.split("\n").map((_, index) => (
@@ -68,7 +71,7 @@ export default function RemoteUpload() {
                           className="leading-none"
                           style={{ height: `${lineHeight}px`, lineHeight: `${lineHeight}px` }}
                         >
-                          {index + 1}
+                          {index + 1}.
                         </span>
                       ))}
                     </div>
@@ -81,8 +84,8 @@ export default function RemoteUpload() {
                       onChange={(e) => setUrls(e.target.value)}
                       onScroll={handleScroll} // Sync scrolling
                       rows={6}
-                      className="w-full font-mono text-sm tracking-wide pl-10 pr-3 pt-3 resize-none overflow-auto
-                                 whitespace-nowrap border rounded-lg bg-background text-foreground
+                      className="w-full font-mono text-sm tracking-wide pl-8 pr-2 pt-1 resize-none overflow-auto
+                                 whitespace-nowrap border-0 rounded-lg bg-background text-foreground
                                  focus:ring-0 focus:ring-blue-500 focus:outline-none leading-[20px]"
                       style={{ overflowX: "auto" }}
                     />
@@ -90,14 +93,14 @@ export default function RemoteUpload() {
                 </div>
 
               {/* Proxy Switch & Input */}
-              <div className="flex flex-row space-x-4 gap-4 my-8 h-6 items-center justify-between">
+              <div className="flex flex-row space-x-2 gap-4 my-8 h-6 items-center justify-between">
               <div className="flex items-center gap-4 min-w-fit">
                 <Switch checked={useProxy} onCheckedChange={setUseProxy} />
                 <span className="text-sm">Use Proxy</span>
               </div>
               {useProxy && (
                 <Input
-                  type="text"
+                  type="url"
                   placeholder="Enter Proxy URL"
                   value={proxyUrl}
                   onChange={(e) => setProxyUrl(e.target.value)}
@@ -106,7 +109,7 @@ export default function RemoteUpload() {
               )}
             </div>
 
-            <Button onClick={async()=>await handleUpload(useProxy, proxyUrl)} disabled={isUploading} className="w-full">
+            <Button variant={'secondary'} onClick={async()=>await handleUpload(useProxy, proxyUrl)} disabled={isUploading} className="w-fit mt-8">
               {isUploading ? "Uploading..." : `Upload to ${selectedBucket}`}
             </Button>
           </CardContent>
@@ -133,7 +136,6 @@ export default function RemoteUpload() {
 }
 
 export const uploadMultipart = async (fileUrl: string, selectedBucket: string, setProgress: any, proxy?: string) => {
-
   try {
     toast.info('Uploading file from url:', {
       description: fileUrl
@@ -155,7 +157,9 @@ export const uploadMultipart = async (fileUrl: string, selectedBucket: string, s
 
     // 2. Extract metadata
     const contentLength = headRes.headers.get("content-length");
-    const contentType = headRes.headers.get("content-type") || "application/octet-stream";
+    const fileSize = parseInt(contentLength as string, 10);
+    const fileName = sanitizeFileName(fileUrl.split("/").pop() || `file-${Date.now()}`);
+    const contentType = headRes.headers.get("content-type") || getFileTypeFromFilename(fileName) || "application/octet-stream";
     if (!contentLength) {
       toast.error('Could not determine file size')
       throw new Error("Could not determine file size")
@@ -164,8 +168,6 @@ export const uploadMultipart = async (fileUrl: string, selectedBucket: string, s
         description: fileUrl
       })
     }
-    const fileSize = parseInt(contentLength as string, 10);
-    const fileName = sanitizeFileName(fileUrl.split("/").pop() || `file-${Date.now()}`);
 
     // 3. Initiate multipart upload
     const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
@@ -183,7 +185,7 @@ export const uploadMultipart = async (fileUrl: string, selectedBucket: string, s
 
 
     // 4. Upload configuration
-    const chunkSize = 5 * 1024 * 1024; // 5MB chunks
+    const chunkSize = calculateChunkSize(fileSize)
     const totalParts = Math.ceil(fileSize / chunkSize);
     const concurrentUploads = 3;
     const parts: { PartNumber: number; ETag: string }[] = [];

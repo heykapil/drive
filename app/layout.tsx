@@ -167,7 +167,8 @@ export default async function RootLayout({
                  {children}
                </TransitionLayout>
             </main>
-          <Toaster theme="system" expand richColors />
+          <Toaster theme="system" expand richColors
+            />
             </ProgressProviders>
           </QueryProvider>
         </ThemeProvider>
