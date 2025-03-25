@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
-import { formatBytes, formatDate } from "@/lib/utils";
-import {  ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Download, Eye, EyeOff, FileText, Fullscreen, Grid, Heart, HeartOff, List, RefreshCw, Share2, Square, Trash2 } from "lucide-react";
+import { formatBytes } from "@/lib/utils";
+import {  ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Download, Edit2, Edit3, Eye, EyeOff, FileText, Fullscreen, Grid, Heart, HeartOff, List, RefreshCw, Share2, Square, Trash2 } from "lucide-react";
 import { useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmModal } from "./ConfirmModal";
@@ -15,7 +15,9 @@ import { Skeleton } from "../ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { VideoPlayer } from "../viewer/VideoPlayer4";
 import { formatDistanceToNow } from "date-fns";
-
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Switch } from "../ui/switch";
+import { useForm } from "react-hook-form";
 type FileState = {
   files: any[];
   sort: string;
@@ -42,7 +44,7 @@ type FileState = {
 type FileAction =
   | { type: 'SET_FIELD'; field: string; value: any }
   | { type: 'SET_MODAL'; modal: keyof FileState['modals']; value: boolean }
-  | { type: 'RESET' };
+  | { type: 'RESET' } | {type: 'SET_SELECTED_FILE', payload: any};
 
 const initialState: FileState = {
   files: [],
@@ -68,6 +70,14 @@ function fileReducer(state: FileState, action: FileAction): FileState {
       return { ...state, modals: { ...state.modals, [action.modal]: action.value } };
     case 'RESET':
       return { ...initialState, view: state.view };
+    case "SET_SELECTED_FILE":
+      return {
+        ...state,
+        selectedFile: {
+          ...state.selectedFile,
+          ...action.payload, // Merge the new values into the selected file
+        },
+    };
     default:
       return state;
   }
@@ -332,7 +342,11 @@ export default function FileList() {
           const errorData = await response.json();
           toast.error(errorData.error || 'Failed to update file');
         }
-        toast.success('File updated successfully');
+      if (!!rename) {
+          toast.success('File has been renamed!')
+      } else {
+        toast.success(liked ? 'Liked!' : 'Unliked!');
+      }
       } catch (error) {
         console.error('Update failed:', error);
         toast.error('Failed to update file');
@@ -404,6 +418,7 @@ export default function FileList() {
     </div>
   );
 
+  const form = useForm();
   return (
     <div className="space-y-4 p-4 w-full">
       <div className="flex flex-col gap-4 md:flex-row md:justify-between">
@@ -802,6 +817,14 @@ export default function FileList() {
                                         Preview File
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
+                                        onClick={() => {
+                                          dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+                                          dispatch({ type: "SET_MODAL", modal: "rename", value: true });
+                                        }}
+                                      >
+                                      <Edit3 className="mr-2 h-4 w-4" />  Edit file
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
                                         onClick={async () => {
                                           dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
                                           const url = await getDownloadUrl(file.id);
@@ -810,15 +833,6 @@ export default function FileList() {
                                       >
                                         <Copy className="mr-2 h-4 w-4" />
                                         Copy Link
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={async () => {
-                                          dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
-                                          await updateFile({ id: file.id, liked: !file.liked });
-                                        }}
-                                      >
-                                        {file.liked ? <HeartOff className="mr-2 h-4 w-4 text-red-500" /> : <Heart className="mr-2 h-4 w-4 text-red-500" />}
-                                        {file.liked ? 'Unlike' : 'Like'}
                                       </DropdownMenuItem>
                                       <DropdownMenuSub>
                                         <DropdownMenuSubTrigger>
@@ -857,6 +871,7 @@ export default function FileList() {
                                         )}
                                         {file.is_public ? "Make Private" : "Make Public"}
                                       </DropdownMenuItem>
+
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem
                                         className="text-red-500"
@@ -943,6 +958,79 @@ export default function FileList() {
         description={`Make this file ${state.selectedFile?.is_public ? 'private' : 'public'}?`}
         confirmText={state.loading ? "Updating..." : "Confirm"}
       />
+
+      <ConfirmModal
+        open={state.modals.rename}
+        onClose={() => dispatch({ type: 'SET_MODAL', modal: 'rename', value: false })}
+        title="Edit file"
+        description=""
+        confirmText={state.loading ? "Updating..." : "Confirm"}
+        onConfirm={form.handleSubmit((data) => {
+          // Update your state with form data
+          dispatch({ type: 'SET_SELECTED_FILE', payload: data });
+          // Execute the updateFile function with the necessary data
+          updateFile({
+            id: state.selectedFile.id,
+            rename: data.filename,
+            liked: data.liked
+          }).then(()=> dispatch({type: 'SET_MODAL', modal: 'rename', value: false }));
+        })}
+      >
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(() => {})} className="space-y-4">
+            {state.selectedFile && (
+            <>
+            <div className="grid gap-2 py-2">
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Type:</span> {state?.selectedFile?.type || ''}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Size:</span> {formatBytes(state?.selectedFile?.size || 0)}
+              </div>
+              <div className="text-sm text-muted-foreground truncate break-words">
+                <span className="font-medium text-foreground">URL:</span>{" "}
+                {state?.selectedFile?.url || ''}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Uploaded:</span>{" "}
+                {new Date(state?.selectedFile?.uploaded_at).toLocaleString()}
+              </div>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="filename"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Filename</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter filename" defaultValue={state?.selectedFile?.filename} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="liked"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <FormLabel>Favorite</FormLabel>
+                    <FormDescription>Mark this file as a favorite</FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value} defaultChecked={state?.selectedFile?.liked} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            </>
+            )}
+          </form>
+        </Form>
+      </ConfirmModal>
+
 
       {state.totalPages > 1 && (
         <div className="flex justify-between items-center mt-4">
