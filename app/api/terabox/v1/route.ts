@@ -5,6 +5,7 @@ interface TeraBoxFile {
   is_dir: string | number;
   category?: string | number;
   filename: string;
+  size: string | number;
   children?: TeraBoxFile[];
   downloadUrl?: string;
   watchUrl?: string;
@@ -31,10 +32,12 @@ interface WatchResponse {
   [key: string]: any;
 }
 
-interface ProcessedResult {
+export interface ProcessedResult {
   items: TeraBoxFile[];
   downloadUrls: string[];
   watchUrls: string[];
+  filenames: string[];
+  sizes: number[];
 }
 
 
@@ -89,7 +92,9 @@ async function processItems(
   const result: ProcessedResult = {
     items: [],
     downloadUrls: [],
-    watchUrls: []
+    watchUrls: [],
+    filenames: [],
+    sizes: [],
   };
 
   for (const item of items) {
@@ -98,6 +103,8 @@ async function processItems(
       const childrenResult = await processItems(item.children || [], params);
       result.downloadUrls.push(...childrenResult.downloadUrls);
       result.watchUrls.push(...childrenResult.watchUrls);
+      result.filenames.push(...childrenResult.filenames);
+      result.sizes.push(...childrenResult.sizes);
 
       result.items.push({
         ...item,
@@ -117,9 +124,13 @@ async function processItems(
 
       result.items.push(newItem);
 
-      // Add to URL arrays if available
-      if (urls.downloadUrl) result.downloadUrls.push(urls.downloadUrl);
-      if (urls.watchUrl) result.watchUrls.push(urls.watchUrl);
+        if (urls.downloadUrl || urls.watchUrl) {
+          result.filenames.push(item.filename);
+          result.sizes.push(Number(item.size));
+        }
+
+         if (urls.downloadUrl) result.downloadUrls.push(urls.downloadUrl);
+         if (urls.watchUrl) result.watchUrls.push(urls.watchUrl);
     }
   }
 
@@ -194,7 +205,9 @@ export async function POST(request: NextRequest) {
           ...infoData,
           list: filteredList,
           downloadUrls: processedResult.downloadUrls,
-          watchUrls: processedResult.watchUrls
+          watchUrls: processedResult.watchUrls,
+          filenames: processedResult.filenames,
+          sizes: processedResult.sizes,
         });
   } catch (error: any) {
     console.error('API Error:', error);

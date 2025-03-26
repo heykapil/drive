@@ -1,5 +1,5 @@
 import Loading from "@/app/loading";
-import RemoteUploadForm from "@/components/upload/RemoteUpload3";
+import RemoteUploadForm from "@/components/upload/RemoteUpload2";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";

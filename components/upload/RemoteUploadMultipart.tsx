@@ -35,25 +35,24 @@ export const uploadMultipart = async (
     const proxyUrl = `${proxyDomain}?url=${encodeURIComponent(fileUrl)}`;
     toast.info('Using proxy', { description: proxyDomain });
 
-    // 1. Get file metadata
-    const headRes = await fetch(proxyUrl, { method: "HEAD" });
-    if (!headRes.ok) {
-      toast.error("Failed to fetch file metadata");
-      throw new Error("Failed to fetch file metadata");
-    }
+      // 1. Get file metadata
+      const headRes = await fetch(proxyUrl, { method: "HEAD" });
+      if (!headRes.ok) {
+        toast.error("Failed to fetch file metadata");
+        throw new Error("Failed to fetch file metadata");
+      }
 
-    // 2. Extract metadata
-    const contentLength = headRes.headers.get("content-length");
-    if (!contentLength) {
-      toast.error('Could not determine file size');
-      throw new Error("Could not determine file size");
-    }
-    const fileSize = parseInt(contentLength, 10);
-    const fileName = sanitizeFileName(fileUrl.split("/").pop() || `file-${Date.now()}`);
-    const contentType =
-      headRes.headers.get("content-type") || getFileTypeFromFilename(fileName) || "application/octet-stream";
-    toast.info('Fetched file url..', { description: fileUrl });
-
+      // 2. Extract metadata
+      const contentLength = headRes.headers.get("content-length");
+      if (!contentLength) {
+        toast.error('Could not determine file size');
+        throw new Error("Could not determine file size");
+      }
+      const fileSize = parseInt(contentLength, 10);
+      const fileName = sanitizeFileName(fileUrl.split("/").pop() || `file-${Date.now()}`);
+      const contentType =
+        headRes.headers.get("content-type") || getFileTypeFromFilename(fileName) || "application/octet-stream";
+      toast.info('Fetched file url..', { description: fileUrl });
     // 3. Initiate multipart upload
     const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
       method: "POST",

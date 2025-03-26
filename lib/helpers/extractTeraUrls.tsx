@@ -15,11 +15,11 @@ function extractShortUrl(url: string) {
   }
 }
 
-export const extractTeraboxDownloadUrls = async (url: string): Promise<string[]> => {
+export const extractTeraboxDownloadUrls = async (url: string) => {
   try {
 
     const shorturl = extractShortUrl(url);
-    const response = await fetch(process.env.NEXT_PUBLIC_APP_URL+'/api/terabox/v1', {
+    const response = await fetch('/api/terabox/v1', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ export const extractTeraboxDownloadUrls = async (url: string): Promise<string[]>
 
     const data = await response.json();
     if (!data?.downloadUrls?.length) throw new Error('No download URLs found');
-    return data.downloadUrls;
+    return data;
   } catch (error: any) {
     throw new Error(`Terabox extraction failed: ${error.message}`);
   }
