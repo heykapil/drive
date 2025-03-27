@@ -1,8 +1,7 @@
 import { QueryProvider } from "@/components/QueryProvider";
 import { ThemeProvider } from "@/hooks/theme-provider";
 import type { Metadata } from "next";
-import { Readex_Pro } from "next/font/google";
-import { Toaster } from 'sonner';
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { HydrationZustand } from "@/hooks/use-bucket-store";
 import { ProgressProviders } from "@/components/ProgressBarProvider";
@@ -10,10 +9,15 @@ import HeaderNav, { HeaderSkeleton } from "@/components/header-nav";
 import { getSession } from "@/lib/auth";
 import TransitionLayout from "@/components/TransitionLayout";
 import { Suspense } from "react";
+import { Toaster } from "sonner";
 
-const readexPro = Readex_Pro({
-  subsets: ["latin"],
-});
+// const readexPro = Readex_Pro({
+//   subsets: ["latin"],
+// });
+
+const DMSans = DM_Sans({
+  subsets: ['latin', 'latin-ext']
+  })
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://drive.kapil.app'),
@@ -135,10 +139,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession()
+  const session = await getSession();
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${readexPro.className} antialiased bg-background text-neutral-900 dark:text-white`}>
+      <body className={`${DMSans.className} antialiased bg-background text-neutral-900 dark:text-white`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>
             <ProgressProviders>
@@ -167,8 +171,7 @@ export default async function RootLayout({
                  {children}
                </TransitionLayout>
             </main>
-          <Toaster theme="system" expand richColors
-            />
+              <Toaster theme="system" expand richColors/>
             </ProgressProviders>
           </QueryProvider>
         </ThemeProvider>

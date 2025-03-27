@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getFileTypeFromFilename } from "@/lib/utils";
-import { Download } from "lucide-react";
+import { Download, ScanEyeIcon } from "lucide-react";
 import { VideoPlayer } from "./VideoPlayer4";
 
 interface FileViewerProps {
@@ -34,8 +34,12 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
           </div>
           <div className="flex gap-2 mr-4">
             <Button variant="outline" onClick={() => window.open(url, "_blank")}>
-             Download File  <Download className="w-5 h-5" />
+             Download <Download className="w-5 h-5 ml-1" />
             </Button>
+            {type === 'application/pdf' && <Button variant={'outline'} onClick={()=> window.open(`https://pdf.kapil.app?file=${url}`, '_blank')}>
+              pdf.js <ScanEyeIcon className="w-5 h-5 ml-1" />
+            </Button>
+            }
           </div>
         </DialogHeader>
         <div className="flex justify-center items-center flex-grow p-1 bg-black rounded-md overflow-auto">
