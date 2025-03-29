@@ -59,12 +59,12 @@ async function fetchFileUrls(
     const [downloadRes, watchRes] = await Promise.all([
       fetch(GET_DOWNLOAD_URL, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Origin': 'https://terabox.hnn.workers.dev', 'HOST': 'terabox.hnn.workers.dev',  'Referer': 'https://terabox.hnn.workers.dev/'  },
+        headers: {'Content-Type': 'application/json', 'mode': 'no-cors', 'Origin': 'https://terabox.hnn.workers.dev', 'HOST': 'terabox.hnn.workers.dev',  'Referer': 'https://terabox.hnn.workers.dev/'  },
         body: JSON.stringify({ ...params, fs_id: fsId }),
       }),
       fetch(GET_WATCH_URL, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Origin': 'https://terabox.hnn.workers.dev', 'HOST': 'terabox.hnn.workers.dev',  'Referer': 'https://terabox.hnn.workers.dev/'  },
+        headers: {'Content-Type': 'application/json', 'mode': 'no-cors', 'Origin': 'https://terabox.hnn.workers.dev', 'HOST': 'terabox.hnn.workers.dev',  'Referer': 'https://terabox.hnn.workers.dev/'  },
         body: JSON.stringify({ ...params, fs_id: fsId }),
       }),
     ]);
@@ -154,11 +154,11 @@ export async function POST(request: NextRequest) {
     if (pwd) infoUrl.searchParams.set('pwd', pwd);
 
     const infoResponse = await fetch(infoUrl.toString(), {
-      headers: {'User-Agent': 'Mozilla/5.0', 'Origin': 'https://terabox.hnn.workers.dev', 'HOST': 'terabox.hnn.workers.dev',  'Referer': 'https://terabox.hnn.workers.dev/'  },
+      headers: {
+        'mode': 'no-cors',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3' },
     });
 
-
-    console.log(infoResponse)
     if (!infoResponse.ok) {
       return NextResponse.json(
         { status: 'error', message: 'Failed to fetch file info' },

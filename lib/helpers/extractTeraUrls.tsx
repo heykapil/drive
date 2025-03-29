@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-function extractShortUrl(url: string) {
+export function extractShortUrl(url: string) {
   try {
     const urlObj = new URL(url);
     // Split the pathname and get the segment after "/s"
