@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { Session } from "@/lib/auth"
 import { bucketOptions } from "@/service/bucket.config"
-import { BellIcon, CloudUpload, CreditCardIcon, FolderInputIcon, FolderOpen, LayoutDashboard, LogOutIcon, Menu, Moon, MoreVerticalIcon, Settings, Share2, Sun, Upload, UserCircleIcon } from "lucide-react"
+import { BellIcon, CloudUpload, CreditCardIcon, FolderInputIcon, FolderOpen, LayoutDashboard, LogOutIcon, Menu, Moon, MoreVerticalIcon, Settings, Share2, Sun, Upload, UserCircleIcon, VideoIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -16,12 +16,14 @@ import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { Card, CardContent } from "./ui/card"
 import { Skeleton } from "./ui/skeleton"
+import Image from "next/image"
 
 const navLinks = [
   { href: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5 text-muted-foreground" /> },
   { href: '/upload', label: 'Upload', icon: <Upload className="h-5 w-5 text-muted-foreground" /> },
   { href: '/upload/remote', label: 'Remote Upload', icon: <CloudUpload className="h-5 w-5 text-muted-foreground" /> },
   { href: '/uploads', label: 'My Files', icon: <FolderOpen className="h-5 w-5 text-muted-foreground" /> },
+  { href: '/player/terabox', label: 'Terabox', icon: <VideoIcon className="h-5 w-5 text-muted-foreground" /> },
   { href: '/shared', label: 'Shared Files', icon: <Share2 className="h-5 w-5 text-muted-foreground" /> },
   { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5 text-muted-foreground" /> },
 ];
@@ -77,10 +79,10 @@ export default function HeaderNav({ session }: { session: Session }) {
   return (
     <header className="sticky top-0 z-50 w-full px-4 sm:px-8 md:px-16 lg:px-20 border-b backdrop-blur-lg bg-background/10">
       <div className="flex flex-row items-center justify-center mx-auto">
-        <div className="container flex h-16 items-center justify-between py-4">
+        <div className="container flex h-12 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Upload className="h-6 w-6" />
-            <span className="hidden font-semibold sm:inline-block">kapil.app</span>
+            <Image src="/icon1.png" alt="Logo" className="h-6 w-6" loading="lazy" width={24} height={24}/>
+            <span className="hidden font-semibold sm:inline-block">drive.kapil.app</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -100,7 +102,7 @@ export default function HeaderNav({ session }: { session: Session }) {
 
                   {/* Active Indicator */}
                   <div
-                    className="absolute bottom-0 not-[]:6px] h-[1px] bg-[#0e0f11] dark:bg-white transition-all duration-300 ease-out"
+                    className="absolute -bottom-1.75 not-[]:6px] h-[1px] bg-blue-600 dark:bg-green-400 transition-all duration-300 ease-out"
                     style={activeStyle}
                   />
 
@@ -117,7 +119,7 @@ export default function HeaderNav({ session }: { session: Session }) {
                           onMouseEnter={() => setHoveredIndex(index)}
                           onMouseLeave={() => setHoveredIndex(null)}
                           className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${
-                            isActive ? "text-black dark:text-white" : "text-[#0e0f1199] dark:text-[#ffffff99]"
+                            isActive ? "text-blue-600 dark:text-green-400" : "text-[#0e0f1199] dark:text-[#ffffff99]"
                           }`}
                         >
                           {link.label}
@@ -173,10 +175,10 @@ export default function HeaderNav({ session }: { session: Session }) {
                                  </SheetTrigger>
                                  <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0">
                                    <div className="flex flex-col h-full">
-                                     <div className="border-b p-4 flex items-center justify-between">
-                                       <div className="flex items-center gap-2">
-                                         <Upload className="h-5 w-5 text-primary" />
-                                         <span className="font-semibold">kapil.app</span>
+                                     <div className="border-b p-3 flex items-center justify-between">
+                                       <div className="flex items-center gap-2 text-primary">
+                                         <Image src="/icon1.png" alt="Logo" className="h-6 w-6" loading="lazy" width={24} height={24}/>
+                                         <span className="font-medium">drive</span>
                                        </div>
                                      </div>
 
@@ -321,7 +323,7 @@ export function HeaderSkeleton() {
   return (
     <header className="sticky top-0 z-50 w-full px-4 sm:px-8 md:px-16 lg:px-20 border-b backdrop-blur-lg bg-background/10">
       <div className="flex flex-row items-center justify-center mx-auto">
-        <div className="container flex h-16 items-center justify-between py-4">
+        <div className="container flex h-12 items-center justify-between py-4">
           {/* Logo & Title Skeleton */}
           <div className="flex items-center gap-2">
             <Skeleton className="h-6 w-6 rounded" />

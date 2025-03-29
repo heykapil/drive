@@ -1,4 +1,5 @@
 import { buckets } from "@/service/bucket.config";
+import { query } from "@/service/postgres";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
@@ -24,6 +25,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing filename or content type" }, { status: 400 });
     }
 
+    const { rows } = await query('SELECT FROM files where filename = $1 AND bucket = $2', [filename, bucketConfig.name])
+
+    if (rows.length > 0) {
+      return NextResponse.json({ success: false, error: "File with this name already exists!" }, { status: 409 });
+    }
+
+
     const key = `uploads/${filename}`;
     const command = new CreateMultipartUploadCommand({
       Bucket: bucketConfig.name,
@@ -38,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, uploadId: response.UploadId, key });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error initiating multipart upload:", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }

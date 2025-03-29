@@ -17,7 +17,7 @@ import React, { useEffect, useRef, useState } from 'react';
 
 interface Media {
   url: string;
-  id: string;
+  id:  string;
 }
 
 let activeVideoId: string | null = null;

@@ -69,7 +69,7 @@ export default function DashboardPage() {
        // Filter and set categories
        setRecentImages(data.files.filter((f: any) => f.type.startsWith('image/')));
        setRecentVideos(data.files.filter((f: any) => f.type.startsWith('video/')));
-       setRecentDocs(data.files.filter((f:any) =>
+       setRecentDocs(data.files.filter((f: any) =>
          f.type.startsWith('application/') ||
          f.type.startsWith('text/')
        ));

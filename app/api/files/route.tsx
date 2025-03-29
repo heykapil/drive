@@ -12,6 +12,8 @@ export async function GET(req: NextRequest) {
     const selectedBucketsParam = searchParams.get("bucket");
     const recent = searchParams.get("recent") === "true";
     const typeGroup = searchParams.get("typeGroup");
+    const liked = searchParams.get('liked');
+    const is_public = searchParams.get('public');
     const allFiles = !searchParams.get("limit") ? true : false;
     const limit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10));
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
@@ -54,7 +56,16 @@ export async function GET(req: NextRequest) {
       whereConditions.push("uploaded_at >= NOW() - INTERVAL '1 week'");
     }
 
-    // Add type group filter
+    if (is_public) {
+      const privacy = is_public === 'true' ? true : false;
+      whereConditions.push(`is_public = ${privacy}`);
+    }
+
+    if (liked) {
+      const like = liked === 'true' ? true : false;
+      whereConditions.push(`liked = ${like}`);
+    }
+
     if (typeGroup) {
       switch (typeGroup) {
         case 'images':
@@ -78,7 +89,12 @@ export async function GET(req: NextRequest) {
       type_desc: "type DESC",
       uploaded_at_asc: "uploaded_at ASC",
       uploaded_at_desc: "uploaded_at DESC",
+      liked_asc: "liked ASC",
+      liked_desc: "liked DESC",
+      public_asc: "is_public ASC",
+      public_desc: "is_public DESC",
     };
+
     const orderBy = sortOptions[sort] || "uploaded_at DESC";
 
     const baseQuery = `
@@ -172,7 +188,8 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({
       message: `Deleted ${successfullyDeleted} files successfully`,
       failedCount: fileIds.length - successfullyDeleted,
-    });
+      deletedCount: successfullyDeleted
+    }, {status: 200});
   } catch (error) {
     console.error("Error deleting files:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

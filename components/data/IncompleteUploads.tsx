@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/table";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { toast } from "sonner";
-import Loading from "@/app/loading";
 
 type Upload = {
   Key: string;
