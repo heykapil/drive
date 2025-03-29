@@ -71,7 +71,7 @@ export default function TeraboxPlayer() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-2 row-start-2 items-center sm:items-start">
-        <div className="md:2xl lg:w-4xl mx-auto py-6 px-2 space-y-6">
+        <div className="w-[95vw] md:2xl lg:w-4xl mx-auto py-6 px-2 space-y-6">
           <h1 className="text-2xl font-bold lg:px-4">Terabox player</h1>
           <div className="p-4 max-w-4xl mx-auto space-y-4">
             <div className="space-y-2">
