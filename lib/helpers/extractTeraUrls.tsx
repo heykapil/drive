@@ -19,7 +19,7 @@ export const extractTeraboxDownloadUrls = async (url: string) => {
   try {
 
     const shorturl = extractShortUrl(url);
-    const response = await fetch('/api/terabox/v1', {
+    const response = await fetch(process.env.NEXT_PUBLIC_APP_URL+'/api/terabox/v1', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
