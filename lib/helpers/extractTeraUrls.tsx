@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 function extractShortUrl(url: string) {
   try {
     const urlObj = new URL(url);
@@ -33,6 +35,7 @@ export const extractTeraboxDownloadUrls = async (url: string) => {
     if (!data?.downloadUrls?.length) throw new Error('No download URLs found');
     return data;
   } catch (error: any) {
+    toast.error(`Terabox extraction failed: ${error.message}`);
     throw new Error(`Terabox extraction failed: ${error.message}`);
   }
 };
