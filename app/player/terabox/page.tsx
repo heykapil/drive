@@ -1,23 +1,16 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { extractShortUrl, extractTeraboxDownloadUrls } from "@/lib/helpers/extractTeraUrls"
+import { extractShortUrl } from "@/lib/helpers/extractTeraUrls"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { VideoPlayer } from "@/components/viewer/VideoPlayer3"
 import { formatBytes } from "@/lib/utils"
 import { betterFetch } from "@better-fetch/fetch"
 
-interface TeraboxData {
-  downloadUrls: string[]
-  watchUrls: string[]
-  filenames: string[]
-  sizes: number[]
-}
-
 export default function TeraboxPlayer() {
   const [link, setLink] = useState("")
-  const [teraboxData, setTeraboxData] = useState<TeraboxData | null>(null)
+  const [teraboxData, setTeraboxData] = useState(null)
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -32,15 +25,15 @@ export default function TeraboxPlayer() {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await fetch("https://terabox.kapil.app", {
+      const data = await betterFetch("https://terabox.kapil.app", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ shorturl: extractShortUrl(link) }),
-      }).then(res => res.json())
-      console.log(data)
-      setTeraboxData(data as unknown as TeraboxData)
+      })
+      // @ts-ignore
+      setTeraboxData(data)
       setCurrentVideoIndex(0)
     } catch (err) {
       setError("Failed to process the link. Please check if it's valid.")
@@ -77,11 +70,14 @@ export default function TeraboxPlayer() {
   }
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-2 row-start-2 items-center sm:items-start">
-        <div className="w-[95vw] md:2xl lg:w-4xl mx-auto py-6 px-2 space-y-6">
-          <h1 className="text-2xl font-bold lg:px-4">Terabox player</h1>
-          <div className="p-4 max-w-4xl mx-auto space-y-4">
+    <>
+          <h1 className="text-2xl font-bold">Terabox player</h1>
+          <h2 className="text-md">Supported Domains:
+          <span className="text-primary/70 ml-1">
+             terabox.com, terafileshare.com, 1024tera.com
+          </span>
+          </h2>
+          <div className="max-w-4xl mx-auto space-y-4">
             <div className="space-y-2">
               <div className="flex gap-2">
                 <Input
@@ -115,7 +111,7 @@ export default function TeraboxPlayer() {
                   </p>
                 </div>
 
-                <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                <div className="aspect-video bg-black p-1 rounded-lg overflow-hidden">
                   <VideoPlayer
                     id={String(currentVideoIndex)}
                     url={teraboxData.watchUrls[currentVideoIndex]}
@@ -164,8 +160,6 @@ export default function TeraboxPlayer() {
               </div>
             )}
           </div>
-        </div>
-      </main>
-    </div>
+        </>
   )
 }

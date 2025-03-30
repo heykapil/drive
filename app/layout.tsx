@@ -99,7 +99,13 @@ export default async function RootLayout({
               <HeaderNav session={session} />
               </Suspense>
                <TransitionLayout>
-                 {children}
+                 <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">
+                   <main className="flex flex-col gap-2 row-start-2 items-center sm:items-start">
+                     <div className="w-[95vw] md:w-2xl lg:w-4xl mx-auto py-6 space-y-6">
+                       {children}
+                     </div>
+                    </main>
+                  </div>
                </TransitionLayout>
             </main>
               <Toaster theme="system" expand richColors/>

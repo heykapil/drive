@@ -176,62 +176,6 @@ export default function FileList() {
     }
   };
 
-  // const handleDownloadAsZip = async () => {
-  //   try {
-  //     if (selectedFiles.size === 0) return;
-  //     const fileIds = Array.from(selectedFiles);
-  //     const urlResponse = await fetch('/api/files/urls', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({
-  //         fileIds,
-  //         bucket: selectedBucket,
-  //         expiresIn: 600 // Optional, defaults to 300 (5 minutes)
-  //       }),
-  //     });
-
-  //     if (!urlResponse.ok) {
-  //       throw new Error('Failed to fetch presigned URLs');
-  //     }
-
-  //     const data = await urlResponse.json();
-
-  //     const response = await fetch('/api/files/zip', {
-  //       method: 'POST',
-  //       headers: { 'Content-Type': 'application/json' },
-  //       body: JSON.stringify({
-  //         presignedUrls: data.presignedUrls.map(u => u.url)
-  //       })
-  //     });
-
-  //     if (!response.body) throw new Error('No response body');
-
-  //     // Stream directly to the browser
-  //     const reader = response.body.getReader();
-  //     const chunks: Uint8Array[] = [];
-
-  //     while (true) {
-  //       const { done, value } = await reader.read();
-  //       if (done) break;
-  //       if (value) chunks.push(value);
-  //     }
-
-  //     const blob = new Blob(chunks, { type: 'application/zip' });
-  //     const url = window.URL.createObjectURL(blob);
-  //     const a = document.createElement('a');
-  //     a.href = url;
-  //     a.download = 'files.zip';
-  //     document.body.appendChild(a);
-  //     a.click();
-  //     window.URL.revokeObjectURL(url);
-  //     document.body.removeChild(a);
-  //   } catch (error) {
-  //     console.error('Download error:', error);
-  //   }
-  // };
-
 
 
   useEffect(() => {
