@@ -1,11 +1,12 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { extractTeraboxDownloadUrls } from "@/lib/helpers/extractTeraUrls"
+import { extractShortUrl, extractTeraboxDownloadUrls } from "@/lib/helpers/extractTeraUrls"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { VideoPlayer } from "@/components/viewer/VideoPlayer3"
 import { formatBytes } from "@/lib/utils"
+import { betterFetch } from "@better-fetch/fetch"
 
 interface TeraboxData {
   downloadUrls: string[]
@@ -31,8 +32,15 @@ export default function TeraboxPlayer() {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await extractTeraboxDownloadUrls(link)
-      setTeraboxData(data)
+      const data = await fetch("https://terabox.kapil.app", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ shorturl: extractShortUrl(link) }),
+      }).then(res => res.json())
+      console.log(data)
+      setTeraboxData(data as unknown as TeraboxData)
       setCurrentVideoIndex(0)
     } catch (err) {
       setError("Failed to process the link. Please check if it's valid.")
