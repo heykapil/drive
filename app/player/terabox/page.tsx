@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { VideoPlayer } from "@/components/viewer/VideoPlayer3"
 import { formatBytes } from "@/lib/utils"
-import { betterFetch } from "@better-fetch/fetch"
+import { toast } from "sonner"
 
 export default function TeraboxPlayer() {
   const [link, setLink] = useState("")
-  const [teraboxData, setTeraboxData] = useState(null)
+  const [teraboxData, setTeraboxData] = useState<null | any>(null)
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,15 +25,16 @@ export default function TeraboxPlayer() {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await betterFetch("https://terabox.kapil.app", {
+      const data = await fetch("https://terabox.kapil.app", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ shorturl: extractShortUrl(link) }),
-      })
-      // @ts-ignore
-      setTeraboxData(data)
+      }).then(res => res.json())
+      if(!data) toast.error("No data received")
+      if(data.watchUrls.length <=0) toast.error("No video found")
+      setTeraboxData(data as unknown as any)
       setCurrentVideoIndex(0)
     } catch (err) {
       setError("Failed to process the link. Please check if it's valid.")
