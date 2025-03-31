@@ -159,9 +159,11 @@ export default function FileUploadServer() {
       handleFileUploadStart(file.name);
       updateUploadStatus(file.name, "Initiating upload...");
       try {
-        file.size <= FILE_SIZE_THRESHOLD
-          ? await uploadSimple(file)
-          : await uploadMultipart(file);
+        if (file.size <= FILE_SIZE_THRESHOLD) {
+          await uploadSimple(file);
+        } else {
+          await uploadMultipart(file);
+        }
         toast.success(`${file.name} uploaded successfully!`);
       } catch (error: any) {
         const message = error.name === "AbortError" ? "Upload cancelled" : error.message;

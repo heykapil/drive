@@ -8,6 +8,7 @@ export interface BucketConfig {
   availableCapacity?: number
   private?: boolean
   cdnUrl?: string
+  provider?: string
 }
 
 export const buckets: Record<string, BucketConfig> = {
@@ -19,6 +20,7 @@ export const buckets: Record<string, BucketConfig> = {
     endpoint: process.env.AWS_ENDPOINT as string,
     cdnUrl: 'https://cdn.kapil.app',
     private: false,
+    provider: 'tebi'
   },
   'photos': {
     name: 'photos.kapil.app',
@@ -29,6 +31,7 @@ export const buckets: Record<string, BucketConfig> = {
     cdnUrl: 'https://photos.kapil.app',
     availableCapacity: 12,
     private: false,
+    provider: 'tebi'
   },
   'documents': {
     name: 'docs.kapil.app',
@@ -38,6 +41,7 @@ export const buckets: Record<string, BucketConfig> = {
     endpoint: process.env.AWS_ENDPOINT as string,
     cdnUrl: 'https://docs.kapil.app',
     private: false,
+    provider: 'tebi'
   },
   'notes': {
     name: 'notes.kapil.app',
@@ -48,6 +52,7 @@ export const buckets: Record<string, BucketConfig> = {
     availableCapacity: 12,
     cdnUrl: 'https://notes.kapil.app',
     private: false,
+    provider: 'tebi'
   },
   'archives' : {
     name: 'archives',
@@ -56,6 +61,7 @@ export const buckets: Record<string, BucketConfig> = {
     region: process.env.AWS_REGION as string,
     endpoint: process.env.AWS_ENDPOINT as string,
     private: true,
+    provider: 'tebi'
   },
   'videos': {
     name: 'terabox',
@@ -64,6 +70,7 @@ export const buckets: Record<string, BucketConfig> = {
     region: process.env.AWS_REGION as string,
     endpoint: process.env.AWS_ENDPOINT as string,
     private: true,
+    provider: 'tebi'
   },
   'videos 2': {
     name: 'elle',
@@ -73,6 +80,7 @@ export const buckets: Record<string, BucketConfig> = {
     endpoint: process.env.AWS_ENDPOINT_5 as string,
     availableCapacity: 15,
     private: true,
+    provider: 'synology'
   },
   'videos 3': {
     name: 'kap',
@@ -82,6 +90,7 @@ export const buckets: Record<string, BucketConfig> = {
     endpoint: process.env.AWS_ENDPOINT_6 as string,
     availableCapacity: 15,
     private: true,
+    provider: 'synology'
   },
   'videos 4': {
     name: 'kch',
@@ -91,6 +100,7 @@ export const buckets: Record<string, BucketConfig> = {
     endpoint: process.env.AWS_ENDPOINT_7 as string,
     availableCapacity: 15,
     private: true,
+    provider: 'synology'
   },
   'videos 5': {
     name: 'tbox',
@@ -100,6 +110,7 @@ export const buckets: Record<string, BucketConfig> = {
     endpoint: process.env.AWS_ENDPOINT_8 as string,
     availableCapacity: 15,
     private: true,
+    provider: 'synology'
   },
   'videos 6': {
     name: 'tbox2',
@@ -109,6 +120,7 @@ export const buckets: Record<string, BucketConfig> = {
     endpoint: process.env.AWS_ENDPOINT_9 as string,
     availableCapacity: 15,
     private: true,
+    provider: 'synology'
   }
 }
 

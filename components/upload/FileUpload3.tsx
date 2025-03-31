@@ -11,9 +11,10 @@ import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { FileRow } from "./FileRow";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Switch } from "../ui/switch";
 
 const FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
-const MAX_RETRY_ATTEMPTS = 3;
+const MAX_RETRY_ATTEMPTS = 1;
 const RETRY_DELAY = 1000; // base delay in ms
 const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
@@ -32,7 +33,7 @@ interface UploadPart {
   ETag: string;
 }
 
-export default function FileUpload() {
+export function FileUpload() {
   const { selectedBucket } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
@@ -47,6 +48,7 @@ export default function FileUpload() {
   // Concurrency states.
   const [maxConcurrentFiles, setMaxConcurrentFiles] = useState<number>(3);
   const [maxConcurrentChunks, setMaxConcurrentChunks] = useState<number>(3);
+  const [proxy, setProxy] = useState<boolean>(false);
   const [maxSize, setMaxSize] = useState<number>(1)
   // Abort controllers for canceling uploads.
   const abortControllers = useRef<Record<string, AbortController[]>>({});
@@ -237,7 +239,6 @@ export default function FileUpload() {
       signal: controller.signal,
     });
     const simRes = await response.json();
-    console.log(simRes)
     if (!simRes.success) {
       toast.error(simRes.error);
     }
@@ -310,7 +311,7 @@ export default function FileUpload() {
           body: JSON.stringify({ uploadId, key, partNumber }),
         });
         const { url } = await presignRes.json();
-        const response = await axios.put(url, chunk, {
+        const response = await axios.put(proxy ? 'https://stream.kapil.app?url=' + encodeURIComponent(url) : url, chunk, {
           signal: controller.signal,
           onUploadProgress: (progressEvent) => {
             setState((prev) => ({
@@ -336,6 +337,7 @@ export default function FileUpload() {
         }));
         return { PartNumber: partNumber, ETag: eTag };
       } catch (error: any) {
+        console.log(error)
         if (error.name === "AbortError") throw error;
         attempt++;
         if (attempt >= MAX_RETRY_ATTEMPTS) {
@@ -431,7 +433,7 @@ export default function FileUpload() {
         ))}
       </div>
       {/* Concurrency Options */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 items-center">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
         <div className="flex flex-row space-x-2 items-center">
           <label className="block text-sm font-medium mb-1">
             Concurrent Files
@@ -490,8 +492,16 @@ export default function FileUpload() {
             </SelectContent>
           </Select>
         </div>
+        <div className="flex flex-row gap-2">
+        <label className="block text-sm font-medium mb-1">
+          Proxy
+        </label>
+        <Switch
+          checked={proxy}
+          onCheckedChange={setProxy}
+        />
+        </div>
       </div>
-
       <Button
         onClick={uploadFiles}
         disabled={state.files.length === 0 || Object.values(state.uploadingFiles).some(Boolean)}

@@ -1,5 +1,4 @@
-import FileUpload from "@/components/upload/FileUpload3";
-import FileUploadServer from "@/components/upload/FileUploadServer";
+import FileUpload from "@/components/upload/FileUpload";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -14,7 +13,8 @@ export default async function UploadPage() {
     <>
       <h1 className="text-2xl font-bold lg:px-4">Upload files</h1>
       <Suspense fallback={<Loading />}>
-        {production ? <FileUpload /> : <FileUploadServer />}
+        {/* {production ? <FileUpload /> : <FileUploadServer />} */}
+        <FileUpload />
       </Suspense>
     </>
   );

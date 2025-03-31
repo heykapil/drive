@@ -75,7 +75,7 @@ export default function TeraboxPlayer() {
           <h1 className="text-2xl font-bold">Terabox player</h1>
           <h2 className="text-md">Supported Domains:
           <span className="text-primary/70 ml-1">
-             terabox.com, terafileshare.com, 1024tera.com
+             terabox.com, terafileshare.com, 1024terabox.com, teraboxlink.com, teraboxapp.xyz
           </span>
           </h2>
           <div className="max-w-4xl mx-auto space-y-4">
