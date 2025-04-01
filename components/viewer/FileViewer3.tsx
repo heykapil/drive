@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getFileTypeFromFilename } from "@/lib/utils";
 import { Download, ScanEyeIcon } from "lucide-react";
 import { VideoPlayer } from "./VideoPlayer4";
@@ -26,14 +26,14 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
   const isVideo = fileType === "video" || name.match(/\.(mp4|webm|ogg|mov)$/);
   return (
     <Dialog open={!!previewFile} onOpenChange={onClose}>
-      <DialogContent className="min-w-[90%] h-[90vh] flex flex-col">
-        <DialogHeader className="flex flex-row justify-between items-center">
+      <DialogContent aria-description="dialog-content" className="h-fit w-full flex flex-col">
+        <DialogHeader className="flex flex-row justify-between items-center p-0">
           <div className="truncate overflow-x-auto max-w-[150px] lg:max-w-[400px] ">
             <DialogTitle className="text-sm font-semibold">{name}</DialogTitle>
             <p className="text-sm text-gray-500">Uploaded: {uploaded_at} | Size: {size} | {!is_public ? "Private" : "Public"}</p>
           </div>
           <div className="flex gap-2 mr-4">
-            <Button variant="outline" onClick={() => window.open(url, "_blank")}>
+            <Button variant="outline" className="hidden md:flex" onClick={() => window.open(url, "_blank")}>
              Download <Download className="w-5 h-5 ml-1" />
             </Button>
             {type === 'application/pdf' && <Button variant={'outline'} onClick={()=> window.open(`https://pdf.kapil.app?file=${url}`, '_blank')}>
@@ -41,8 +41,9 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
             </Button>
             }
           </div>
+          <DialogDescription className="sr-only">Dialog-content</DialogDescription>
         </DialogHeader>
-        <div className="flex justify-center items-center flex-grow p-1 bg-black rounded-md overflow-auto">
+        <div className="flex aspect-ratio justify-center items-center flex-grow p-0 rounded-md overflow-auto">
           {isImage && <img src={url} alt={name} className="max-h-full w-auto rounded-md" />}
           {isVideo && (
             <VideoPlayer url={url} id={id} />

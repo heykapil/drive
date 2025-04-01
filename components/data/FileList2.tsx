@@ -364,7 +364,7 @@ export default function FileList() {
 
   const form = useForm();
   return (
-    <div className="space-y-4 p-4 w-full">
+    <div className="space-y-4 p-1 w-full">
       <div className="flex flex-col gap-4 md:flex-row md:justify-between">
         <Input
           placeholder="Search files..."

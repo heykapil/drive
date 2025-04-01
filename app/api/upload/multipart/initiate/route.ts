@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing filename or content type" }, { status: 400 });
     }
 
-    const { rows } = await query('SELECT FROM files where filename = $1 AND bucket = $2', [filename, bucketConfig.name])
+    const { rows } = await query('SELECT FROM files where filename = $1', [filename])
 
     if (rows.length > 0) {
       return NextResponse.json({ success: false, error: "File with this name already exists!" }, { status: 409 });

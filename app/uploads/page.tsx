@@ -12,7 +12,7 @@ export default async function UploadsPage() {
   }
   return (
     <>
-      <h1 className="text-2xl font-bold lg:px-4">My files</h1>
+      <h1 className="text-2xl font-bold px-1">My files</h1>
       <Suspense fallback={<Loading />}>
         <FileList />
       </Suspense>

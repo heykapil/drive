@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { Session } from "@/lib/auth"
 import { bucketOptions } from "@/service/bucket.config"
@@ -152,7 +152,7 @@ export default function HeaderNav({ session }: { session: Session }) {
                       {/* Theme Toggle */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon">
+                          <Button variant="outline" size="icon" className="hidden md:flex">
                             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                             <span className="sr-only">Toggle theme</span>
@@ -173,7 +173,8 @@ export default function HeaderNav({ session }: { session: Session }) {
                                      <SheetTitle className="sr-only">Toggle menu</SheetTitle>
                                    </Button>
                                  </SheetTrigger>
-                                 <SheetContent side="right" className="w-[300px] sm:w-[350px] p-0">
+                                 <SheetContent side="right" aria-describedby="mobile-menu-content" className="w-[300px] sm:w-[350px] p-0">
+                                   <SheetDescription className="sr-only">Mobile-menu-content</SheetDescription>
                                    <div className="flex flex-col h-full">
                                      <div className="border-b p-3 flex items-center justify-between">
                                        <div className="flex items-center gap-2 text-primary">

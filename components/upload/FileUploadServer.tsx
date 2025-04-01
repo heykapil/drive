@@ -53,7 +53,7 @@ export default function FileUploadServer() {
   const [maxConcurrentFiles, setMaxConcurrentFiles] = useState<number>(3);
   const [maxConcurrentChunks, setMaxConcurrentChunks] = useState<number>(3);
   const abortControllers = useRef<Record<string, AbortController[]>>({});
-
+  const production = process.env.NODE_ENV === 'production';
   const updateUploadStatus = (fileName: string, status: string) => {
     setState((prev) => ({
       ...prev,
@@ -258,7 +258,7 @@ export default function FileUploadServer() {
         formData.append("chunk", new Blob([chunk]));
 
         const { data } = await axios.post(
-          `/api/upload/multipart/chunk?bucket=${selectedBucket}`,
+          production ? `https://chunk.kapil.app/upload?bucket=${selectedBucket}` : `/api/upload/multipart/chunk?bucket=${selectedBucket}`,
           formData,
           {
             signal: controller.signal,
@@ -290,7 +290,7 @@ export default function FileUploadServer() {
           },
         }));
 
-        return { PartNumber: partNumber, ETag: data.ETag };
+        return { PartNumber: partNumber, ETag: data.ETag || data.etag || data.eTag };
       } catch (error: any) {
         if (error.name === "AbortError") throw error;
         if (++attempt >= MAX_RETRY_ATTEMPTS) throw error;
