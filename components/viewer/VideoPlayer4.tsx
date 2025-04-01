@@ -34,7 +34,6 @@ export const VideoPlayer: React.FC<Media> = ({ url, id }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isPiP, setIsPiP] = useState(false);
-  const [paddingTop, setPaddingTop] = useState((9 / 16) * 100); // fallback for 16:9
 
   useEffect(() => {
     const video = videoRef.current;
@@ -148,23 +147,14 @@ export const VideoPlayer: React.FC<Media> = ({ url, id }) => {
     return `${minutes}:${seconds}`;
   };
 
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      const { videoWidth, videoHeight } = videoRef.current;
-      if (videoWidth && videoHeight) {
-        setPaddingTop((videoHeight / videoWidth) * 100);
-      }
-    }
-  };
-
   return (
-    <div id={id} className="relative bg-black" onMouseMove={resetControlsTimeout} style={{ paddingTop: `${paddingTop}%` }}>
+    <div id={id} className="relative w-full bg-black aspect-video" onMouseMove={resetControlsTimeout}>
       <video
         ref={videoRef}
-        className="w-full h-full object-cover rounded-lg"
+        className="w-full h-full object-contain rounded-lg"
         onClick={togglePlayPause}
         muted={isMuted}
-        onLoadedMetadata={handleLoadedMetadata}
+        disablePictureInPicture={false}
       />
       {/* Controls */}
       <div className={cn(
