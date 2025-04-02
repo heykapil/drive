@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { FileRow } from "./FileRow";
+import { signJWT } from "@/lib/helpers/jose";
 
 const FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
 const MAX_RETRY_ATTEMPTS = 3;
@@ -256,9 +257,15 @@ export default function FileUploadServer() {
         formData.append("key", key);
         formData.append("partNumber", partNumber.toString());
         formData.append("chunk", new Blob([chunk]));
-
+        const payload = {
+          uploadId,
+          key,
+          partNumber,
+          chunk,
+        };
+        const jwtToken = await signJWT(payload)
         const { data } = await axios.post(
-          production ? `https://chunk.kapil.app/upload?bucket=${selectedBucket}` : `/api/upload/multipart/chunk?bucket=${selectedBucket}`,
+          production ? `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}` : `/api/upload/multipart/chunk?bucket=${selectedBucket}`,
           formData,
           {
             signal: controller.signal,
@@ -276,6 +283,7 @@ export default function FileUploadServer() {
             },
             headers: {
               "Content-Type": "multipart/form-data",
+              "x-access-token": jwtToken,
             },
           }
         );

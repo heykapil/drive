@@ -72,8 +72,8 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
               </Button>
             )}
 
-            <Button variant="outline" size="icon" onClick={onClose} className="h-8 w-8">
-              <X className="w-4 h-4" />
+            <Button variant="outline" size="icon" onClick={onClose} className="h-8 w-8 mb-2">
+              <X className="w-4 h-4 sr-only" />
             </Button>
           </div>
         </div>

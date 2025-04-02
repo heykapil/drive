@@ -148,7 +148,7 @@ export const VideoPlayer: React.FC<Media> = ({ url, id }) => {
   };
 
   return (
-    <div id={id} className="relative w-full bg-black aspect-video" onMouseMove={resetControlsTimeout}>
+    <div id={id} className="relative w-full h-full aspect-video bg-black" onMouseMove={resetControlsTimeout}>
       <video
         ref={videoRef}
         className="w-full h-full object-contain rounded-lg"
