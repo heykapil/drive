@@ -261,9 +261,7 @@ export default function FileUploadServer() {
           uploadId,
           key,
           partNumber,
-          chunk,
         };
-        const jwtToken = await signJWT(payload)
         const { data } = await axios.post(
           production ? `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}` : `/api/upload/multipart/chunk?bucket=${selectedBucket}`,
           formData,
@@ -283,7 +281,7 @@ export default function FileUploadServer() {
             },
             headers: {
               "Content-Type": "multipart/form-data",
-              "x-access-token": jwtToken,
+              "x-access-token":  await signJWT(payload),
             },
           }
         );
