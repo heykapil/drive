@@ -23,7 +23,7 @@ const navLinks = [
   { href: '/upload', label: 'Upload', icon: <Upload className="h-5 w-5 text-muted-foreground" /> },
   { href: '/upload/remote', label: 'Remote Upload', icon: <CloudUpload className="h-5 w-5 text-muted-foreground" /> },
   { href: '/uploads', label: 'My Files', icon: <FolderOpen className="h-5 w-5 text-muted-foreground" /> },
-  { href: '/player/terabox', label: 'Terabox', icon: <VideoIcon className="h-5 w-5 text-muted-foreground" /> },
+  { href: '/player/yt-dlp', label: 'Player', icon: <VideoIcon className="h-5 w-5 text-muted-foreground" /> },
   { href: '/shared', label: 'Shared Files', icon: <Share2 className="h-5 w-5 text-muted-foreground" /> },
   { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5 text-muted-foreground" /> },
 ];

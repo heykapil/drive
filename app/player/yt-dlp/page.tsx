@@ -80,6 +80,12 @@ export default function TeraboxPage2() {
 
   return (
     <>
+      <h1 className="text-2xl font-bold">Video player (yt-dlp)</h1>
+      <h2 className="text-md">
+      <a className="underline underline-offset-2" href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">
+        Supported Domains
+      </a>
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-4 mb-8">
         <div className="flex flex-col md:flex-row gap-4">
           <Input
@@ -103,8 +109,8 @@ export default function TeraboxPage2() {
       )}
 
       {loading && (
-        <div className="text-center py-8 inline-flex gap-2 text-primary items-center">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        <div className="text-center py-4 inline-flex gap-2 text-primary items-center">
+          <Loader2 className="mr-1 h-5 w-5 animate-spin" />
           <span>Fetching video information...</span>
         </div>
       )}
@@ -117,7 +123,7 @@ export default function TeraboxPage2() {
               <div className="flex flex-wrap gap-2 mt-2">
                 <Badge variant="outline">{data?.uploader}</Badge>
                 <Badge variant="outline">{data?.duration_string}</Badge>
-                <Badge variant="outline">{data?.view_count.toLocaleString()} views</Badge>
+                <Badge variant="outline">{data?.view_count?.toLocaleString()} views</Badge>
                 <Badge variant="destructive">Age {data?.age_limit}+</Badge>
               </div>
             </CardHeader>
@@ -142,9 +148,9 @@ export default function TeraboxPage2() {
                         <SelectValue placeholder="Select format" />
                       </SelectTrigger>
                       <SelectContent>
-                        {data?.formats.map((format) => (
-                          <SelectItem key={format.format_id} value={format.format_id}>
-                            {format.resolution} ({format.ext.toUpperCase()}) - {format.vcodec}
+                        {data?.formats?.map((format) => (
+                          <SelectItem key={format?.format_id} value={format?.format_id}>
+                            {format?.resolution} ({format.ext.toUpperCase()}) - {format.vcodec}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -152,14 +158,14 @@ export default function TeraboxPage2() {
                   </div>
 
                   <div className="flex space-x-4 items-center gap-4">
-                    {selectedFormatData && (
+                    {selectedFormatData?.url && (
                       <div className='flex w-full aspect-video'>
 
                         <Button asChild>
                           <a
                             href={selectedFormatData?.url}
-                            download={`${data?.title}.${selectedFormatData?.ext}`}
-                            // download
+                            // download={`${data?.title}.${selectedFormatData?.ext}`}
+                            target='_blank'
                           >
                             Download
                           </a>
@@ -168,26 +174,29 @@ export default function TeraboxPage2() {
                     )}
                   </div>
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <Label>Categories</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {data?.categories.map((category) => (
-                        <Badge key={category} variant="secondary">{category}</Badge>
-                      ))}
-                    </div>
+                {(data?.categories || data?.tags) && (
+                  <div className="space-y-4">
+                    {data?.categories && (
+                      <div>
+                        <Label>Categories</Label>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {data?.categories?.map((category) => (
+                            <Badge key={category} variant="secondary">{category}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {data?.tags && (
+                      <div>
+                        <Label>Tags</Label>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {data?.tags?.map((tag) => (
+                            <Badge key={tag} variant="outline">{tag}</Badge>
+                          ))}
+                        </div>
+                      </div>)}
                   </div>
-
-                  <div>
-                    <Label>Tags</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {data?.tags.map((tag) => (
-                        <Badge key={tag} variant="outline">{tag}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
