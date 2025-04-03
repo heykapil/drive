@@ -15,3 +15,21 @@ export async function testSystemHealth() {
       : null,
   };
 }
+
+export async function ytDlp(inputUrl: any) {
+  try {
+    const response = await fetch(process.env.YTDLP_LAMBDA_URL as string, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.YTDLP_LAMBDA_API_KEY as string,
+      },
+      body: JSON.stringify({ urls: [inputUrl], extraOptions: [], cookies: '' })
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}

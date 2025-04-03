@@ -18,11 +18,12 @@ import React, { useEffect, useRef, useState } from 'react';
 interface Media {
   url: string;
   id:  string;
+  poster?: string;
 }
 
 let activeVideoId: string | null = null;
 
-export const VideoPlayer: React.FC<Media> = ({ url, id }) => {
+export const VideoPlayer: React.FC<Media> = ({ url, id, poster }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsTimeout = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -154,6 +155,7 @@ export const VideoPlayer: React.FC<Media> = ({ url, id }) => {
         className="w-full h-full object-contain rounded-lg"
         onClick={togglePlayPause}
         muted={isMuted}
+        poster={poster}
         disablePictureInPicture={false}
       />
       {/* Controls */}
