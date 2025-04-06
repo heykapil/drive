@@ -10,7 +10,6 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { uploadMultipart } from "./RemoteUploadMultipart2";
 import { getBucketConfig } from "@/service/bucket.config";
-
 export default function RemoteUpload() {
   const { selectedBucket } = useBucketStore()
   const [useProxy, setUseProxy] = useState(true);
