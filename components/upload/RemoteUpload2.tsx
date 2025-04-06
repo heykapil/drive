@@ -8,9 +8,11 @@ import { toast } from "sonner";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
-import { uploadMultipart } from "./RemoteUploadMultipart";
+import { uploadMultipart } from "./RemoteUploadMultipart2";
+import { getBucketConfig } from "@/service/bucket.config";
 
 export default function RemoteUpload() {
+  const { selectedBucket } = useBucketStore()
   const [useProxy, setUseProxy] = useState(true);
   const [proxyUrl, setProxyUrl] = useState("https://stream.kapil.app");
   const [urls, setUrls] = useState("");
@@ -19,6 +21,11 @@ export default function RemoteUpload() {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const [lineHeight, setLineHeight] = useState(20); // Default line height
+  const[synologyBucket,setIsSynologyBucket] = useState(false);
+
+  useEffect(()=>{
+    setIsSynologyBucket(getBucketConfig(selectedBucket)?.provider?.includes('synology') || false);
+  },[selectedBucket])
 
   useEffect(() => {
       if (textAreaRef.current) {
@@ -33,7 +40,6 @@ export default function RemoteUpload() {
       }
     };
 
-  const { selectedBucket } = useBucketStore()
   const handleUpload = async(useProxy: boolean, proxyUrl?:string) => {
     const urlList = urls.split("\n").map(url => url.trim()).filter(Boolean);
     const proxy = useProxy ? proxyUrl : undefined;
@@ -41,7 +47,7 @@ export default function RemoteUpload() {
     setProgress(Object.fromEntries(urlList.map((url) => [url, 0])));
     setIsUploading(true)
     for (const [index, url] of urlList.entries()) {
-      toast.promise(uploadMultipart(url, selectedBucket, setProgress, proxy), {
+      toast.promise(uploadMultipart(url, selectedBucket, setProgress, proxy, synologyBucket), {
         loading: `Uploading... ${index + 1} of ${urlList.length}`,
         error: `Error occured in number ${index + 1} URL: ${url}`,
       })

@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
     // Validate bucket
     const bucketConfig = buckets[bucket];
     if (!bucketConfig?.name) {
+      console.error({ bucket, error: "Invalid bucket configuration" }, );
       return NextResponse.json(
         { success: false, error: "Invalid bucket configuration" },
         { status: 400 }
@@ -26,6 +27,12 @@ export async function POST(req: NextRequest) {
 
     // Validate required fields
     if (!uploadId || !key || !partNumber || !chunk) {
+      console.error( "Missing required fields", {
+        uploadId,
+        key,
+        partNumber,
+        chunk
+      })
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
         { status: 400 }
@@ -48,6 +55,7 @@ export async function POST(req: NextRequest) {
     const response = await client.send(command);
 
     if (!response.ETag) {
+      console.error({ error: "Missing ETag in upload response", response });
       throw new Error("Missing ETag in upload response");
     }
 
@@ -56,7 +64,7 @@ export async function POST(req: NextRequest) {
       ETag: response.ETag.replace(/"/g, ""),
     });
   } catch (error: any) {
-    console.error("Error uploading chunk:", error);
+    console.error("Error uploading chunk:", error.message);
     return NextResponse.json(
       { success: false, error: error.message || "Chunk upload failed" },
       { status: 500 }
