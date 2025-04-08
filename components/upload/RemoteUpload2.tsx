@@ -22,8 +22,12 @@ export default function RemoteUpload() {
   const [lineHeight, setLineHeight] = useState(20); // Default line height
   const[synologyBucket,setIsSynologyBucket] = useState(false);
 
-  useEffect(()=>{
-    setIsSynologyBucket(getBucketConfig(selectedBucket)?.provider?.includes('synology') || false);
+  useEffect(() => {
+    async function setSynologyBucket(){
+      const config = await getBucketConfig(selectedBucket)
+    setIsSynologyBucket(config?.provider?.includes('synology') || false);
+  }
+  setSynologyBucket();
   },[selectedBucket])
 
   useEffect(() => {

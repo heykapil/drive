@@ -1,4 +1,4 @@
-import { buckets } from "@/service/bucket.config";
+import { getallBuckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const bucket = searchParams.get("bucket");
 
-    // Validate bucket parameter
     if (!bucket) {
       return NextResponse.json(
         { success: false, error: "Bucket name not provided." },
@@ -21,7 +20,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate bucket configuration
+    const buckets = await getallBuckets();
+
     const bucketConfig = buckets[bucket];
     if (!bucketConfig?.name) {
       return NextResponse.json(

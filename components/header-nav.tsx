@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { Session } from "@/lib/auth"
-import { bucketOptions } from "@/service/bucket.config"
 import { BellIcon, CloudUpload, CreditCardIcon, FolderInputIcon, FolderOpen, LayoutDashboard, LogOutIcon, Menu, Moon, MoreVerticalIcon, Settings, Share2, Sun, Upload, UserCircleIcon, VideoIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
@@ -28,7 +27,7 @@ const navLinks = [
   { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5 text-muted-foreground" /> },
 ];
 
-export default function HeaderNav({ session }: { session: Session }) {
+export default function HeaderNav({ session, bucketOptions }: { session: Session,bucketOptions: any[] }) {
   const [isMounted, setIsMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const { selectedBucket, setSelectedBucket } = useBucketStore();

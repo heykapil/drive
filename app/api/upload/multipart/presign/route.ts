@@ -1,4 +1,4 @@
-import { buckets } from "@/service/bucket.config";
+import { getallBuckets } from "@/service/bucket.config";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { UploadPartCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({success: false, error: 'Bucket name not provided'})
     }
 
+    const buckets = await getallBuckets()
     const bucketConfig = buckets[bucket]
 
     if(!bucketConfig.name){

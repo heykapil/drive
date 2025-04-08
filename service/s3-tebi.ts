@@ -1,9 +1,12 @@
 'use server'
 import { HeadBucketCommand, ListBucketsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 import { cookies } from 'next/headers';
-import { BucketConfig, buckets } from './bucket.config';
+import { BucketConfig, getallBuckets } from './bucket.config';
+import { toast } from "sonner";
+
 
 export async function s3BucketSyncError({ bucket }: {bucket: string}){
+
   const cookieStore = await cookies();
   const secureCookie: boolean = process.env.BETTER_AUTH_URL?.startsWith('https://') || false;
   const cookiePrefix  = secureCookie ? '__Secure-' : '';
@@ -16,6 +19,7 @@ export async function s3BucketSyncError({ bucket }: {bucket: string}){
 }
 
 export async function s3() {
+  const buckets = await getallBuckets();
   const cookieStore = await cookies();
   const secureCookie: boolean = process.env.BETTER_AUTH_URL?.startsWith('https://') || false;
   const cookiePrefix  = secureCookie ? '__Secure-' : '';
@@ -46,7 +50,7 @@ export async function s3WithConfig(bucketConfig: BucketConfig) {
 
 export async function testS3Connections() {
   const results = [];
-
+  const buckets = await getallBuckets();
   for (const [name, config] of Object.entries(buckets)) {
     try {
       const s3 = await s3WithConfig(config);
@@ -64,6 +68,7 @@ const DEFAULT_MAX_BUCKET_CAPACITY_GB = 25; // 25GB limit
 export async function getS3StorageUsage() {
   const results = [];
 
+  const buckets = await getallBuckets();
   for (const [name, config] of Object.entries(buckets)) {
     try {
       const s3 = await s3WithConfig(config);
@@ -112,6 +117,7 @@ export async function getS3StorageUsage() {
 }
 
 export async function getBucketStorageUsage(bucketName: string) {
+  const buckets = await getallBuckets();
   const config = buckets[bucketName];
   if (!config) {
     throw new Error("Invalid bucket");
@@ -159,6 +165,7 @@ export async function getBucketStorageUsage(bucketName: string) {
 }
 
 export async function getSingleBucketStorageUsage(bucketId: string) {
+  const buckets = await getallBuckets();
   const config = buckets[bucketId];
   if (!config) {
     throw new Error("Invalid bucket");
@@ -203,5 +210,23 @@ export async function getSingleBucketStorageUsage(bucketId: string) {
       status: "Error",
       message: error.message,
     };
+  }
+}
+
+
+export async function verifyBucketConnection(bucketConfig: BucketConfig): Promise<boolean> {
+  const s3Client = await s3WithConfig(bucketConfig);
+  try {
+    await s3Client.send(
+      new HeadBucketCommand({
+        Bucket: bucketConfig.name,
+      })
+    );
+    return true;
+  } catch (error) {
+    toast.error('Bucket connection verification failed:', { description: JSON.stringify(error)});
+    return false;
+  } finally {
+    s3Client.destroy();
   }
 }

@@ -7,11 +7,14 @@ import { useEffect, useState } from "react";
 
 export default function FileUpload() {
   const { selectedBucket } = useBucketStore();
-  const[synologyBucket,setIsSynologyBucket] = useState(false);
-  // const production = process.env.NODE_ENV === 'production';
-  useEffect(()=>{
-    setIsSynologyBucket(getBucketConfig(selectedBucket)?.provider?.includes('synology') || false);
-  },[selectedBucket])
+  const [synologyBucket, setIsSynologyBucket] = useState(false);
+  useEffect(() => {
+    async function setSynologyBucket(){
+      const config = await getBucketConfig(selectedBucket)
+    setIsSynologyBucket(config?.provider?.includes('synology') || false);
+  }
+  setSynologyBucket();
+},[selectedBucket])
   if (synologyBucket) {
     return <FileUploadServer />
   } else {

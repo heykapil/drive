@@ -2,7 +2,7 @@ import { CountdownTimer } from "@/components/CountDownTimer";
 import FileIcon from "@/components/data/FileIcon";
 import { verifyToken } from "@/lib/helpers/token";
 import { formatBytes } from "@/lib/utils";
-import { buckets } from "@/service/bucket.config";
+import { getallBuckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import {
     AlertCircle,
@@ -38,6 +38,7 @@ export default async function FilePage(props: {
 
   const getDownloadUrl = async (id: string, bucket: string) => {
     try {
+      const buckets = await getallBuckets();
       const bucketId = Object.keys(buckets).find(
         (key) => buckets[key].name === bucket
       );

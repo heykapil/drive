@@ -27,8 +27,8 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { Filter, ListFilter, CircleX, Ellipsis } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { bucketOptions, getbucketId } from "@/service/bucket.config";
+import { useEffect, useRef, useState } from "react";
+import { getbucketId } from "@/service/bucket.config";
 import { Badge } from "../ui/badge";
 
 // FileItem type coming from the API. The "bucket" field is the S3 bucket name.
@@ -118,7 +118,7 @@ const columns: ColumnDef<FileItem>[] = [
     // Use an accessor function to derive the bucket identifier from the API bucket name.
     header: "Bucket",
     id: "bucket",
-    accessorFn: (row: FileItem) => getbucketId(row.bucket) || row.bucket,
+    accessorFn: async (row: FileItem) => await getbucketId(row.bucket) || row.bucket,
     cell: ({ row }) => {
       const bucketKey = row.getValue("bucket") as string;
       return bucketKey.charAt(0).toUpperCase() + bucketKey.slice(1);
@@ -132,9 +132,9 @@ const columns: ColumnDef<FileItem>[] = [
   },
 ];
 
-const initialBuckets = bucketOptions.map((option) => option.value);
 
-export default function FilesTable() {
+export default function FilesTable({ options }:{ options: any[]}) {
+  const initialBuckets = options.map((option) => option.value);
   const [data, setData] = useState<FileItem[]>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([
     { id: "bucket", value: initialBuckets },
@@ -278,7 +278,7 @@ export default function FilesTable() {
           </PopoverTrigger>
           <PopoverContent className="w-48">
             <div className="space-y-2">
-              {bucketOptions.map((option) => (
+              {options.map((option) => (
                 <div key={option.value} className="flex items-center gap-2">
                   <Checkbox
                     checked={((table.getColumn("bucket")?.getFilterValue() as string[]) || []).includes(option.value)}

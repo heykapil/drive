@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type File = {
   id : string,
   filename : string,
@@ -66,3 +68,16 @@ export type FileAction =
   | { type: "SET_SELECTED_FILE"; payload: Partial<FileItem> }
   | { type: "APPEND_FILES"; files: FileItem[] }
   | { type: "REPLACE_FILES"; files: FileItem[] };
+
+  export const addBucketformSchema = z.object({
+    id: z.string().min(1, "ID is required"),
+    name: z.string().min(1, "Bucket name is required"),
+    accessKey: z.string().min(1, "Access key is required"),
+    secretKey: z.string().min(1, "Secret key is required"),
+    region: z.string().min(1, "Region is required"),
+    endpoint: z.string().min(1, "Endpoint is required"),
+    availableCapacity: z.number().optional(),
+    private: z.boolean().optional(),
+    cdnUrl: z.string().optional(),
+    provider: z.string().optional(),
+  })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query } from "@/service/postgres";
-import { buckets } from "@/service/bucket.config";
+import { getallBuckets } from "@/service/bucket.config";
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
       .split(",")
       .map(b => b.trim())
       .filter(b => b);
+
+    const buckets = await getallBuckets();
 
     const validBuckets = selectedBuckets
       .filter(b => buckets[b] && buckets[b].name)

@@ -1,12 +1,14 @@
 "use client";
 
 import { StorageChart } from "@/components/data/StoragePieChart";
+import { BucketForm } from "@/components/new-bucket";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { testSystemHealth } from "@/lib/actions";
-import { buckets } from "@/service/bucket.config";
+import { BucketConfig } from "@/service/bucket.config";
 import { getS3StorageUsage } from "@/service/s3-tebi";
-import { AlertTriangle, CheckCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, PaintBucketIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 // Type Definitions
@@ -40,12 +42,14 @@ type HealthData = {
 
 type BucketUsage = BucketUsageSuccess | BucketUsageError;
 
-export default function SettingsContent() {
+export default function SettingsContent({ buckets }:{ buckets: Record<string, BucketConfig>}) {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [usage, setUsage] = useState<BucketUsage[]>([]);
   const [loadingBuckets, setLoadingBuckets] = useState(true);
   const [loadingPostgres, setLoadingPostgres] = useState(true);
-
+  const [addBucketdialogOpen, setaddBucketDialogOpen] = useState(false);
+  const [editBucketdialogOpen, seteditBucketDialogOpen] = useState(false);
+  const [selectedBucket, setSelectedBucket] = useState<{ id: string, config: BucketConfig } | null>(null);
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -111,7 +115,9 @@ export default function SettingsContent() {
     <Card>
       {/* S3 Buckets Section */}
       <CardHeader>
-        <CardTitle>Configured S3 Buckets</CardTitle>
+        <CardTitle className="flex flex-row justify-between">Configured S3 Buckets
+          <Button variant={'outline'}  className="flex flex-row items-center" onClick={()=>setaddBucketDialogOpen(true)}>New Bucket</Button>
+        </CardTitle>
         <CardDescription>
           Status of test connections to your configured storage buckets.
         </CardDescription>
@@ -142,7 +148,10 @@ export default function SettingsContent() {
                       )}
                       <div>
                         <p>{config.name}</p>
-                        <p className="text-sm text-gray-500">ID: {bucketId}</p>
+                        <button className="text-sm text-gray-500" onClick={() => {
+                          setSelectedBucket({ id: bucketId, config });
+                          seteditBucketDialogOpen(true)
+                        }}>ID: {bucketId}</button>
                       </div>
                     </div>
                     {!hasError && (
@@ -172,6 +181,24 @@ export default function SettingsContent() {
           })
         )}
       </CardContent>
+
+      {addBucketdialogOpen && (
+        <BucketForm
+          open={addBucketdialogOpen}
+          onCloseAction={() => setaddBucketDialogOpen(false)}
+        />
+      )}
+
+      {editBucketdialogOpen && selectedBucket && (
+        <BucketForm
+          open={editBucketdialogOpen}
+          onCloseAction={() => seteditBucketDialogOpen(false)}
+          id={selectedBucket.id}
+          bucketConfig={selectedBucket.config}
+        />
+      )}
+
+
 
       {/* Database Section */}
       <CardHeader>

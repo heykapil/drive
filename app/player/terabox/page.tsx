@@ -32,6 +32,7 @@ export default function TeraboxPlayer() {
         },
         body: JSON.stringify({ shorturl: extractShortUrl(link) }),
       }).then(res => res.json())
+      console.log(data)
       if(!data) toast.error("No data received")
       if(data.watchUrls.length <=0) toast.error("No video found")
       setTeraboxData(data as unknown as any)

@@ -11,6 +11,7 @@ import TransitionLayout from "@/components/TransitionLayout";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
 import type { Viewport } from 'next'
+import { bucketOptions } from "@/service/bucket.config";
 
 export const viewport: Viewport = {
   themeColor: [
@@ -71,6 +72,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
+  const bucketOption = await bucketOptions();
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${DMSans.className} antialiased bg-background text-neutral-900 dark:text-white`}>
@@ -96,7 +98,7 @@ export default async function RootLayout({
             <HydrationZustand />
             <main className="min-h-screen flex flex-col items-center p-0">
               <Suspense fallback={<HeaderSkeleton />}>
-              <HeaderNav session={session} />
+              <HeaderNav session={session} bucketOptions={bucketOption} />
               </Suspense>
                <TransitionLayout>
                  <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">

@@ -1,4 +1,4 @@
-import { buckets } from "@/service/bucket.config";
+import { getallBuckets } from "@/service/bucket.config";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { AbortMultipartUploadCommand, ListMultipartUploadsCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Bucket name not provided" });
     }
 
+    const buckets = await getallBuckets()
     const bucketConfig = buckets[bucket];
     if (!bucketConfig?.name) {
       return NextResponse.json({ success: false, error: "Wrong bucket id provided" });
@@ -37,6 +38,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
     }
 
+    const buckets = await getallBuckets();
     const bucketConfig = buckets[bucket];
     if (!bucketConfig?.name) {
       return NextResponse.json({ success: false, error: "Wrong bucket id provided" });

@@ -1,4 +1,4 @@
-import { buckets } from "@/service/bucket.config";
+import {  getallBuckets } from "@/service/bucket.config";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { UploadPartCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const bucket = searchParams.get("bucket") || "";
 
-    // Validate bucket
+    const buckets = await getallBuckets()
     const bucketConfig = buckets[bucket];
     if (!bucketConfig?.name) {
       console.error({ bucket, error: "Invalid bucket configuration" }, );
@@ -63,10 +63,10 @@ export async function POST(req: NextRequest) {
       success: true,
       ETag: response.ETag.replace(/"/g, ""),
     });
-  } catch (error: any) {
-    console.error("Error uploading chunk:", error.message);
+  } catch (error) {
+    console.error("Error uploading chunk:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Chunk upload failed" },
+      { success: false, error: error || "Chunk upload failed" },
       { status: 500 }
     );
   }

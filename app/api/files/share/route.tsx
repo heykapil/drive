@@ -1,6 +1,6 @@
 import { SharedFile } from "@/components/data/shared-files-table";
 import { generateToken } from "@/lib/helpers/token";
-import { buckets } from "@/service/bucket.config";
+import { getallBuckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -13,13 +13,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Bucket name not provided" });
     }
 
+    const buckets = await getallBuckets();
     const bucketConfig = buckets[bucket];
 
     if (!bucketConfig?.name) {
       return NextResponse.json({ success: false, error: "Wrong bucket id provided" });
     }
 
-    // ✅ Read and store the JSON request body
     const body = await req.json();
     const { fileId, duration } = body;
 
@@ -65,7 +65,7 @@ export async function DELETE(req: NextRequest){
 
     await query(`DELETE from shared WHERE token = $1`, [token])
     return NextResponse.json({success: true, message: 'Token deleted'})
-  } catch(error: any){
+  } catch(error){
     console.error(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -115,10 +115,10 @@ export async function GET(req: NextRequest) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: error ||"Internal server error" },
       { status: 500 }
     );
   }

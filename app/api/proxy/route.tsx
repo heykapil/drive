@@ -1,5 +1,5 @@
 // app/api/proxy/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 // List of rotating User-Agents
 const USER_AGENTS = [

@@ -1,4 +1,4 @@
-import { buckets } from "@/service/bucket.config";
+import { getallBuckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const limit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10));
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const offset = (page - 1) * limit;
-
+    const buckets = await getallBuckets();
     if (!selectedBucketsParam) {
       return NextResponse.json({ error: "No bucket selected" }, { status: 400 });
     }
@@ -28,11 +28,9 @@ export async function GET(req: NextRequest) {
       .split(",")
       .map(b => b.trim())
       .filter(b => b);
-
     const validBuckets = selectedBuckets
       .filter(b => buckets[b] && buckets[b].name)
       .map(b => buckets[b].name);
-
     if (validBuckets.length === 0) {
       return NextResponse.json({ error: "No valid bucket selected" }, { status: 400 });
     }
@@ -152,6 +150,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "No bucket selected" }, { status: 400 });
     }
 
+    const buckets = await getallBuckets();
     const bucketConfig = buckets[selectedBucket];
     if (!bucketConfig?.name) {
       return NextResponse.json({ error: "Invalid bucket selection" }, { status: 400 });

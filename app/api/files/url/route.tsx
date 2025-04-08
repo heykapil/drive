@@ -1,4 +1,4 @@
-import { buckets } from "@/service/bucket.config";
+import { getallBuckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
@@ -19,6 +19,9 @@ export async function GET(req: NextRequest) {
     if(!bucket){
       return NextResponse.json({success: false, error: 'Bucket name not provided'})
     }
+
+
+    const buckets = await getallBuckets();
     const bucketConfig = buckets[bucket]
 
     if(!bucketConfig.name){
