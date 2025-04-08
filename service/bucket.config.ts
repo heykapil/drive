@@ -1,6 +1,7 @@
 'use server'
 import { decryptJWT } from "@/lib/helpers/jose"
 import { cookies } from "next/headers"
+import { toast } from "sonner"
 export interface BucketConfig {
   name: string
   accessKey: string
@@ -280,4 +281,35 @@ export async function getRedisBucketArrayCookies() {
     redisbucketArray = await fetch(`https://kv.kapil.app/kv/list?prefix=buckets,drive.kapil.app`).then(res => res.json())
   }
   return redisbucketArray;
+}
+
+export async function deleteBucketCookies() {
+  const secureCookie: boolean = process.env.NODE_ENV === "production";
+  const cookiePrefix = secureCookie ? '__Secure-' : '';
+  const cookieStore = await cookies();
+  const allCookies = cookieStore.getAll();
+  const bucketCookies = allCookies.filter(cookie =>
+    cookie.name.startsWith(`${cookiePrefix}bucket_`)
+  );
+  try {
+    bucketCookies.map(cookie => cookieStore.delete(cookie))
+  } catch{
+    toast.error('Failed to delete bucket cookies')
+  }
+  return bucketCookies;
+}
+
+export async function verifyPassword(password: string): Promise<{ success: boolean}> {
+  try {
+    if (password === process.env.BUCKET_PASSWORD!) {
+      console.log(password)
+      return { success: true };
+    }
+    return { success: false};
+  } catch (error) {
+    toast.error('Error verifying password:', {
+      description: JSON.stringify(error),
+    });
+    return { success: false };
+  }
 }

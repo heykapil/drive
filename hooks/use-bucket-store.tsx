@@ -9,6 +9,8 @@ interface BucketStore {
   // accessCode: string | null;
   // setAccessCode: (code: string) => void;
   // clearSession: () => void;
+  isAuthenticated: boolean;
+  setIsAuthenticated: (auth: boolean) => void;
 }
 
 export const useBucketStore = create<BucketStore>()(
@@ -19,6 +21,8 @@ export const useBucketStore = create<BucketStore>()(
       // accessCode: null,
       // setAccessCode: (code: string) => set({ accessCode: code }),
       // clearSession: () => set({  accessCode: null })
+      isAuthenticated: false,
+      setIsAuthenticated: (auth: boolean) => set({ isAuthenticated: auth }),
     }),
     {
       name: 'bucket-store', // Unique name for the storage

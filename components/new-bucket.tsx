@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useState } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { CheckCircle, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useMemo, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -14,26 +14,27 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
-import { toast } from "sonner"
-import { addBucketformSchema } from "@/lib/schema"
-import { BucketConfig } from "@/service/bucket.config"
-import { verifyBucketConnection } from "@/service/s3-tebi"
-import { addredisBucket } from "@/lib/actions"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import { addBucketformSchema } from "@/lib/schema";
+import { BucketConfig, deleteBucketCookies } from "@/service/bucket.config";
+import { verifyBucketConnection } from "@/service/s3-tebi";
+import { addredisBucket, deleteredisBucket } from "@/lib/actions";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog"
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
-const generateDefaultId = () => {
+// Utility to generate a default ID (e.g. year plus random 4-digit number)
+const generateDefaultId = (): string => {
   const year = new Date().getFullYear().toString();
-  const randomNum = Math.floor(1000 + Math.random() * 9000); // 4-digit number
+  const randomNum = Math.floor(1000 + Math.random() * 9000);
   return `${year},${randomNum}`;
 };
 
@@ -48,7 +49,8 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  console.log(id, bucketConfig)
+
+  // Memoize initial values so that they don’t change on each render.
   const initialValues = useMemo(() => {
     if (id && bucketConfig) {
       return { id, ...bucketConfig };
@@ -67,13 +69,13 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
     };
   }, [id, bucketConfig]);
 
-  // Initialize the form with the initial values.
+  // Initialize the form with default values and the zod resolver.
   const form = useForm<z.infer<typeof addBucketformSchema>>({
     resolver: zodResolver(addBucketformSchema),
     defaultValues: initialValues,
   });
 
-  // Reset form values when initialValues change.
+  // Reset the form values when initial values change.
   useEffect(() => {
     form.reset(initialValues);
   }, [initialValues, form]);
@@ -139,11 +141,11 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
       };
 
       await addredisBucket(values.id, bucketConfig);
+      await deleteBucketCookies().then(()=> window.location.reload())
       toast.success("Bucket added", {
         description: "The bucket has been successfully added to Redis.",
       });
 
-      // Reset form with new default ID and clear other fields.
       form.reset({
         id: generateDefaultId(),
         name: "",
@@ -167,14 +169,15 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
   };
 
   return (
-    <Dialog open={open} onOpenChange={onCloseAction}>
-      <DialogHeader>
-        <DialogTitle>{id ? "Edit S3 Bucket" : "Add S3 Bucket"}</DialogTitle>
-        <DialogDescription>Configure S3 bucket to Redis.</DialogDescription>
-      </DialogHeader>
-      <DialogContent>
+    <Sheet open={open} onOpenChange={onCloseAction}>
+      <SheetContent className="w-auto px-6 py-3 overflow-scroll">
+        <SheetHeader className="text-center">
+          <SheetTitle>{id ? `Edit` : `Add`} S3 bucket</SheetTitle>
+          <SheetDescription>Configure S3 bucket to Redis.</SheetDescription>
+        </SheetHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* First row: ID and Bucket Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -185,7 +188,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
                       ID
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} disabled={!!id} />
                     </FormControl>
                     <FormDescription>Unique identifier for this bucket</FormDescription>
                     <FormMessage />
@@ -210,6 +213,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
               />
             </div>
 
+            {/* Second row: Access and Secret Keys */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -245,6 +249,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
               />
             </div>
 
+            {/* Third row: Region and Endpoint */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -278,6 +283,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
               />
             </div>
 
+            {/* Fourth row: Provider and Available Capacity */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -315,6 +321,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
               />
             </div>
 
+            {/* Fifth row: CDN URL and Private Bucket toggle */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -337,7 +344,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
                   <FormItem className="flex flex-row items-center gap-6 rounded-lg">
                     <div className="space-y-0">
                       <FormLabel>Private Bucket</FormLabel>
-                      <FormDescription>Set it to true if bucket is private</FormDescription>
+                      <FormDescription>Set to true if the bucket is private</FormDescription>
                     </div>
                     <FormControl>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -347,6 +354,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
               />
             </div>
 
+            {/* Action Buttons: Verify and Submit */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 type="button"
@@ -380,17 +388,33 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
                     Submitting
                   </>
                 ) : (
-                  "Add Bucket"
+                  id ? `Edit` : `Add`
                 )}
               </Button>
             </div>
           </form>
+          {id && (
+            <Button
+              variant={'destructive'}
+              className="w-fit"
+              onClick={async () => {
+                // Display a confirmation dialog
+                const confirmed = window.confirm("Are you sure you want to delete this bucket?");
+                // Only execute the deletion if the user confirms
+                if (confirmed) {
+                  await deleteredisBucket(id);
+                }
+              }}
+            >
+              Delete Bucket
+            </Button>
+          )}
         </Form>
-      </DialogContent>
-      <DialogFooter className="flex flex-col text-sm text-muted-foreground">
-        <p>Fields marked with * are required.</p>
-        <p>Bucket must be verified before submission.</p>
-      </DialogFooter>
-    </Dialog>
+        <SheetFooter className="mt-4 text-left text-sm text-muted-foreground">
+          <p>Fields marked with * are required.</p>
+          <p>Bucket must be verified before submission.</p>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

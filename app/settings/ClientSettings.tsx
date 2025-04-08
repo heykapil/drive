@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { testSystemHealth } from "@/lib/actions";
 import { BucketConfig } from "@/service/bucket.config";
 import { getS3StorageUsage } from "@/service/s3-tebi";
-import { AlertTriangle, CheckCircle, PaintBucketIcon, PlusIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 // Type Definitions
@@ -147,11 +147,11 @@ export default function SettingsContent({ buckets }:{ buckets: Record<string, Bu
                         <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
                       )}
                       <div>
-                        <p>{config.name}</p>
-                        <button className="text-sm text-gray-500" onClick={() => {
+                        <button className="text-primary hover:underline hover:cursor-pointer" onClick={() => {
                           setSelectedBucket({ id: bucketId, config });
                           seteditBucketDialogOpen(true)
-                        }}>ID: {bucketId}</button>
+                        }}>{config.name}</button>
+                        <p className="text-sm text-gray-500">ID: {bucketId}</p>
                       </div>
                     </div>
                     {!hasError && (
