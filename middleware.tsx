@@ -12,6 +12,7 @@ export async function middleware(request: NextRequest) {
   const sessionData = request.cookies.get(`${cookiePrefix}kapil.app.sessionData`)?.value || '';
   const allCookies = request.cookies.getAll();
   const bucketCookies = allCookies.filter(cookie => cookie.name.startsWith(`${cookiePrefix}bucket_`));
+  const refresh_buckets: boolean = allCookies.filter(cookie => cookie.name.startsWith(`${cookiePrefix}refresh_buckets`))[0]?.value === 'true';
   const midResponse = NextResponse.next();
   if (production && !session_token) {
    return NextResponse.redirect(new URL('/login?redirectTo='+ encodeURIComponent(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
@@ -40,7 +41,9 @@ export async function middleware(request: NextRequest) {
       });
     }
   }
-  if (bucketCookies.length > 0) {
+
+
+  if (bucketCookies.length > 0 && !refresh_buckets) {
       return midResponse;
   }
 
@@ -62,6 +65,7 @@ export async function middleware(request: NextRequest) {
           path: '/',
         });
       });
+      response.cookies.delete(`${cookiePrefix}refresh_buckets`)
       return response;
     } catch (error) {
       console.error('Error fetching KV:', error);

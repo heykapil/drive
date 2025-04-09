@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { addBucketformSchema } from "@/lib/schema";
-import { BucketConfig, deleteBucketCookies } from "@/service/bucket.config";
+import { BucketConfig, refreshBucketCookies } from "@/service/bucket.config";
 import { verifyBucketConnection } from "@/service/s3-tebi";
 import { addredisBucket, deleteredisBucket } from "@/lib/actions";
 import {
@@ -141,7 +141,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
       };
 
       await addredisBucket(values.id, bucketConfig);
-      await deleteBucketCookies().then(()=> window.location.reload())
+      await refreshBucketCookies().then(()=> window.location.reload())
       toast.success("Bucket added", {
         description: "The bucket has been successfully added to Redis.",
       });

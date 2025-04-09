@@ -283,20 +283,17 @@ export async function getRedisBucketArrayCookies() {
   return redisbucketArray;
 }
 
-export async function deleteBucketCookies() {
+export async function refreshBucketCookies() {
   const secureCookie: boolean = process.env.NODE_ENV === "production";
   const cookiePrefix = secureCookie ? '__Secure-' : '';
   const cookieStore = await cookies();
-  const allCookies = cookieStore.getAll();
-  const bucketCookies = allCookies.filter(cookie =>
-    cookie.name.startsWith(`${cookiePrefix}bucket_`)
-  );
-  try {
-    bucketCookies.map(cookie => cookieStore.delete(cookie))
-  } catch{
-    toast.error('Failed to delete bucket cookies')
-  }
-  return bucketCookies;
+  cookieStore.set(`${cookiePrefix}refresh_buckets`, 'true', {
+    expires: new Date(Date.now() + 1000 * 15),
+    path: '/',
+    sameSite: 'lax',
+    secure: secureCookie,
+    httpOnly: true,
+  });
 }
 
 export async function verifyPassword(password: string): Promise<{ success: boolean}> {
