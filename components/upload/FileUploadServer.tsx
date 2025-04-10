@@ -2,22 +2,24 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { calculateChunkSize } from "@/lib/helpers/chunk-size";
+import { encryptTokenV4, signPasetoToken } from "@/lib/helpers/paseto-ts";
 import { runPromisePool } from "@/lib/helpers/promise-pool";
 import { getFileType, getFileTypeFromFilename } from "@/lib/utils";
+import { BucketConfig, getBucketConfig } from "@/service/bucket.config";
 import axios from "axios";
+import { Payload } from "paseto-ts/lib/types";
 import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { FileRow } from "./FileRow";
-import { signJWT } from "@/lib/helpers/jose";
 
 const FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
 const MAX_RETRY_ATTEMPTS = 3;
@@ -50,7 +52,6 @@ export default function FileUploadServer() {
     chunkSizes: {},
     uploadStatus: {},
   });
-
   const [maxConcurrentFiles, setMaxConcurrentFiles] = useState<number>(3);
   const [maxConcurrentChunks, setMaxConcurrentChunks] = useState<number>(3);
   const abortControllers = useRef<Record<string, AbortController[]>>({});
@@ -94,7 +95,7 @@ export default function FileUploadServer() {
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     multiple: true,
-    // maxSize: 1024 * 1024 * 1024,
+    // maxSize: 1024 * 1024 * 1024
   });
 
   useEffect(() => {
@@ -251,12 +252,13 @@ export default function FileUploadServer() {
         const start = (partNumber - 1) * chunkSize;
         const end = Math.min(start + chunkSize, file.size);
         const chunk = file.slice(start, end);
-
+        const config = await getBucketConfig(selectedBucket)
         const formData = new FormData();
         formData.append("uploadId", uploadId);
         formData.append("key", key);
         formData.append("partNumber", partNumber.toString());
         formData.append("chunk", new Blob([chunk]));
+        formData.append("s3config", await encryptTokenV4(config as BucketConfig as Payload) as string);
         const payload = {
           uploadId,
           key,
@@ -264,6 +266,7 @@ export default function FileUploadServer() {
         };
         const { data } = await axios.post(
           production ? `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}` : `/api/upload/multipart/chunk?bucket=${selectedBucket}`,
+         // `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}`,
           formData,
           {
             signal: controller.signal,
@@ -281,7 +284,7 @@ export default function FileUploadServer() {
             },
             headers: {
               "Content-Type": "multipart/form-data",
-              "x-access-token":  await signJWT(payload),
+              "x-access-token":  await signPasetoToken(payload),
             },
           }
         );
