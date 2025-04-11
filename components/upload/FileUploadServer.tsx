@@ -2,20 +2,19 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { calculateChunkSize } from "@/lib/helpers/chunk-size";
-import { encryptTokenV4, signPasetoToken } from "@/lib/helpers/paseto-ts";
+import { signPasetoToken } from "@/lib/helpers/paseto-ts";
 import { runPromisePool } from "@/lib/helpers/promise-pool";
 import { getFileType, getFileTypeFromFilename } from "@/lib/utils";
-import { BucketConfig, getBucketConfig } from "@/service/bucket.config";
+import { encryptBucketConfig } from "@/service/bucket.config";
 import axios from "axios";
-import { Payload } from "paseto-ts/lib/types";
 import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
@@ -52,6 +51,7 @@ export default function FileUploadServer() {
     chunkSizes: {},
     uploadStatus: {},
   });
+  const [endpoint, setEndpoint] = useState<string>("https://us-chunk.kapil.app");
   const [maxConcurrentFiles, setMaxConcurrentFiles] = useState<number>(3);
   const [maxConcurrentChunks, setMaxConcurrentChunks] = useState<number>(3);
   const abortControllers = useRef<Record<string, AbortController[]>>({});
@@ -252,21 +252,22 @@ export default function FileUploadServer() {
         const start = (partNumber - 1) * chunkSize;
         const end = Math.min(start + chunkSize, file.size);
         const chunk = file.slice(start, end);
-        const config = await getBucketConfig(selectedBucket)
         const formData = new FormData();
         formData.append("uploadId", uploadId);
         formData.append("key", key);
         formData.append("partNumber", partNumber.toString());
         formData.append("chunk", new Blob([chunk]));
-        formData.append("s3config", await encryptTokenV4(config as BucketConfig as Payload) as string);
+        formData.append("s3config", await encryptBucketConfig(selectedBucket));
         const payload = {
           uploadId,
           key,
           partNumber,
         };
+        const url = production
+          ? (endpoint ? `${endpoint}/upload?bucket=${selectedBucket}`: `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}`)
+          : `/api/upload/multipart/chunk?bucket=${selectedBucket}`;
         const { data } = await axios.post(
-          production ? `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}` : `/api/upload/multipart/chunk?bucket=${selectedBucket}`,
-         // `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}`,
+          url,
           formData,
           {
             signal: controller.signal,
@@ -419,6 +420,27 @@ export default function FileUploadServer() {
                   {num} chunks
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-row space-x-2 items-center">
+           <label className="block text-sm font-medium mb-1">Custom Endpoint</label>
+          <Select
+            defaultValue="https://us-chunk.kapil.app"
+            value={endpoint?.toString()}
+            onValueChange={(value) => setEndpoint(value)}
+          >
+            <SelectTrigger className="w-auto">
+              <SelectValue placeholder="Select endpoint" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={`https://s3chunk-us.kapil.app`}>
+                  Gcloud (US)
+              </SelectItem>
+              <SelectItem value={`https://us-chunk.kapil.app`}>
+                  Render (EU)
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

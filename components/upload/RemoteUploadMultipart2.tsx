@@ -1,12 +1,11 @@
 'use client';
 
 import { calculateChunkSize } from "@/lib/helpers/chunk-size";
-import { encryptTokenV4, signPasetoToken } from "@/lib/helpers/paseto-ts";
+import { signPasetoToken } from "@/lib/helpers/paseto-ts";
 import { sanitizeFileName } from "@/lib/helpers/sanitize-file-name";
 import { getFileTypeFromFilename } from "@/lib/utils";
-import { BucketConfig, getBucketConfig } from "@/service/bucket.config";
+import { encryptBucketConfig } from "@/service/bucket.config";
 import axios from "axios";
-import { Payload } from "paseto-ts/lib/types";
 import { toast } from "sonner";
 
 // Interfaces for upload responses and progress state.
@@ -46,7 +45,9 @@ export const uploadMultipart = async (
   setProgress: SetProgress,
   proxy?: string,
   isSynologyBucket?: boolean,
+  endpoint?: string
 ): Promise<void> => {
+
   try {
     toast.info("Starting upload", { description: `Uploading file from URL: ${fileUrl}` });
 
@@ -172,17 +173,16 @@ export const uploadMultipart = async (
         // Server-side upload.
         const payload = { uploadId, key, partNumber };
         const formData = new FormData();
-        const config = await getBucketConfig(selectedBucket) as BucketConfig;
         formData.append("uploadId", uploadId);
         formData.append("key", key);
         formData.append("partNumber", partNumber.toString());
         formData.append("chunk", new Blob([chunk]), fileName);
-        formData.append("s3config", await encryptTokenV4(config as BucketConfig as Payload) as string);
+        formData.append("s3config", await encryptBucketConfig(selectedBucket));
         const production = process.env.NODE_ENV === "production";
-        const endpoint = production
-          ? `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}`
+        const url = production
+          ? (endpoint ? `${endpoint}/upload?bucket=${selectedBucket}`: `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}`)
           : `/api/upload/multipart/chunk?bucket=${selectedBucket}`;
-        const { data } = await axios.post(endpoint, formData, {
+        const { data } = await axios.post(url, formData, {
           onUploadProgress: (progressEvent) => {
             const loaded = progressEvent.loaded;
             inProgressParts[partNumber] = loaded;

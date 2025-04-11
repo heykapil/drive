@@ -1,6 +1,8 @@
 'use server'
 import { decryptJWT } from "@/lib/helpers/jose"
+import { encryptTokenV4 } from "@/lib/helpers/paseto-ts"
 import { cookies } from "next/headers"
+import { Payload } from "paseto-ts/lib/types"
 import { toast } from "sonner"
 export interface BucketConfig {
   name: string
@@ -309,4 +311,10 @@ export async function verifyPassword(password: string): Promise<{ success: boole
     });
     return { success: false };
   }
+}
+
+export async function encryptBucketConfig(bucket: string){
+  const config = await getBucketConfig(bucket);
+  const token = await encryptTokenV4(config as BucketConfig as Payload) as string;
+  return token;
 }
