@@ -2,9 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-      // ppr: true,
+      ppr: true,
       serverActions: {
-      allowedOrigins: ["api.kapil.app", "api2.kapil.app", "auth.kapil.app"],
+      allowedOrigins: ["api.kapil.app", "api2.kapil.app", "auth.kapil.app", "us-chunk.kapil.app"],
       },
 
     },

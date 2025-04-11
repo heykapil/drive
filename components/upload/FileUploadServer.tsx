@@ -2,11 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { calculateChunkSize } from "@/lib/helpers/chunk-size";

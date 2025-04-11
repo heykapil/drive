@@ -172,9 +172,7 @@ export const uploadMultipart = async (
         // Server-side upload.
         const payload = { uploadId, key, partNumber };
         const formData = new FormData();
-        // Append required fields into form data.
-        const config = await getBucketConfig(selectedBucket)
-
+        const config = await getBucketConfig(selectedBucket) as BucketConfig;
         formData.append("uploadId", uploadId);
         formData.append("key", key);
         formData.append("partNumber", partNumber.toString());
@@ -184,7 +182,6 @@ export const uploadMultipart = async (
         const endpoint = production
           ? `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}`
           : `/api/upload/multipart/chunk?bucket=${selectedBucket}`;
-
         const { data } = await axios.post(endpoint, formData, {
           onUploadProgress: (progressEvent) => {
             const loaded = progressEvent.loaded;
