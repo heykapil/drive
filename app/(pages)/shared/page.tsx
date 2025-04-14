@@ -1,8 +1,8 @@
+import Loading from "@/app/loading";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { SharedFilesPage } from "./SharedClientPage";
-import Loading from "../loading";
 
 export default async function SharedPage(){
   const production = process.env.NODE_ENV === 'production';

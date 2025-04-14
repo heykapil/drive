@@ -1,8 +1,8 @@
-import  FileList  from "@/components/data/FileList2";
+import Loading from "@/app/loading";
+import FileList from "@/components/data/FileList2";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import Loading from "../loading";
 
 export default async function UploadsPage() {
   const production = process.env.NODE_ENV === 'production';

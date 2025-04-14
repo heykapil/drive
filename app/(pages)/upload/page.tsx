@@ -1,8 +1,9 @@
+import Loading from "@/app/loading";
 import FileUpload from "@/components/upload/FileUpload";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import Loading from "../loading";
+
 export default async function UploadPage() {
   const production = process.env.NODE_ENV === 'production';
   const session = await getSession();

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { getFileTypeFromFilename } from "@/lib/utils"
 import { Download, File, FileImage, FileText, FileVideo, ScanEyeIcon, X } from "lucide-react"
-import { VideoPlayer } from "./VideoPlayer4"
+import { VideoPlayer } from "./VideoPlayer"
 
 interface FileViewerProps {
   previewFile: {

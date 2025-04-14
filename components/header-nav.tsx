@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { Session } from "@/lib/auth"
-import { BellIcon, CloudUpload, CreditCardIcon, FolderInputIcon, FolderOpen, LayoutDashboard, LogOutIcon, Menu, Moon, MoreVerticalIcon, Settings, Share2, Sun, Upload, UserCircleIcon, VideoIcon } from "lucide-react"
+import { BellIcon, CloudUpload, CreditCardIcon, FolderInputIcon, FolderOpen, LayoutDashboard, LogOutIcon, Menu, Moon, MoreVerticalIcon, PaintBucket, Settings, Share2, Sun, Upload, UserCircleIcon, VideoIcon } from "lucide-react"
 import { useTheme } from "next-themes"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -15,10 +16,10 @@ import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { Card, CardContent } from "./ui/card"
 import { Skeleton } from "./ui/skeleton"
-import Image from "next/image"
 
 const navLinks = [
   { href: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5 text-muted-foreground" /> },
+  { href: '/buckets', label: 'Buckets', icon: <PaintBucket className="h-5 w-5 text-muted-foreground" /> },
   { href: '/upload', label: 'Upload', icon: <Upload className="h-5 w-5 text-muted-foreground" /> },
   { href: '/upload/remote', label: 'Remote Upload', icon: <CloudUpload className="h-5 w-5 text-muted-foreground" /> },
   { href: '/uploads', label: 'My Files', icon: <FolderOpen className="h-5 w-5 text-muted-foreground" /> },
@@ -27,7 +28,7 @@ const navLinks = [
   { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5 text-muted-foreground" /> },
 ];
 
-export default function HeaderNav({ session, bucketOptions }: { session: Session,bucketOptions: any[] }) {
+export default function HeaderNav({ session, bucketOptions }: { session: Session, bucketOptions: any[] }) {
   const [isMounted, setIsMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const { selectedBucket, setSelectedBucket } = useBucketStore();
@@ -75,6 +76,7 @@ export default function HeaderNav({ session, bucketOptions }: { session: Session
     }
   };
   if (!isMounted) return null;
+  if (!session?.user && process.env.NODE_ENV === 'production') return null;
   return (
     <header className="sticky top-0 z-50 w-full px-4 sm:px-8 md:px-16 lg:px-20 border-b backdrop-blur-lg bg-background/10">
       <div className="flex flex-row items-center justify-center mx-auto">

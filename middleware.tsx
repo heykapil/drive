@@ -5,6 +5,10 @@ import { Session } from './lib/auth';
 import { signJWT } from './lib/helpers/jose';
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith('/file/')) {
+    return NextResponse.next();
+  }
   const production = process.env.NODE_ENV === 'production';
   const secureCookie: boolean = production;
   const cookiePrefix  = secureCookie ? '__Secure-' : '';
