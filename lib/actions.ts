@@ -1,11 +1,12 @@
 'use server';
+import { BucketConfig } from '@/service/bucket.config';
 import { testDBConnection } from '@/service/postgres';
 import { testS3Connections } from '@/service/s3-tebi';
-import { generateRandomUUID } from './helpers/uuid';
-import { signPasetoToken } from './helpers/paseto';
-import { decryptJWT, encryptJWT } from './helpers/jose';
 import { JWTPayload } from 'jose';
-import { BucketConfig } from '@/service/bucket.config';
+import { Payload } from 'paseto-ts/lib/types';
+import { decryptJWT, encryptJWT } from './helpers/jose';
+import { signPasetoToken } from './helpers/paseto-ts';
+import { generateRandomUUID } from './helpers/uuid';
 
 export async function testSystemHealth() {
   const storageErrors = await testS3Connections();
@@ -45,7 +46,7 @@ export async function addredisBucket(id: string, bucketConfig: BucketConfig) {
   try {
     const state = generateRandomUUID()
     const payload = { state }
-    const token = await signPasetoToken({ payload })
+    const token = await signPasetoToken(payload)
     const response = await fetch(`https://kv.kapil.app/kv?key=buckets,drive.kapil.app,${id}&state=${state}`, {
       method: 'POST',
       body: JSON.stringify(await encryptJWT({ bucketConfig } as JWTPayload)),
@@ -66,7 +67,7 @@ export async function deleteredisBucket(id: string) {
   try {
     const state = generateRandomUUID()
     const payload = { state }
-    const token = await signPasetoToken({ payload })
+    const token = await signPasetoToken(payload)
     const response = await fetch(`https://kv.kapil.app/kv?key=buckets,drive.kapil.app,${id}&state=${state}`, {
       method: 'DELETE',
       headers: {
@@ -89,5 +90,20 @@ export async function getredisBucket(id: string) {
     return bucket as unknown as BucketConfig;
   } catch (error) {
     throw error
+  }
+}
+
+export async function generateStateToken() {
+  const state = generateRandomUUID()
+  const payload = { state }
+  const hash = await signPasetoToken(payload as Payload);
+
+  console.log({state, token: `v4.public.${hash}`});
+
+  if(!hash) {
+    throw new Error('Failed to generate state token');
+  }
+  else {
+    return { state, token: `v4.public.${hash}` };
   }
 }

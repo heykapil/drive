@@ -1,14 +1,15 @@
 import { betterFetch } from '@better-fetch/fetch';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { generateStateToken } from './lib/actions';
 import { Session } from './lib/auth';
 import { signJWT } from './lib/helpers/jose';
 
 export async function middleware(request: NextRequest) {
-  // const pathname = request.nextUrl.pathname;
-  // if (pathname.startsWith('/file')) {
-  //   return NextResponse.next();
-  // }
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith('/file')) {
+    return NextResponse.next();
+  }
   const production = process.env.NODE_ENV === 'production';
   const secureCookie: boolean = production;
   const cookiePrefix  = secureCookie ? '__Secure-' : '';
@@ -52,11 +53,12 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-      const res = await fetch('https://kv.kapil.app/kv/list?prefix=buckets,drive.kapil.app');
-      const redisbucketArray = await res.json();
+    const { state, token } = await generateStateToken();
+    console.log({state, token})
+    const res = await fetch(`https://kv.kapil.app/kv/list?prefix=buckets,drive.kapil.app&state=${state}&token=${token}`);
+    const redisbucketArray = await res.json();
 
-      // Create a response to set cookies.
-      const response = midResponse;
+    const response = midResponse;
 
       // For each bucket, store the encrypted config in a separate cookie.
       redisbucketArray.forEach((item: any) => {

@@ -1,4 +1,5 @@
 'use server'
+import { generateStateToken } from "@/lib/actions"
 import { decryptJWT } from "@/lib/helpers/jose"
 import { encryptTokenV4 } from "@/lib/helpers/paseto-ts"
 import { cookies } from "next/headers"
@@ -280,7 +281,8 @@ export async function getRedisBucketArrayCookies() {
       };
     });
   } else {
-    redisbucketArray = await fetch(`https://kv.kapil.app/kv/list?prefix=buckets,drive.kapil.app`).then(res => res.json())
+    const {state, token} = await generateStateToken();
+    redisbucketArray = await fetch(`https://kv.kapil.app/kv/list?prefix=buckets,drive.kapil.app&state=${state}&token=${token}`).then(res => res.json())
   }
   return redisbucketArray;
 }
