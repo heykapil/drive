@@ -7,13 +7,15 @@ import { signJWT } from './lib/helpers/jose';
 export async function middleware(request: NextRequest) {
   const production = process.env.NODE_ENV === 'production';
   const secureCookie: boolean = production;
-  const cookiePrefix  = secureCookie ? '__Secure-' : '';
+  const cookiePrefix = secureCookie ? '__Secure-' : '';
   const session_token = request.cookies.get(`${cookiePrefix}kapil.app.session_token`)?.value || '';
   const sessionData = request.cookies.get(`${cookiePrefix}kapil.app.sessionData`)?.value || '';
   const midResponse = NextResponse.next();
+
   if (production && !session_token) {
-   return NextResponse.redirect(new URL('/login?redirectTo='+ encodeURIComponent(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
+    return NextResponse.redirect(new URL('/login?redirectTo=' + encodeURIComponent(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
   }
+
   if (production && session_token && !sessionData) {
     const { data: session } = await betterFetch<Session>('/api/auth/get-session', {
       baseURL: process.env.BETTER_AUTH_URL,
@@ -21,8 +23,9 @@ export async function middleware(request: NextRequest) {
         cookie: request.headers.get("cookie") || "",
       },
     });
+
     if (production && !session) {
-     return NextResponse.redirect(new URL('/login?redirectTo='+ encodeURIComponent(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
+      return NextResponse.redirect(new URL('/login?redirectTo=' + encodeURIComponent(request.nextUrl as unknown as string), process.env.BETTER_AUTH_URL!));
     }
 
     if (production) {
@@ -38,6 +41,9 @@ export async function middleware(request: NextRequest) {
       });
     }
   }
+
+  // Add this return statement
+  return midResponse;
 }
 
 export const config = {
