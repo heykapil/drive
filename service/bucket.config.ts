@@ -26,18 +26,10 @@ export async function getBucketConfig(bucketIds: number | number[]): Promise<Buc
 
   // Construct the full URL WITHOUT query parameters
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const url = `${appUrl}/api/buckets/postgres/config`; // <-- FIX IS HERE
+  const url = `${appUrl}/api/buckets/postgres/config?bucketIds=${cacheKey}`;
 
   try {
-    console.log(`[getBucketConfig] POSTing to URL: ${url}`);
-    const response = await fetch(url, {
-      method: 'POST',
-      body: JSON.stringify({
-        bucketIds: ids, // Data is ONLY in the body
-      }),
-      headers: { 'Content-Type': 'application/json' },
-      next: { revalidate: 60 }
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
       const errorText = await response.text();

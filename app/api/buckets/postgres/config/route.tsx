@@ -2,8 +2,8 @@ import { BucketConfig } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: NextRequest) {
-  const { bucketIds } = await req.json();
+export async function GET(req: NextRequest) {
+  const bucketIds = req?.nextUrl?.searchParams?.get('bucketIds')?.split(',') || [];
 
   if (!Array.isArray(bucketIds) || bucketIds.length === 0) {
     return NextResponse.json({ error: "At least one bucket ID is required" }, { status: 400 });
