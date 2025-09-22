@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "File ID is required" }, { status: 400 });
     }
 
-
     const { rows } = await query("SELECT key, bucket_id FROM files WHERE id = $1", [fileId]);
     if (rows.length === 0) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
