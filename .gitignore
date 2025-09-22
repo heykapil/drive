@@ -41,3 +41,10 @@ bun.lockb
 next-env.d.ts
 
 certificates
+
+sql/bucketConfig.json
+sql/buckets.json
+sql/migration.ts
+
+
+package-lock.json

@@ -1,4 +1,3 @@
-import { getallBuckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -10,66 +9,52 @@ interface FileUpdateRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const bucket = searchParams.get("bucket");
-
-    if (!bucket) {
-      return NextResponse.json(
-        { success: false, error: "Bucket name not provided." },
-        { status: 400 }
-      );
-    }
-
-    const buckets = await getallBuckets();
-
-    const bucketConfig = buckets[bucket];
-    if (!bucketConfig?.name) {
-      return NextResponse.json(
-        { success: false, error: "Invalid bucket specified." },
-        { status: 400 }
-      );
-    }
-
-    // Parse and validate request body
     const body: FileUpdateRequest = await req.json();
-    if (!body.fileId) {
+    const { fileId, rename, liked } = body;
+
+    if (!fileId) {
       return NextResponse.json(
-        { success: false, error: "File ID is required." },
+        { success: false, error: "A 'fileId' is required in the request body." },
         { status: 400 }
       );
     }
 
-    // Build SQL update statement dynamically based on the provided fields
     const updates: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
 
-    if (body.rename !== undefined) {
+    if (rename !== undefined) {
       updates.push(`filename = $${paramIndex++}`);
-      values.push(body.rename);
+      values.push(rename);
     }
-    if (typeof body.liked === "boolean") {
+    if (typeof liked === "boolean") {
       updates.push(`liked = $${paramIndex++}`);
-      values.push(body.liked);
+      values.push(liked);
     }
 
     if (updates.length === 0) {
       return NextResponse.json(
-        { success: false, error: "No valid update fields provided." },
+        { success: false, error: "At least one valid update field ('rename' or 'liked') must be provided." },
         { status: 400 }
       );
     }
 
-    // Add fileId for WHERE clause
-    values.push(body.fileId);
-
-    const sql = `UPDATE files SET ${updates.join(", ")} WHERE id = $${paramIndex} RETURNING *;`;
+    // 4. CONSTRUCT THE SECURE QUERY WITH A COMPOUND WHERE CLAUSE
+    // This is the critical security fix: we ensure the file belongs to the specified bucket.
+    const sql = `
+      UPDATE files
+      SET ${updates.join(", ")}
+      WHERE id = $${paramIndex}
+      RETURNING id, filename, liked;
+    `;
+    values.push(fileId);
 
     const result = await query(sql, values);
 
+    // If no rows are returned, the file either doesn't exist or isn't in the correct bucket.
     if (result.rows.length === 0) {
       return NextResponse.json(
-        { success: false, error: "File not found." },
+        { success: false, error: "File not found within the specified bucket." },
         { status: 404 }
       );
     }

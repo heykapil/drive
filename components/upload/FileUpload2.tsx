@@ -21,7 +21,7 @@ interface FileState {
 }
 
 export default function FileUpload() {
-  const { selectedBucket } = useBucketStore();
+  const { selectedBucketName: selectedBucket } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
     progress: {},

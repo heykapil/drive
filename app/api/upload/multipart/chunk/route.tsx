@@ -1,4 +1,4 @@
-import {  getallBuckets } from "@/service/bucket.config";
+import { getBucketConfig } from "@/service/bucket.config";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { UploadPartCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
@@ -6,16 +6,27 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const bucket = searchParams.get("bucket") || "";
+    const bucketIdParam = searchParams.get("bucket");
 
-    const buckets = await getallBuckets()
-    const bucketConfig = buckets[bucket];
-    if (!bucketConfig?.name) {
-      console.error({ bucket, error: "Invalid bucket configuration" }, );
-      return NextResponse.json(
-        { success: false, error: "Invalid bucket configuration" },
-        { status: 400 }
-      );
+    const bucketId = bucketIdParam ? parseInt(bucketIdParam, 10) : NaN;
+
+    if (!bucketId || isNaN(bucketId) || bucketId <= 0) {
+        return NextResponse.json({
+          success: false,
+          error: "Bucket ID must be a positive integer",
+        });
+      }
+
+    const bucketConfigArray = await getBucketConfig(bucketId)
+
+    if(bucketConfigArray.length===0){
+      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
+    }
+
+    const bucketConfig = bucketConfigArray[0];
+
+    if(!bucketConfig.name){
+      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
     }
 
     // Parse multipart/form-data

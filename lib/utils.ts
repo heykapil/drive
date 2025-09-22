@@ -111,3 +111,84 @@ export const getFileTypeFromFilename = (filename: string): string => {
   const extension = filename.slice(dotIndex).toLowerCase();
   return mimeTypeMap[extension] || "application/octet-stream";
 };
+
+// Define the types for our data for type safety
+export interface Bucket {
+  bucket_id: number;
+  bucket_name: string;
+  private: boolean;
+  provider: string;
+  storage_used_bytes: number | string;
+  total_capacity_gb: number | string;
+  available_storage_gb: number | string;
+  usage_percentage: number | string;
+  updated_at: string | Date;
+}
+
+// Represents a folder row from the new `/api/folders/all` endpoint
+export interface Folder {
+  id: number;
+  name: string;
+  parent_id: number | null;
+}
+
+export interface FolderNode {
+  folder_id: number;
+  folder_name: string;
+  folder_parent_id: number | null;
+  children: FolderNode[]; // For nested subfolders
+  buckets: Bucket[];      // For buckets directly inside this folder
+}
+
+// The raw data format from your buckets API
+type ApiBucketEntry = Bucket & {
+  folder_id: number;
+  folder_name: string;
+  folder_parent_id: number | null;
+};
+
+/**
+ * Transforms a list of all folders and a list of bucket data
+ * into a complete hierarchical tree structure.
+ * @param allFolders A list of all folders from the `folders` table.
+ * @param bucketData The flat array from '/api/buckets/postgres'.
+ * @returns An array of root-level folder nodes.
+ */
+export function buildFolderTree(allFolders: Folder[], bucketData: ApiBucketEntry[]): FolderNode[] {
+  const folderMap: { [key: number]: FolderNode } = {};
+
+  // First pass: Create a map of ALL folders using the complete list from the new API.
+  // This is the crucial step that ensures even folders without direct buckets are included.
+  allFolders.forEach(folder => {
+    folderMap[folder.id] = {
+      folder_id: folder.id,
+      folder_name: folder.name,
+      folder_parent_id: folder.parent_id,
+      children: [],
+      buckets: [], // Initialize with empty buckets
+    };
+  });
+
+  // Second pass: Populate the buckets into their respective folders.
+  bucketData.forEach(item => {
+    const { folder_id, ...bucketDetails } = item;
+    // Check if the folder exists in our map before adding buckets
+    if (folderMap[folder_id]) {
+      folderMap[folder_id].buckets.push({ ...bucketDetails });
+    }
+  });
+
+  // Third pass: Link children to their parents to build the final tree.
+  const rootFolders: FolderNode[] = [];
+  Object.values(folderMap).forEach(folderNode => {
+    if (folderNode.folder_parent_id && folderMap[folderNode.folder_parent_id]) {
+      // If it has a parent that exists in our map, add it as a child.
+      folderMap[folderNode.folder_parent_id].children.push(folderNode);
+    } else {
+      // Otherwise, it's a root folder.
+      rootFolders.push(folderNode);
+    }
+  });
+
+  return rootFolders;
+}

@@ -1,17 +1,15 @@
-import { QueryProvider } from "@/components/QueryProvider";
-import { ThemeProvider } from "@/hooks/theme-provider";
-import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
-import "./globals.css";
-import { HydrationZustand } from "@/hooks/use-bucket-store";
+import "@/app/globals.css";
 import { ProgressProviders } from "@/components/ProgressBarProvider";
-import HeaderNav, { HeaderSkeleton } from "@/components/header-nav";
-import { getSession } from "@/lib/auth";
+import { QueryProvider } from "@/components/QueryProvider";
 import TransitionLayout from "@/components/TransitionLayout";
+import HeaderNav, { HeaderSkeleton } from "@/components/header-nav";
+import { ThemeProvider } from "@/hooks/theme-provider";
+import { BucketStoreInitializer } from "@/hooks/use-bucket-store";
+import { getSession } from "@/lib/auth";
+import type { Metadata, Viewport } from "next";
+import { Outfit } from "next/font/google";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
-import type { Viewport } from 'next'
-import { bucketOptions } from "@/service/bucket.config";
 
 export const viewport: Viewport = {
   themeColor: [
@@ -24,9 +22,12 @@ export const viewport: Viewport = {
 //   subsets: ["latin"],
 // });
 
-const DMSans = DM_Sans({
-  subsets: ['latin', 'latin-ext']
-  })
+// const DMSans = DM_Sans({
+//   subsets: ['latin', 'latin-ext']
+//   })
+const OutFit = Outfit({
+  subsets: ['latin']
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://drive.kapil.app'),
@@ -72,10 +73,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
-  const bucketOption = await bucketOptions();
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${DMSans.className} antialiased bg-background text-neutral-900 dark:text-white`}>
+      <body className={`${OutFit.className} antialiased bg-background text-neutral-900 dark:text-white`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>
             <ProgressProviders>
@@ -95,10 +96,10 @@ export default async function RootLayout({
               </filter>
               <rect width="100%" height="100%" filter="url(#pedroduarteisalegend)"></rect>
             </svg>
-            <HydrationZustand />
             <main className="min-h-screen flex flex-col items-center p-0">
               <Suspense fallback={<HeaderSkeleton />}>
-              <HeaderNav session={session} bucketOptions={bucketOption} />
+                <BucketStoreInitializer />
+              <HeaderNav session={session} />
               </Suspense>
                <TransitionLayout>
                  <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">

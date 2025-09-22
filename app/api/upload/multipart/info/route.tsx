@@ -1,4 +1,4 @@
-import { getallBuckets } from "@/service/bucket.config";
+import { getBucketConfig } from "@/service/bucket.config";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { AbortMultipartUploadCommand, ListMultipartUploadsCommand } from "@aws-sdk/client-s3";
 import { NextRequest, NextResponse } from "next/server";
@@ -6,17 +6,29 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const bucket = searchParams.get("bucket") || "";
+    const bucketIdParam = searchParams.get("bucket");
 
-    if (!bucket) {
-      return NextResponse.json({ success: false, error: "Bucket name not provided" });
+    const bucketId = bucketIdParam ? parseInt(bucketIdParam, 10) : NaN;
+
+    if (!bucketId || isNaN(bucketId) || bucketId <= 0) {
+        return NextResponse.json({
+          success: false,
+          error: "Bucket ID must be a positive integer",
+        });
+      }
+
+    const bucketConfigArray = await getBucketConfig(bucketId)
+
+    if(bucketConfigArray.length===0){
+      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
     }
 
-    const buckets = await getallBuckets()
-    const bucketConfig = buckets[bucket];
-    if (!bucketConfig?.name) {
-      return NextResponse.json({ success: false, error: "Wrong bucket id provided" });
+    const bucketConfig = bucketConfigArray[0];
+
+    if(!bucketConfig.name){
+      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
     }
+
 
     const client = await s3WithConfig(bucketConfig);
     const command = new ListMultipartUploadsCommand({
@@ -34,14 +46,29 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { bucket, uploadId, key } = await req.json();
-    if (!bucket || !uploadId || !key) {
+    if (!uploadId || !key) {
       return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
     }
 
-    const buckets = await getallBuckets();
-    const bucketConfig = buckets[bucket];
-    if (!bucketConfig?.name) {
-      return NextResponse.json({ success: false, error: "Wrong bucket id provided" });
+    const bucketId = bucket ? parseInt(bucket, 10) : NaN;
+
+    if (!bucketId || isNaN(bucketId) || bucketId <= 0) {
+        return NextResponse.json({
+          success: false,
+          error: "Bucket ID must be a positive integer",
+        });
+      }
+
+    const bucketConfigArray = await getBucketConfig(bucketId)
+
+    if(bucketConfigArray.length===0){
+      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
+    }
+
+    const bucketConfig = bucketConfigArray[0];
+
+    if(!bucketConfig.name){
+      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
     }
 
     const client = await s3WithConfig(bucketConfig);

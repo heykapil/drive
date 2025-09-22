@@ -9,9 +9,10 @@ import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
-import { FileRow } from "./FileRow";
+import { BucketSelector } from "../bucket-selector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
+import { FileRow } from "./FileRow";
 
 const FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
 const MAX_RETRY_ATTEMPTS = 1;
@@ -34,7 +35,7 @@ interface UploadPart {
 }
 
 export function FileUpload() {
-  const { selectedBucket } = useBucketStore();
+  const { selectedBucketId, selectedBucketName, isLoading } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
     uploadingFiles: {},
@@ -49,7 +50,7 @@ export function FileUpload() {
   const [maxConcurrentFiles, setMaxConcurrentFiles] = useState<number>(3);
   const [maxConcurrentChunks, setMaxConcurrentChunks] = useState<number>(3);
   const [proxy, setProxy] = useState<boolean>(false);
-  const [maxSize, setMaxSize] = useState<number>(1)
+  // const [maxSize, setMaxSize] = useState<number>(1)
   // Abort controllers for canceling uploads.
   const abortControllers = useRef<Record<string, AbortController[]>>({});
 
@@ -94,7 +95,7 @@ export function FileUpload() {
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     multiple: true,
-    maxSize: maxSize * 1024 * 1024 * 1024,
+    // maxSize: maxSize * 1024 * 1024 * 1024,
   });
 
   // Allow pasting files.
@@ -233,7 +234,7 @@ export function FileUpload() {
     abortControllers.current[fileName] = [controller];
     const formData = new FormData();
     formData.append("file", file);
-    const response = await fetch(`/api/upload/simple?bucket=${selectedBucket}`, {
+    const response = await fetch(`/api/upload/simple?bucket=${selectedBucketId}`, {
       method: "POST",
       body: formData,
       signal: controller.signal,
@@ -249,7 +250,7 @@ export function FileUpload() {
     const fileName = file.name;
     const contentType = getFileType(file) || file.type || getFileTypeFromFilename(fileName) || DEFAULT_CONTENT_TYPE;
 
-    const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
+    const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucketId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filename: fileName, contentType }),
@@ -305,7 +306,7 @@ export function FileUpload() {
         const start = (partNumber - 1) * chunkSize;
         const end = Math.min(start + chunkSize, file.size);
         const chunk = file.slice(start, end);
-        const presignRes = await fetch(`/api/upload/multipart/presign?bucket=${selectedBucket}`, {
+        const presignRes = await fetch(`/api/upload/multipart/presign?bucket=${selectedBucketId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uploadId, key, partNumber }),
@@ -367,7 +368,7 @@ export function FileUpload() {
     fileName: string
   ) => {
     const contentType = getFileType(file) || type || file.type || DEFAULT_CONTENT_TYPE;
-    const finalRes = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucket}`, {
+    const finalRes = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucketId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -472,7 +473,7 @@ export function FileUpload() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-row space-x-2 items-center">
+        {/*<div className="flex flex-row space-x-2 items-center">
           <label className="block text-sm font-medium mb-1">
             Max File size
           </label>
@@ -491,7 +492,7 @@ export function FileUpload() {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </div>*/}
         <div className="flex flex-row gap-2">
         <label className="block text-sm font-medium mb-1">
           Proxy
@@ -502,14 +503,17 @@ export function FileUpload() {
         />
         </div>
       </div>
-      <Button
-        onClick={uploadFiles}
-        disabled={state.files.length === 0 || Object.values(state.uploadingFiles).some(Boolean)}
-      >
-        {Object.values(state.uploadingFiles).some(Boolean)
-          ? "Uploading..."
-          : `Upload to ${selectedBucket}`}
-      </Button>
+      <div className="flex flex-row gap-2">
+        <BucketSelector testConnection={true} />
+        <Button
+          onClick={uploadFiles}
+          disabled={state.files.length === 0 || isLoading || Object.values(state.uploadingFiles).some(Boolean)}
+        >
+          {isLoading ? <span>Please wait...</span> : Object.values(state.uploadingFiles).some(Boolean)
+            ? "Uploading..."
+            : `Upload to ${selectedBucketName}`}
+        </Button>
+      </div>
     </div>
   );
 }

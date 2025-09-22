@@ -83,7 +83,7 @@ function fileReducer(state: FileState, action: FileAction): FileState {
   }
 }
 export default function FileList() {
-  const { selectedBucket } = useBucketStore();
+  const { selectedFolderName, selectedFolderId, selectedBucketId } = useBucketStore();
   const [state, dispatch] = useReducer(fileReducer, initialState);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   // const production = process.env.NODE_ENV === 'production';
@@ -107,7 +107,7 @@ export default function FileList() {
 
       const fileIds = Array.from(selectedFiles); // Convert Set to array
 
-      const response = await fetch(`/api/files/privacy?bucket=${selectedBucket}`, {
+      const response = await fetch(`/api/files/privacy?bucket=${selectedBucketId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -148,7 +148,7 @@ export default function FileList() {
 
       const fileIds = Array.from(selectedFiles); // ✅ Convert Set to array
 
-      const response = await fetch(`/api/files?bucket=${selectedBucket}`, {
+      const response = await fetch(`/api/files?bucket=${selectedBucketId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -179,12 +179,12 @@ export default function FileList() {
 
 
   useEffect(() => {
-    if (!!selectedBucket) {
+    if (!!selectedFolderId) {
       fetchFiles();
     } else {
       dispatch({ type: 'RESET' });
     }
-  }, [selectedBucket, state.sort, state.search, state.page, state.limit]);
+  }, [selectedFolderId, state.sort, state.search, state.page, state.limit]);
 
   const fetchFiles = async () => {
     try {
@@ -192,7 +192,7 @@ export default function FileList() {
       dispatch({ type: 'SET_FIELD', field: 'error', value: null });
 
       const res = await fetch(
-        `/api/files?bucket=${selectedBucket}&sort=${state.sort}&search=${state.search}&page=${state.page}&limit=${state.limit}`, {
+        `/api/files?folderId=${selectedFolderId}&sort=${state.sort}&search=${state.search}&page=${state.page}&limit=${state.limit}`, {
           // cache: 'no-store',
         }
       );
@@ -222,7 +222,7 @@ export default function FileList() {
     try {
       dispatch({ type: "SET_FIELD", field: "loading", value: true });
 
-      const response = await fetch(`/api/files?bucket=${selectedBucket}`, {
+      const response = await fetch(`/api/files?bucket=${selectedBucketId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" }, // ✅ Proper headers
         body: JSON.stringify({ fileIds: [state.selectedFile.id] }), // ✅ Uses consistent API structure
@@ -249,7 +249,7 @@ export default function FileList() {
 
   const handleShare = async (file: any, duration: number) => {
     try {
-      const response = await fetch(`/api/files/share?bucket=${selectedBucket}`, {
+      const response = await fetch(`/api/files/share?bucket=${selectedBucketId}`, {
         method: "POST",
         body: JSON.stringify({ fileId: file.id, duration })
       });
@@ -268,7 +268,7 @@ export default function FileList() {
   };
 
   const updateFile = async({ id, rename, liked }: { id: number, rename?: string, liked?: boolean }) => {
-    const url = `/api/files/edit?bucket=${selectedBucket}`;
+    const url = `/api/files/edit?bucket=${selectedBucketId}`;
     try {
         const response = await fetch(url, {
           method: 'POST',
@@ -305,7 +305,7 @@ export default function FileList() {
     try {
       dispatch({ type: "SET_FIELD", field: "loading", value: true });
 
-      const response = await fetch(`/api/files/privacy?bucket=${selectedBucket}`, {
+      const response = await fetch(`/api/files/privacy?bucket=${selectedBucketId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" }, // ✅ Proper headers
         body: JSON.stringify({
@@ -344,7 +344,7 @@ export default function FileList() {
 
   const getDownloadUrl = async (id: string) => {
     try {
-      const res = await fetch(`/api/files/url?bucket=${selectedBucket}&fileId=${id}&expiresIn=7200`);
+      const res = await fetch(`/api/files/url?bucket=${selectedBucketId}&fileId=${id}&expiresIn=7200`);
       const { url, error } = await res.json();
       if (error) toast.error(error);
       return   url;
@@ -497,7 +497,7 @@ export default function FileList() {
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            Showing {state.files.length} of {state.totalFiles} files in {selectedBucket}
+            Showing {state.files.length} of {state.totalFiles} files in {selectedFolderName}
           </p>
 
           {state.view === "grid" && (

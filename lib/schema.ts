@@ -70,7 +70,7 @@ export type FileAction =
   | { type: "REPLACE_FILES"; files: FileItem[] };
 
   export const addBucketformSchema = z.object({
-    id: z.string().min(1, "ID is required"),
+    id: z.number().min(1, "ID is required"),
     name: z.string().min(1, "Bucket name is required"),
     accessKey: z.string().min(1, "Access key is required"),
     secretKey: z.string().min(1, "Secret key is required"),

@@ -1,152 +1,198 @@
-"use client"
+'use client'
 
-import type React from "react"
+import { StorageChart } from "@/components/data/StoragePieChart"; // Assuming component and props are here
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getBucketIdsFromFolderId, getBucketInfo, useBucketStore } from "@/hooks/use-bucket-store";
+import { Bucket } from "@/lib/utils";
+import { testS3Connection } from "@/service/s3-tebi"; // Assuming this is the correct path
+import { InfoIcon, RefreshCwIcon, TestTube2Icon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {  Edit3, Globe, Lock, LockIcon, LockOpen, Plus } from "lucide-react"
-import { BucketConfig, verifyPassword } from "@/service/bucket.config"
-import { BucketForm } from "@/components/new-bucket"
-import { useBucketStore } from "@/hooks/use-bucket-store"
+type ConnectionStatus = {
+  bucket: number;
+  status?: string;
+  name?: string;
+  message?: string;
+};
 
-export function S3BucketViewer({buckets}: {buckets: Record<string, BucketConfig>}) {
-  const [password, setPassword] = useState("")
-  const { isAuthenticated, setIsAuthenticated } = useBucketStore()
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [openSheet, setopenSheet] = useState<boolean>(false);
-  const publicBuckets = Object.entries(buckets)
-    .filter(([_, bucket]) => bucket.private === false) // Filter only public buckets
-    .map(([key, config]) => ({
-      value: key,
-      config: config,
-      label: key.charAt(0).toUpperCase() + key.slice(1), // Capitalizing the first letter
-    }));
 
-  const privateBuckets = Object.entries(buckets)
-    .filter(([_, bucket]) => bucket.private === true) // Filter only private buckets
-    .map(([key, config]) => ({
-      value: key,
-      config: config,
-      label: key.charAt(0).toUpperCase() + key.slice(1), // Capitalizing the first letter
-    }));
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
+export function S3BucketViewer() {
+  const { selectedFolderId, isLoading: isStoreLoading } = useBucketStore();
+  const [statuses, setStatuses] = useState<ConnectionStatus[]>([]);
+  const [isTesting, setIsTesting] = useState<boolean>(true);
+  const [testS3, setTestS3] = useState<boolean>(false);
 
+  const bucketIds = useMemo(() => {
+      return selectedFolderId ? getBucketIdsFromFolderId(selectedFolderId) : [];
+    }, [selectedFolderId]);
+
+  // useCallback to memoize the function for stability
+  const runConnectionTest = useCallback(async (ids: number[]) => {
+    setIsTesting(true);
     try {
-      const result = await verifyPassword(password)
-      if (result.success) {
-        setIsAuthenticated(true)
-      } else {
-        setError("Invalid password. Please try again.")
+      const results = await testS3Connection(ids);
+      setStatuses(results);
+      const errorCount = results.filter(r => r.status === 'Error').length;
+      if (errorCount > 0) {
+        toast.error(`${errorCount} bucket(s) failed the connection test.`);
       }
-    } catch (err: any) {
-      setError(err || "An error occurred. Please try again.")
+    } catch (error) {
+      toast.error("Failed to run connection tests.");
+      console.error(error);
     } finally {
-      setIsLoading(false)
+      setIsTesting(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!isStoreLoading && bucketIds.length > 0 && testS3) {
+      runConnectionTest(bucketIds)
+    } else if (!isStoreLoading) {
+        // Handle case where there are no buckets
+        setIsTesting(false);
+    }
+  }, [bucketIds, isStoreLoading, runConnectionTest, testS3]);
+
+  if (isStoreLoading) {
+    return <S3BucketViewerSkeleton />;
   }
 
-  if (isAuthenticated) {
+  if (bucketIds.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex justify-between">S3 Buckets <Button variant={'outline'} className="w-fit" onClick={()=>setopenSheet(true)}>New Bucket <Plus /></Button></CardTitle>
-          <CardDescription>View all S3 buckets configured in this project</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="public">
-            <TabsList className="mb-4">
-              <TabsTrigger value="public">Public Buckets <LockOpen /></TabsTrigger>
-              <TabsTrigger value="private">Private Buckets <LockIcon /></TabsTrigger>
-            </TabsList>
-            <TabsContent value="public">
-              <BucketList buckets={publicBuckets} type="public" />
-            </TabsContent>
-            <TabsContent value="private">
-              <BucketList buckets={privateBuckets} type="private" />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-        {openSheet &&
-          <BucketForm open={openSheet} onCloseAction={() => setopenSheet(false)} />
-        }
-      </Card>
-    )
+        <div className="flex items-center justify-center h-full p-8 text-center">
+            <p className="text-muted-foreground">No buckets found in this folder. Add a bucket to get started.</p>
+        </div>
+    );
   }
 
   return (
-    <Card className="max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Lock className="h-5 w-5" />
-          Authentication Required
-        </CardTitle>
-        <CardDescription>Enter the password to view S3 bucket information</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Input
-              type="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            {error && <p className="text-sm text-red-500">{error}</p>}
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Verifying..." : "Submit"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
-  )
+    <div className="p-4 md:p-6 space-y-6">
+        <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-semibold">Bucket Management</h1>
+            <Button variant="outline" onClick={() => setTestS3(true)} disabled={isTesting}>
+              {testS3 ? <span className="flex flex-row gap-2 items-center" onClick={()=> runConnectionTest(bucketIds)}> <RefreshCwIcon className={`mr-2 h-4 w-4 ${isTesting ? 'animate-spin' : ''}`} />
+                {isTesting ? 'Testing...' : 'Refresh Status'}
+              </span>: <span className="flex flex-row gap-2 items-center"><TestTube2Icon /> Test Connection</span>}
+            </Button>
+        </div>
+        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {bucketIds.map(id => {
+            const bucketInfo = getBucketInfo(id);
+            if (!bucketInfo) return null;
+
+            const statusInfo = statuses.find(s => s.bucket === id);
+
+            return (
+                <BucketCard
+                    key={id}
+                    bucketInfo={bucketInfo}
+                    statusInfo={statusInfo}
+                    isTesting={isTesting}
+                    testS3={testS3}
+                />
+            );
+        })}
+        </div>
+    </div>
+  );
+}
+
+// Sub-component for individual bucket cards
+function BucketCard({ bucketInfo, statusInfo, isTesting, testS3 }: { bucketInfo: Bucket, statusInfo?: ConnectionStatus, isTesting: boolean, testS3: boolean }) {
+    const usagePercentage = parseFloat(bucketInfo.usage_percentage.toString());
+    const usedGB = parseFloat(bucketInfo?.storage_used_bytes.toString()) / (1024 * 1024 * 1024);
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <CardTitle className="truncate">{bucketInfo.bucket_name}</CardTitle>
+                        <CardDescription className="capitalize">{bucketInfo.provider}</CardDescription>
+                    </div>
+                    {testS3 ? <> {isTesting ? (
+                         <Skeleton className="h-4 w-20 rounded-full" />
+                    ) : (
+                      <Tooltip>
+                        <Button size={'sm'} variant="ghost"  className="flex items-center gap-1.5">
+                            <span className={`h-2 w-2 rounded-full ${statusInfo?.status === 'Success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                            {statusInfo?.status || 'Testing...'}
+                            {statusInfo?.message ? (<>
+                            <TooltipTrigger>
+                              <InfoIcon />
+                            </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{statusInfo?.message}</p>
+                              </TooltipContent>
+                            </>
+                            ) : null}
+                        </Button>
+                      </Tooltip>
+                    )}</> : null}
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <StorageChart storageUsedGB={usedGB} availableCapacityGB={parseFloat(bucketInfo.available_storage_gb.toString())} usagePercentage={parseFloat(bucketInfo.usage_percentage.toString())} />
+                <div>
+                    <div className="flex justify-between mb-1 text-sm text-muted-foreground">
+                        <span>{usedGB.toFixed(2)} GB ({usagePercentage.toFixed(2)}%)</span>
+                        <span>{bucketInfo.total_capacity_gb} GB total</span>
+                    </div>
+                    <Progress value={usagePercentage} />
+                </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2">
+                <Button variant="outline">Manage Files</Button>
+                <Button>Upload</Button>
+            </CardFooter>
+        </Card>
+    );
 }
 
 
-function BucketList({ buckets, type }: { buckets:  {
-   value: string;
-   config: BucketConfig;
-   label: string;
-}[], type: string }) {
-  const [openSheet, setopenSheet] = useState(false);
-  const [selectedBucket, setSelectedBucket] = useState<{ id: string, config: BucketConfig } | null>(null);
+// Skeleton loader component
+export function S3BucketViewerSkeleton() {
   return (
-    <div className="space-y-2">
-      {buckets.map((bucket) => (
-        <Card key={bucket.label} className="overflow-hidden">
-          <CardContent className="px-6 py-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-medium flex items-center gap-2">
-                  {type === "public" ? (
-                    <Globe className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <LockIcon className="h-4 w-4 text-amber-500" />
-                  )}
-                  {bucket.label}
-                </h3>
-                <p className="text-sm text-muted-foreground">Region: {bucket?.config?.region}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                 Name : {bucket?.config?.name}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                 Provider : {bucket?.config?.provider}
-                </p>
-              </div>
-              <Button variant={type === "public" ? "outline" : "secondary"} onClick={() => { setSelectedBucket({ id: bucket.value, config: bucket.config }); setopenSheet(true) }}>Edit <Edit3 /></Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-      {openSheet && selectedBucket && (<BucketForm open={openSheet} id={selectedBucket?.id} bucketConfig={selectedBucket?.config} onCloseAction={() => setopenSheet(false)} />)}
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Card key={index}>
+            <CardHeader>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <Skeleton className="h-6 w-3/4 mb-2" />
+                        <Skeleton className="h-4 w-1/4" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex justify-center">
+                    <Skeleton className="h-32 w-32 rounded-full" />
+                </div>
+                <div>
+                    <div className="flex justify-between mb-1">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-20" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                </div>
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2">
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-10 w-20" />
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
     </div>
-  )
+  );
 }

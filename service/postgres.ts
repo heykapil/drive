@@ -28,6 +28,9 @@ const isWriteQuery = (queryString: string) => {
   return writeKeywords.test(queryString.trim());
 };
 
+export const sql = mainDB;
+
+
 // **Query function that supports both read and write operations**
 export const query = async <T = any>(
   queryString: string,

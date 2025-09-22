@@ -1,6 +1,5 @@
 "use client";
 
-import { cn, formatBytes } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatBytes } from "@/lib/utils";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -26,9 +26,8 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { Filter, ListFilter, CircleX, Ellipsis } from "lucide-react";
+import { CircleX, Ellipsis, Filter, ListFilter } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { getbucketId } from "@/service/bucket.config";
 import { Badge } from "../ui/badge";
 
 // FileItem type coming from the API. The "bucket" field is the S3 bucket name.
@@ -42,6 +41,7 @@ type FileItem = {
   is_public: boolean;
   liked: boolean;
   bucket: string;
+  bucket_id: number;
 };
 
 // Filter functions for boolean values and bucket keys.
@@ -118,7 +118,7 @@ const columns: ColumnDef<FileItem>[] = [
     // Use an accessor function to derive the bucket identifier from the API bucket name.
     header: "Bucket",
     id: "bucket",
-    accessorFn: async (row: FileItem) => await getbucketId(row.bucket) || row.bucket,
+    accessorFn: async (row: FileItem) => row.bucket || row.bucket_id,
     cell: ({ row }) => {
       const bucketKey = row.getValue("bucket") as string;
       return bucketKey.charAt(0).toUpperCase() + bucketKey.slice(1);

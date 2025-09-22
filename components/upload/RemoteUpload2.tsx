@@ -3,15 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useBucketStore } from "@/hooks/use-bucket-store";
+import { getBucketConfig } from "@/service/bucket.config";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { BucketSelector } from "../bucket-selector";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { uploadMultipart } from "./RemoteUploadMultipart2";
-import { getBucketConfig } from "@/service/bucket.config";
 export default function RemoteUpload() {
-  const { selectedBucket } = useBucketStore()
+  const { selectedBucketId, selectedBucketName, isLoading: isZustLoading } = useBucketStore()
   const [useProxy, setUseProxy] = useState(true);
   const [proxyUrl, setProxyUrl] = useState("https://stream.kapil.app");
   const [urls, setUrls] = useState("");
@@ -24,11 +25,13 @@ export default function RemoteUpload() {
 
   useEffect(() => {
     async function setSynologyBucket(){
-      const config = await getBucketConfig(selectedBucket)
-    setIsSynologyBucket(config?.provider?.includes('synology') || false);
+      if (!isZustLoading) {
+        const config = await getBucketConfig(selectedBucketId as number)
+         setIsSynologyBucket(config[0]?.provider?.includes('synology') || false);
+      }
   }
   setSynologyBucket();
-  },[selectedBucket])
+  },[selectedBucketId, isZustLoading])
 
   useEffect(() => {
       if (textAreaRef.current) {
@@ -50,7 +53,7 @@ export default function RemoteUpload() {
     setProgress(Object.fromEntries(urlList.map((url) => [url, 0])));
     setIsUploading(true)
     for (const [index, url] of urlList.entries()) {
-      toast.promise(uploadMultipart(url, selectedBucket, setProgress, proxy, synologyBucket), {
+      toast.promise(uploadMultipart(url, selectedBucketId as number, setProgress, proxy, synologyBucket), {
         loading: `Uploading... ${index + 1} of ${urlList.length}`,
         error: `Error occured in number ${index + 1} URL: ${url}`,
       })
@@ -109,8 +112,10 @@ export default function RemoteUpload() {
                 />
               )}
             </div>
-            <Button variant={'secondary'} onClick={async()=>await handleUpload(useProxy, proxyUrl)} disabled={isUploading} className="w-fit mt-8">
-              {isUploading ? "Uploading..." : `Upload to ${selectedBucket}`}
+
+              <BucketSelector testConnection={true}/>
+            <Button variant={'secondary'} onClick={async()=>await handleUpload(useProxy, proxyUrl)} disabled={isUploading || isZustLoading} className="w-fit mt-8">
+              {isZustLoading ? <span>Loading...</span> : isUploading ? "Uploading..." : `Upload to ${selectedBucketName}`}
             </Button>
           </CardContent>
         </Card>

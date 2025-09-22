@@ -41,7 +41,7 @@ const DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
  */
 export const uploadMultipart = async (
   fileUrl: string,
-  selectedBucket: string,
+  selectedBucketId: number,
   setProgress: SetProgress,
   proxy?: string,
   isSynologyBucket?: boolean,
@@ -85,7 +85,7 @@ export const uploadMultipart = async (
     toast.info("Fetched file metadata", { description: `File: ${fileName}` });
 
     // 2. Initiate multipart upload.
-    const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
+    const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucketId}`, {
       method: "POST",
       body: JSON.stringify({ filename: fileName, contentType }),
       headers: { "Content-Type": "application/json" },
@@ -176,12 +176,13 @@ export const uploadMultipart = async (
         formData.append("uploadId", uploadId);
         formData.append("key", key);
         formData.append("partNumber", partNumber.toString());
+        // @ts-ignore
         formData.append("chunk", new Blob([chunk]), fileName);
-        formData.append("s3config", await encryptBucketConfig(selectedBucket));
+        formData.append("s3config", await encryptBucketConfig(selectedBucketId));
         const production = process.env.NODE_ENV === "production";
         const url = production
-          ? (endpoint ? `${endpoint}/upload?bucket=${selectedBucket}`: `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}`)
-          : `/api/upload/multipart/chunk?bucket=${selectedBucket}`;
+          ? (endpoint ? `${endpoint}/upload?bucket=${selectedBucketId}`: `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucketId}`)
+          : `/api/upload/multipart/chunk?bucket=${selectedBucketId}`;
         const { data } = await axios.post(url, formData, {
           onUploadProgress: (progressEvent) => {
             const loaded = progressEvent.loaded;
@@ -208,7 +209,7 @@ export const uploadMultipart = async (
         parts.push({ PartNumber: partNumber, ETag: eTag });
       } else {
         // Client-side upload via presigned URL.
-        const presignRes = await fetch(`/api/upload/multipart/presign?bucket=${selectedBucket}`, {
+        const presignRes = await fetch(`/api/upload/multipart/presign?bucket=${selectedBucketId}`, {
           method: "POST",
           body: JSON.stringify({ uploadId, key, partNumber }),
           headers: { "Content-Type": "application/json" },
@@ -322,7 +323,7 @@ export const uploadMultipart = async (
     }
 
     // 8. Complete the multipart upload.
-    const finalRes = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucket}`, {
+    const finalRes = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucketId}`, {
       method: "POST",
       body: JSON.stringify({
         uploadId,

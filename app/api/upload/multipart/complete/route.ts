@@ -1,4 +1,4 @@
-import {  getallBuckets } from "@/service/bucket.config";
+import { getBucketConfig } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
@@ -7,13 +7,24 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const bucket = searchParams.get("bucket") || "";
-    if(!bucket){
-      return NextResponse.json({success: false, error: 'Bucket name not provided'})
+    const bucketIdParam = searchParams.get("bucket");
+
+    const bucketId = bucketIdParam ? parseInt(bucketIdParam, 10) : NaN;
+
+    if (!bucketId || isNaN(bucketId) || bucketId <= 0) {
+        return NextResponse.json({
+          success: false,
+          error: "Bucket ID must be a positive integer",
+        });
+      }
+
+    const bucketConfigArray = await getBucketConfig(bucketId)
+
+    if(bucketConfigArray.length===0){
+      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
     }
 
-    const buckets = await getallBuckets()
-    const bucketConfig = buckets[bucket]
+    const bucketConfig = bucketConfigArray[0];
 
     if(!bucketConfig.name){
       return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
@@ -33,8 +44,8 @@ export async function POST(req: NextRequest) {
     });
     const client = await s3WithConfig(bucketConfig);
     await client.send(command).then( async () =>
-    await query("INSERT INTO files (filename, key, size, type, bucket) VALUES ($1, $2, $3, $4, $5)", [
-      filename, key, size, contentType, bucketConfig.name
+    await query("INSERT INTO files (filename, key, size, type, bucket, bucket_id) VALUES ($1, $2, $3, $4, $5, $6)", [
+      filename, key, size, contentType, bucketConfig.name, bucketConfig.id
     ]));
 
     return NextResponse.json({ success: true });

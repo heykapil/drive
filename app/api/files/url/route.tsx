@@ -1,4 +1,4 @@
-import { getallBuckets } from "@/service/bucket.config";
+import { getBucketConfig } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
@@ -10,33 +10,20 @@ export async function GET(req: NextRequest) {
    const { searchParams } = new URL(req.url);
     const fileId = searchParams.get("fileId");
     const expiresIn = Math.max(60, parseInt(searchParams.get("expiresIn") || "300", 10)); // Min 1 min, Default 5 mins
-    const bucket = searchParams.get("bucket") || "";
 
     if (!fileId) {
       return NextResponse.json({ error: "File ID is required" }, { status: 400 });
     }
 
-    if(!bucket){
-      return NextResponse.json({success: false, error: 'Bucket name not provided'})
-    }
 
-
-    const buckets = await getallBuckets();
-    const bucketConfig = buckets[bucket]
-
-    if(!bucketConfig.name){
-      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
-    }
-
-    const { rows } = await query("SELECT key FROM files WHERE id = $1 AND bucket = $2", [fileId, bucketConfig.name]);
-    if (!rows.length) {
+    const { rows } = await query("SELECT key, bucket_id FROM files WHERE id = $1", [fileId]);
+    if (rows.length === 0) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
-
-    const client = await s3WithConfig(bucketConfig)
-    const command = new GetObjectCommand({ Bucket: bucketConfig.name, Key: rows[0].key });
+    const bucketConfig = await getBucketConfig(rows[0].bucket_id);
+    const client = await s3WithConfig(bucketConfig[0])
+    const command = new GetObjectCommand({ Bucket: bucketConfig[0].name, Key: rows[0].key });
     const url = await getSignedUrl(client, command, { expiresIn: expiresIn });
-
     return NextResponse.json({ url });
   } catch (error) {
     console.error("Error generating signed URL:", error);

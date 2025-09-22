@@ -66,10 +66,50 @@ export async function encryptJWT(payload: JWTPayload): Promise<string> {
     .encrypt(publicKey);
 }
 
+// Symmetric algrothim
 // 🔓 **Decrypt JWT (JWE)**
 export async function decryptJWT(token: string): Promise<JWTPayload> {
   const { privateKey } = await loadEncryptionKeys();
   const { plaintext } = await compactDecrypt(token, privateKey);
 
   return JSON.parse(new TextDecoder().decode(plaintext));
+}
+
+const masterKey = Buffer.from(process.env.ENCRYPTION_KEY!, 'base64');
+if (masterKey.length !== 32) {
+  throw new Error('Invalid ENCRYPTION_KEY length. Must be 32 bytes (256 bits) for A256GCM.');
+}
+
+const encryptionAlgorithm = 'A256GCM'; // AES-256-GCM is a highly secure and efficient standard.
+
+/**
+ * Encrypts a plaintext string using symmetric encryption (AES-256-GCM).
+ * @param plaintext The secret string to encrypt (e.g., an S3 access key).
+ * @returns A JWE string in Compact Serialization format.
+ */
+export async function encryptSecret(plaintext: string): Promise<string> {
+  const jwe = await new CompactEncrypt(new TextEncoder().encode(plaintext))
+    .setProtectedHeader({
+      alg: 'dir', // 'dir' stands for "Direct Encryption" with a shared symmetric key.
+      enc: encryptionAlgorithm,
+    })
+    .encrypt(masterKey); // Encrypt using the single master key.
+
+  return jwe;
+}
+
+/**
+ * Decrypts a JWE string that was encrypted with the master key.
+ * @param jwe The JWE string from the database.
+ * @returns The original plaintext secret.
+ */
+export async function decryptSecret(jwe: string): Promise<string> {
+  try {
+    const { plaintext } = await compactDecrypt(jwe, masterKey);
+    return new TextDecoder().decode(plaintext);
+  } catch (error) {
+    console.error("Decryption failed:", error);
+    // This typically means the master key is wrong or the data is corrupted.
+    throw new Error("Failed to decrypt secret.");
+  }
 }

@@ -18,6 +18,7 @@ import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
+import { BucketSelector } from "../bucket-selector";
 import { FileRow } from "./FileRow";
 
 const FILE_SIZE_THRESHOLD = 5 * 1024 * 1024; // 5MB
@@ -41,7 +42,7 @@ interface UploadPart {
 }
 
 export default function FileUploadServer() {
-  const { selectedBucket } = useBucketStore();
+  const { selectedBucketId, selectedBucketName, isLoading } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
     uploadingFiles: {},
@@ -190,7 +191,7 @@ export default function FileUploadServer() {
     const formData = new FormData();
     formData.append("file", file);
 
-    await fetch(`/api/upload/simple?bucket=${selectedBucket}`, {
+    await fetch(`/api/upload/simple?bucket=${selectedBucketId}`, {
       method: "POST",
       body: formData,
       signal: controller.signal,
@@ -201,7 +202,7 @@ export default function FileUploadServer() {
     const fileName = file.name;
     const contentType = getFileType(file) || getFileTypeFromFilename(fileName) || DEFAULT_CONTENT_TYPE;
 
-    const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucket}`, {
+    const initRes = await fetch(`/api/upload/multipart/initiate?bucket=${selectedBucketId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filename: fileName, contentType }),
@@ -257,15 +258,17 @@ export default function FileUploadServer() {
         formData.append("key", key);
         formData.append("partNumber", partNumber.toString());
         formData.append("chunk", new Blob([chunk]));
-        formData.append("s3config", await encryptBucketConfig(selectedBucket));
+        formData.append("s3config", await encryptBucketConfig(selectedBucketId as number));
         const payload = {
           uploadId,
           key,
           partNumber,
         };
         const url = production
-          ? (endpoint ? `${endpoint}/upload?bucket=${selectedBucket}`: `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucket}`)
-          : `/api/upload/multipart/chunk?bucket=${selectedBucket}`;
+          ? (endpoint ? `${endpoint}/upload?bucket=${selectedBucketId}`: `${process.env.NEXT_PUBLIC_GCLOUD_URL_CHUNK}/upload?bucket=${selectedBucketId}`)
+          : `/api/upload/multipart/chunk?bucket=${selectedBucketId}`;
+
+        // const url = endpoint ? `${endpoint}/upload?bucket=${selectedBucketId}`: `${process.env.NEXT_PUBLIC_RENDER_URL_CHUNK}/upload?bucket=${selectedBucketName}`;
         const { data } = await axios.post(
           url,
           formData,
@@ -318,7 +321,7 @@ export default function FileUploadServer() {
     parts: UploadPart[],
     fileName: string
   ) => {
-    const res = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucket}`, {
+    const res = await fetch(`/api/upload/multipart/complete?bucket=${selectedBucketId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -435,11 +438,20 @@ export default function FileUploadServer() {
               <SelectValue placeholder="Select endpoint" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={`https://s3chunk-us.kapil.app`}>
-                  Gcloud (US)
+              {/*<SelectItem value={`https://encrypt-s3.kapil-math-hons.workers.dev`}>
+                  Cloudflare (new)
               </SelectItem>
+              <SelectItem value={`https://s3chunk.kapil.app`}>
+                  Cloudflare (Prod)
+              </SelectItem>
+              <SelectItem value={`http://localhost:8787`}>
+                  Cloudflare (dev)
+              </SelectItem>*/}
               <SelectItem value={`https://us-chunk.kapil.app`}>
                   Render (EU)
+              </SelectItem>
+              <SelectItem value={`https://s3chunk-xi59.onrender.com`}>
+                  Render (AP)
               </SelectItem>
             </SelectContent>
           </Select>
@@ -447,16 +459,18 @@ export default function FileUploadServer() {
       </div>
 
 
-
+      <div className="flex flex-row items-center gap-2">
+        <BucketSelector testConnection={true} />
       <Button
         onClick={uploadFiles}
-        disabled={!state.files.length || Object.values(state.uploadingFiles).some(Boolean)}
-        className="w-full"
+        className="w-fit ml-4"
+        disabled={!state.files.length || isLoading || Object.values(state.uploadingFiles).some(Boolean)}
       >
-        {Object.values(state.uploadingFiles).some(Boolean)
+        {isLoading ? <span>Please wait...</span> : Object.values(state.uploadingFiles).some(Boolean)
           ? "Uploading..."
-          : `Upload ${state.files.length} file(s) to ${selectedBucket}`}
+          : `Upload to ${selectedBucketName}`}
       </Button>
+      </div>
     </div>
   );
 }

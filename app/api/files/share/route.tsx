@@ -1,25 +1,10 @@
 import { SharedFile } from "@/components/data/shared-files-table";
 import { generateToken } from "@/lib/helpers/token";
-import { getallBuckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const bucket = searchParams.get("bucket") || "";
-
-    if (!bucket) {
-      return NextResponse.json({ success: false, error: "Bucket name not provided" });
-    }
-
-    const buckets = await getallBuckets();
-    const bucketConfig = buckets[bucket];
-
-    if (!bucketConfig?.name) {
-      return NextResponse.json({ success: false, error: "Wrong bucket id provided" });
-    }
-
     const body = await req.json();
     const { fileId, duration } = body;
 
@@ -27,24 +12,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request parameters" }, { status: 400 });
     }
 
-    // ✅ Fetch file details from the database
-    const { rows } = await query("SELECT * FROM files WHERE id = $1 AND bucket = $2", [
-      fileId,
-      bucketConfig.name,
+    const { rows } = await query("SELECT id, filename, size, type, bucket_id FROM files WHERE id = $1", [
+      fileId
     ]);
-    if (!rows.length) {
+
+    if (rows.length === 0) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    const { id, filename, size, type } = rows[0];
+    const { id, filename, size, type, bucket_id } = rows[0];
     const expires = new Date(Date.now() + duration * 24 * 60 * 60 * 1000);
     const token = generateToken(fileId, duration)
 
     const url = `${process.env.NEXT_PUBLIC_APP_URL}/file?id=${fileId}&token=${token}`;
 
     await query(
-      "INSERT INTO shared (token, id, filename, size, type, bucket, expires, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-      [token, id, filename, size, type, bucketConfig.name, expires, new Date()]
+      "INSERT INTO shared (token, id, filename, size, type, bucket_id, expires, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+      [token, id, filename, size, type, bucket_id, expires, new Date()]
     );
 
     return NextResponse.json({ message: "File has been shared", url });

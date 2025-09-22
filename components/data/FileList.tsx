@@ -6,12 +6,12 @@ import { useBucketStore } from "@/hooks/use-bucket-store";
 import { ArrowDown, ArrowDownAZ, ArrowDownNarrowWideIcon, ArrowDownWideNarrowIcon, ArrowDownZA, ArrowUp, CalendarArrowDown, CalendarArrowUp, Copy, Eye, EyeOff, FileText, Grid, List, RefreshCw, Square, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ConfirmModal } from "./ConfirmModal";
-import FileIcon from "./FileIcon";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { ConfirmModal } from "./ConfirmModal";
+import FileIcon from "./FileIcon";
 export default function FileList() {
-  const { selectedBucket } = useBucketStore();
+  const { selectedBucketId: selectedBucket } = useBucketStore();
   const [state, setState] = useState<Record<string, any>>({
     files: [],
     loading: false,

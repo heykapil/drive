@@ -1,42 +1,34 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
-import { addBucketformSchema } from "@/lib/schema";
-import { BucketConfig, refreshBucketCookies } from "@/service/bucket.config";
-import { verifyBucketConnection } from "@/service/s3-tebi";
-import { addredisBucket, deleteredisBucket } from "@/lib/actions";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
 } from "@/components/ui/sheet";
-
-// Utility to generate a default ID (e.g. year plus random 4-digit number)
-const generateDefaultId = (): string => {
-  const year = new Date().getFullYear().toString();
-  const randomNum = Math.floor(1000 + Math.random() * 9000);
-  return `${year},${randomNum}`;
-};
+import { Switch } from "@/components/ui/switch";
+import { addPostgresBucket, deleteredisBucket } from "@/lib/actions";
+import { addBucketformSchema } from "@/lib/schema";
+import { BucketConfig } from "@/service/bucket.config";
+import { verifyBucketConnection } from "@/service/s3-tebi";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { CheckCircle, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import * as z from "zod";
 
 interface BucketFormProps {
   open: boolean;
@@ -53,10 +45,9 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
   // Memoize initial values so that they don’t change on each render.
   const initialValues = useMemo(() => {
     if (id && bucketConfig) {
-      return { id, ...bucketConfig };
+      return bucketConfig;
     }
     return {
-      id: generateDefaultId(),
       name: "",
       accessKey: "",
       secretKey: "",
@@ -84,6 +75,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
   const handleVerify = async () => {
     const values = form.getValues();
     const bucketConfig: BucketConfig = {
+      id: values.id,
       name: values.name,
       accessKey: values.accessKey,
       secretKey: values.secretKey,
@@ -92,7 +84,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
       private: values.private,
       cdnUrl: values.cdnUrl,
       provider: values.provider,
-      availableCapacity: values.availableCapacity,
+      storageUsedBytes: values.availableCapacity
     };
 
     setIsVerifying(true);
@@ -129,6 +121,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
     setIsSubmitting(true);
     try {
       const bucketConfig: BucketConfig = {
+        id: values.id,
         name: values.name,
         accessKey: values.accessKey,
         secretKey: values.secretKey,
@@ -137,17 +130,15 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
         private: values.private,
         cdnUrl: values.cdnUrl,
         provider: values.provider,
-        availableCapacity: values.availableCapacity,
+        storageUsedBytes: values.availableCapacity,
       };
-
-      await addredisBucket(values.id, bucketConfig);
-      await refreshBucketCookies().then(()=> window.location.reload())
+      await addPostgresBucket(Number(id), bucketConfig);
+      // await addredisBucket(values.id, bucketConfig);
       toast.success("Bucket added", {
         description: "The bucket has been successfully added to Redis.",
       });
 
       form.reset({
-        id: generateDefaultId(),
         name: "",
         accessKey: "",
         secretKey: "",
@@ -188,7 +179,7 @@ export function BucketForm({ open, onCloseAction, id, bucketConfig }: BucketForm
                       ID
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={!!id} />
+                      <Input {...field} type="number" />
                     </FormControl>
                     <FormDescription>Unique identifier for this bucket</FormDescription>
                     <FormMessage />

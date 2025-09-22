@@ -2,7 +2,6 @@ import { CountdownTimer } from "@/components/CountDownTimer";
 import FileIcon from "@/components/data/FileIcon";
 import { verifyToken } from "@/lib/helpers/token";
 import { formatBytes } from "@/lib/utils";
-import { getallBuckets } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import {
     AlertCircle,
@@ -36,15 +35,12 @@ export default async function FilePage(props: {
     };
   }
 
-  const getDownloadUrl = async (id: string, bucket: string) => {
+  const getDownloadUrl = async (id: string) => {
     try {
-      const buckets = await getallBuckets();
-      const bucketId = Object.keys(buckets).find(
-        (key) => buckets[key].name === bucket
-      );
+
       const res = await fetch(
         process.env.NEXT_PUBLIC_APP_URL +
-          `/api/files/url?bucket=${bucketId}&fileId=${id}&expiresIn=7200`
+          `/api/files/url?&fileId=${id}&expiresIn=7200`
       );
       const { url } = await res.json();
       return url;
@@ -99,7 +95,7 @@ export default async function FilePage(props: {
   }
 
   const file = rows[0];
-  const href = await getDownloadUrl(file.id, file.bucket);
+  const href = await getDownloadUrl(file.id);
   return (
     <div className="min-h-screen flex items-center w-full justify-center bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-600 p-4">
       <div className="max-w-lg w-full bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden transform hover:scale-105 transition duration-300">
