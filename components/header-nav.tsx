@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
-import { Session } from "@/lib/auth"
 import { FolderNode } from "@/lib/utils"
 import { Check, CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu, Moon, PaintBucket, Settings, Share2, Sun, Upload, VideoIcon } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -102,7 +101,7 @@ function FolderSelector () {
 };
 
 
-export default function HeaderNav({ session }: { session: Session }) {
+export default function HeaderNav() {
   const { theme, setTheme } = useTheme();
   const path = usePathname();
   const [isMounted, setIsMounted] = useState(false);
@@ -126,7 +125,6 @@ export default function HeaderNav({ session }: { session: Session }) {
     <>
       <HeaderSkeleton /></>
   );
-  if (!session?.user && process.env.NODE_ENV === 'production') return null;
 
   return (
     <header className="sticky top-0 z-50 w-full px-4 sm:px-8 border-b backdrop-blur-lg bg-background/10">

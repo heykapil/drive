@@ -1,3 +1,7 @@
+'use server'
+import { cache } from "react"
+import { query } from "./postgres"
+
 export interface BucketConfig {
   name: string
   accessKey: string
@@ -13,41 +17,60 @@ export interface BucketConfig {
 }
 
 
-const configCache = new Map<string, BucketConfig[]>();
+/**
+ * Fetches a SINGLE bucket configuration from the database.
+ * This function is the one we will wrap with `cache`.
+ * It's intentionally not exported, as it's an internal implementation detail.
+ */
+const getSingleBucketConfigFromDb = async (bucketId: number): Promise<BucketConfig | null> => {
+  const { rows } = await query("SELECT * FROM s3_buckets WHERE id = $1 LIMIT 1", [bucketId]);
 
-export async function getBucketConfig(bucketIds: number | number[]): Promise<BucketConfig[]> {
-  const ids = Array.isArray(bucketIds) ? bucketIds.sort() : [bucketIds];
-  const cacheKey = ids.join(',');
-
-  if (configCache.has(cacheKey)) {
-    console.log(`[getBucketConfig] Returning config from cache for key: ${cacheKey}`);
-    return configCache.get(cacheKey)!;
+  if (rows.length === 0) {
+    return null;
   }
 
-  // Construct the full URL WITHOUT query parameters
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const url = `${appUrl}/api/buckets/postgres/config?bucketIds=${cacheKey}`;
+  const bucket = rows[0];
+  // Simple mapping logic (ensure this matches your schema)
+  return {
+    id: bucket.id,
+    name: bucket.name,
+    accessKey: bucket.access_key_encrypted,
+    secretKey: bucket.secret_key_encrypted,
+    region: bucket.region,
+    endpoint: bucket.endpoint,
+    totalCapacityGB: bucket.total_capacity_gb,
+    storageUsedBytes: bucket.storage_used_bytes,
+    private: bucket.is_private,
+    provider: bucket.provider,
+  };
+};
 
-  try {
-    const response = await fetch(url);
+// 2. Create the cached version of the function
+// Any calls to this function with the same `bucketId` within the same server request
+// will be de-duplicated.
+const getCachedBucketConfig = cache(getSingleBucketConfigFromDb);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[getBucketConfig] Fetch failed with status: ${response.status}`);
-      console.error(`[getBucketConfig] Raw error response from API: ${errorText}`);
-      throw new Error(`Failed to fetch bucket config. API returned status ${response.status}`);
-    }
+/**
+ * This is the primary function you will call from your server code.
+ * It intelligently fetches multiple bucket configurations using the cached function.
+ */
+export async function getBucketConfig(bucketIds: number | number[]): Promise<BucketConfig[]> {
+  const ids = Array.isArray(bucketIds) ? bucketIds : [bucketIds];
+  const uniqueIds = [...new Set(ids)]; // Ensure we don't process duplicate IDs
 
-    const data: BucketConfig[] = await response.json();
-    console.log(`[getBucketConfig] Successfully fetched config for buckets: ${cacheKey}`);
-
-    configCache.set(cacheKey, data);
-    return data;
-
-  } catch (error) {
-    console.error('[getBucketConfig] An unexpected error occurred during fetch:', error);
+  if (uniqueIds.length === 0) {
     return [];
   }
+
+  // 3. Use Promise.all to fetch all configs in parallel.
+  // React's `cache` will ensure that if getCachedBucketConfig(1) is called multiple
+  // times across these promises, the database is only hit once for ID 1.
+  const configPromises = uniqueIds.map(id => getCachedBucketConfig(id));
+
+  const results = await Promise.all(configPromises);
+
+  // Filter out any null results for IDs that were not found
+  return results.filter((config: any): config is BucketConfig => config !== null);
 }
 
 
@@ -56,6 +79,6 @@ export async function encryptBucketConfig(bucketId: number){
     method: 'POST',
     body: JSON.stringify({ bucketId })
   })
-  const { token } = await response.json()
+  const { token } = await response.json();
   return token;
 }

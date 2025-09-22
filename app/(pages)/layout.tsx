@@ -1,11 +1,9 @@
-import "@/app/globals.css";
 import { ProgressProviders } from "@/components/ProgressBarProvider";
 import { QueryProvider } from "@/components/QueryProvider";
 import TransitionLayout from "@/components/TransitionLayout";
 import HeaderNav, { HeaderSkeleton } from "@/components/header-nav";
 import { ThemeProvider } from "@/hooks/theme-provider";
 import { BucketStoreInitializer } from "@/hooks/use-bucket-store";
-import { getSession } from "@/lib/auth";
 import type { Metadata, Viewport } from "next";
 import { Outfit } from "next/font/google";
 import { Suspense } from "react";
@@ -72,8 +70,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getSession();
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${OutFit.className} antialiased bg-background text-neutral-900 dark:text-white`}>
@@ -99,13 +95,13 @@ export default async function RootLayout({
             <main className="min-h-screen flex flex-col items-center p-0">
               <Suspense fallback={<HeaderSkeleton />}>
                 <BucketStoreInitializer />
-              <HeaderNav session={session} />
+              <HeaderNav />
               </Suspense>
                <TransitionLayout>
                  <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">
                    <main className="flex flex-col gap-2 row-start-2 items-center sm:items-start">
                      <div className="w-[95vw] md:w-2xl lg:w-4xl mx-auto py-6 space-y-6">
-                       {children}
+                      {children}
                      </div>
                     </main>
                   </div>
