@@ -13,50 +13,50 @@ export interface BucketConfig {
 }
 
 
- const configCache = new Map<string, any>();
+const configCache = new Map<string, BucketConfig[]>();
 
- export async function getBucketConfig(bucketIds: number | number[]): Promise<BucketConfig[]> {
-   const ids = Array.isArray(bucketIds) ? bucketIds.sort() : [bucketIds];
-   const cacheKey = ids.join(',');
+export async function getBucketConfig(bucketIds: number | number[]): Promise<BucketConfig[]> {
+  const ids = Array.isArray(bucketIds) ? bucketIds.sort() : [bucketIds];
+  const cacheKey = ids.join(',');
 
-   if (configCache.has(cacheKey)) {
-     console.log(`[getBucketConfig] Returning config from cache for key: ${cacheKey}`);
-     return configCache.get(cacheKey);
-   }
+  if (configCache.has(cacheKey)) {
+    console.log(`[getBucketConfig] Returning config from cache for key: ${cacheKey}`);
+    return configCache.get(cacheKey)!;
+  }
 
-   // Construct the full URL, crucial for server-side fetching
-   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-   const url = `${appUrl}/api/buckets/postgres/config?bucketIds=${cacheKey}`;
+  // Construct the full URL WITHOUT query parameters
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const url = `${appUrl}/api/buckets/postgres/config`; // <-- FIX IS HERE
 
-   try {
-     console.log(`[getBucketConfig] Fetching from URL: ${url}`);
-     const response = await fetch(url, {
-       method: 'POST',
-       body: JSON.stringify({
-         bucketIds: ids,
-       }),
-       headers: { 'Content-Type': 'application/json' },
-       next: { revalidate: 60 } // Optional: revalidate cache every 60 seconds
-     });
+  try {
+    console.log(`[getBucketConfig] POSTing to URL: ${url}`);
+    const response = await fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        bucketIds: ids, // Data is ONLY in the body
+      }),
+      headers: { 'Content-Type': 'application/json' },
+      next: { revalidate: 60 }
+    });
 
-     if (!response.ok) {
-       const errorText = await response.text(); // Get the raw response body
-       console.error(`[getBucketConfig] Fetch failed with status: ${response.status}`);
-       console.error(`[getBucketConfig] Raw error response from API: ${errorText}`);
-       throw new Error(`Failed to fetch bucket config. API returned status ${response.status}`);
-     }
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[getBucketConfig] Fetch failed with status: ${response.status}`);
+      console.error(`[getBucketConfig] Raw error response from API: ${errorText}`);
+      throw new Error(`Failed to fetch bucket config. API returned status ${response.status}`);
+    }
 
-     const data = await response.json();
-     console.log(`[getBucketConfig] Successfully fetched config for buckets: ${cacheKey}`);
+    const data: BucketConfig[] = await response.json();
+    console.log(`[getBucketConfig] Successfully fetched config for buckets: ${cacheKey}`);
 
-     configCache.set(cacheKey, data); // Store result in cache
-     return data;
+    configCache.set(cacheKey, data);
+    return data;
 
-   } catch (error) {
-     console.error('[getBucketConfig] An unexpected error occurred during fetch:', error);
-     return []; // Return an empty array on failure
-   }
- }
+  } catch (error) {
+    console.error('[getBucketConfig] An unexpected error occurred during fetch:', error);
+    return [];
+  }
+}
 
 
 export async function encryptBucketConfig(bucketId: number){
