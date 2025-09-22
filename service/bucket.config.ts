@@ -31,7 +31,10 @@ export interface BucketConfig {
    try {
      console.log(`[getBucketConfig] Fetching from URL: ${url}`);
      const response = await fetch(url, {
-       method: 'GET',
+       method: 'POST',
+       body: JSON.stringify({
+         bucketIds: ids,
+       }),
        headers: { 'Content-Type': 'application/json' },
        next: { revalidate: 60 } // Optional: revalidate cache every 60 seconds
      });
