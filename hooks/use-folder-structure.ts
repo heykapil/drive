@@ -21,8 +21,8 @@ export function useFolderStructure() {
 
         // 2. If not cached, fetch from both APIs in parallel for efficiency
         const [foldersResponse, bucketsResponse] = await Promise.all([
-          fetch('/api/folders/all'),
-          fetch('/api/buckets/postgres')
+          fetch(process.env.NEXT_PUBLIC_APP_URL+'/api/folders/all'),
+          fetch(process.env.NEXT_PUBLIC_APP_URL+'/api/buckets/postgres')
         ]);
 
         if (!foldersResponse.ok) {
