@@ -8,41 +8,28 @@ import { toast } from "sonner";
 import { BucketConfig, getBucketConfig } from './bucket.config';
 
 export async function s3WithConfig(bucketConfig: BucketConfig) {
-  return new S3Client({
-    region: bucketConfig.region || 'auto',
-    endpoint: bucketConfig.endpoint,
-    credentials: {
-      accessKeyId: await decryptSecret(bucketConfig.accessKey),
-      secretAccessKey: await decryptSecret(bucketConfig.secretKey),
-    },
-    forcePathStyle: true,
-    // sha256: Sha256,
-    // md5: Md5,
-  });
+  try {
+    const accessKeyId = await decryptSecret(bucketConfig.accessKey);
+    const secretAccessKey = await decryptSecret(bucketConfig.secretKey);
 
-  // --- DIAGNOSTIC LOGGER ---
-  // This middleware will intercept the request and print its details.
-  // client.middlewareStack.add(
-  //   (next) => async (args) => {
-  //     const request = args.request;
-  //     if (HttpRequest.isInstance(request)) {
-  //       console.log("--- S3 Request About to Be Sent ---");
-  //       console.log("METHOD:", request.method);
-  //       console.log("HOSTNAME:", request.hostname);
-  //       console.log("PATH:", request.path);
-  //       // We are looking for 'content-md5' in the headers below
-  //       console.log("HEADERS:", JSON.stringify(request.headers, null, 2));
-  //       console.log("-----------------------------------");
-  //     }
-  //     return next(args);
-  //   },
-  //   {
-  //     step: "finalizeRequest", // Runs just before the request is sent
-  //     name: "RequestLoggerMiddleware",
-  //   }
-  // );
+    if (!accessKeyId || !secretAccessKey) {
+        throw new Error("Decryption failed. One or both keys are null or empty. Check production environment variables.");
+    }
 
-  // return client
+    return new S3Client({
+      region: bucketConfig.region || 'auto',
+      endpoint: bucketConfig.endpoint,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+      forcePathStyle: true,
+    });
+  } catch (error) {
+    console.error("FATAL ERROR in s3WithConfig:", error);
+    // Re-throw the error to be caught by the API route handler
+    throw new Error(`Failed to create S3 client for bucket ${bucketConfig.name}. Please check server logs.`);
+  }
 }
 
 export async function testS3Connection(bucketIds: number | number[]) {

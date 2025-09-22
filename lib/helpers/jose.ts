@@ -1,4 +1,3 @@
-'use server'
 import { CompactEncrypt, JWTPayload, SignJWT, compactDecrypt, importJWK, jwtVerify } from "jose";
 
 // Helper function to safely parse JSON from environment variables
