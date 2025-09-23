@@ -26,7 +26,6 @@ export function S3BucketViewer() {
   const [statuses, setStatuses] = useState<ConnectionStatus[]>([]);
   const [isTesting, setIsTesting] = useState<boolean>(true);
   const [testS3, setTestS3] = useState<boolean>(false);
-
   const bucketIds = useMemo(() => {
       return selectedFolderId ? getBucketIdsFromFolderId(selectedFolderId) : [];
     }, [selectedFolderId]);

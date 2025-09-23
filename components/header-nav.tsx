@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { FolderNode } from "@/lib/utils"
-import { Check, CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu, Moon, PaintBucket, Settings, Share2, Sun, Upload, VideoIcon } from "lucide-react"
+import { Check, CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu, Moon, PaintBucket, Share2, Sun, Upload, VideoIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import Image from "next/image"
 import Link from "next/link"
@@ -24,7 +24,7 @@ const navLinks = [
   { href: '/uploads', label: 'My Files', icon: <FolderOpen className="h-5 w-5 text-muted-foreground" /> },
   { href: '/player/yt-dlp', label: 'Player', icon: <VideoIcon className="h-5 w-5 text-muted-foreground" /> },
   { href: '/shared', label: 'Shared Files', icon: <Share2 className="h-5 w-5 text-muted-foreground" /> },
-  { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5 text-muted-foreground" /> },
+  // { href: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5 text-muted-foreground" /> },
 ];
 
 // Sub-component for rendering the hierarchical folder selector

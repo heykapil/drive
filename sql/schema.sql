@@ -95,3 +95,19 @@ CREATE UNIQUE INDEX s3_buckets_name_key ON public.s3_buckets USING btree (name);
 CREATE UNIQUE INDEX s3_buckets_pkey ON public.s3_buckets USING btree (id);
 
 CREATE UNIQUE INDEX shared_pkey ON public.shared USING btree (token);
+
+
+-- This script corrects the sequence counters for all tables with 'serial' columns.
+-- It finds the current maximum 'id' in each table and sets the sequence to that value.
+-- This ensures that the next inserted row gets the correct auto-incremented ID.
+-- The use of COALESCE handles cases where tables might be empty.
+
+-- Verbose output to show which table is being updated.
+-- For the 'files' table
+SELECT setval(pg_get_serial_sequence('files', 'id'), COALESCE((SELECT MAX(id) FROM files), 0));
+
+-- For the 'folders' table
+SELECT setval(pg_get_serial_sequence('folders', 'id'), COALESCE((SELECT MAX(id) FROM folders), 0));
+
+-- For the 's3_buckets' table
+SELECT setval(pg_get_serial_sequence('s3_buckets', 'id'), COALESCE((SELECT MAX(id) FROM s3_buckets), 0));

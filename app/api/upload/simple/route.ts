@@ -1,4 +1,4 @@
-import { getBucketConfig } from "@/service/bucket.config";
+import { getBucketConfig, refreshBucketUsage } from "@/service/bucket.config";
 import { query } from "@/service/postgres";
 import { s3WithConfig } from "@/service/s3-tebi";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     ).then(async () => await query(
       "INSERT INTO files (filename, key, size, type, bucket, bucket_id) VALUES ($1, $2, $3, $4, $5, $6)",
       [file.name, key, file.size, file.type, bucketConfig.name, bucketConfig.id]
-    ));
+    )).finally(async () => await refreshBucketUsage([bucketConfig.id]));
     return NextResponse.json({ success: true, key });
   } catch (error) {
     console.error("File upload error:", error);

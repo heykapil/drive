@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { bucketIds } = (await req.json()) as { bucketIds?: number[] };
+    const { bucketIds} = await req.json();
 
     let bucketsToRefresh: { id: number }[];
 

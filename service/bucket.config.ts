@@ -3,6 +3,7 @@ import { decryptSecret } from "@/lib/helpers/jose"
 import { encryptTokenV4 } from "@/lib/helpers/paseto-ts"
 import { cache } from "react"
 import { query } from "./postgres"
+import { getS3StorageUsage } from "./s3-tebi"
 
 export interface BucketConfig {
   name: string
@@ -99,6 +100,42 @@ export async function encryptBucketConfig(bucketId: number){
     return token;
   } catch(error: any){
     console.error(error)
+    throw new Error(error)
+  }
+}
+
+export async function refreshBucketUsage(bucketIds: number[]){
+  try {
+    let bucketsToRefresh: { id: number }[];
+    if (bucketIds && bucketIds.length > 0) {
+      const { rows } = await query("SELECT id FROM s3_buckets WHERE id = ANY($1::int[])", [bucketIds]);
+      bucketsToRefresh = rows;
+    } else {
+      bucketsToRefresh = [];
+    }
+    if (bucketsToRefresh.length === 0) {
+      throw new Error("No matching buckets found to refresh.");
+    }
+
+    const bucketIdsToProcess = bucketsToRefresh.map(b => b.id);
+
+    // Call your existing async function to get the latest usage stats
+    const usageStats = await getS3StorageUsage(bucketIdsToProcess);
+
+    // Prepare and execute database updates
+    const updatePromises = usageStats
+      // THIS IS THE FIX: Filter the array to only include success objects.
+      .filter(stat => stat.status === "Success")
+      .map(stat => {
+        return query(
+          "UPDATE s3_buckets SET storage_used_bytes = $1, updated_at = NOW() WHERE id = $2",
+          [stat.storageUsedBytes, stat.bucket]
+        );
+      });
+
+    await Promise.all(updatePromises);
+    return { success: true, refreshed: updatePromises.length }
+  } catch(error: any){
     throw new Error(error)
   }
 }
