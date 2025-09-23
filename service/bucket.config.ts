@@ -1,6 +1,5 @@
 'use server'
 import { cache } from "react"
-import { toast } from "sonner"
 import { query } from "./postgres"
 
 export interface BucketConfig {
@@ -75,7 +74,7 @@ export async function getBucketConfig(bucketIds: number | number[]): Promise<Buc
     return results.filter((config: any): config is BucketConfig => config !== null)
   } catch(error){
     console.error(error)
-    toast.error('Could not get bucket configuration!')
+    return []
   }
 }
 
