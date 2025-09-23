@@ -1,4 +1,6 @@
 'use server'
+import { decryptSecret } from "@/lib/helpers/jose"
+import { encryptTokenV4 } from "@/lib/helpers/paseto-ts"
 import { cache } from "react"
 import { query } from "./postgres"
 
@@ -81,11 +83,19 @@ export async function getBucketConfig(bucketIds: number | number[]): Promise<Buc
 
 export async function encryptBucketConfig(bucketId: number){
   try {
-    const response = await fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/postgres/encrypt', {
-      method: 'POST',
-      body: JSON.stringify({ bucketId })
-    })
-    const { token } = await response.json();
+    const config = await getBucketConfig(bucketId)
+    const payload = {
+      name: config[0].name,
+      accessKey: await decryptSecret(config[0].accessKey),
+      secretKey: await decryptSecret(config[0].secretKey),
+      region: config[0].region,
+      endpoint: config[0].endpoint,
+      // availableCapacity: config[0]?.storageUsedBytes || 20,
+      // private: config[0]?.private || true,
+      // cdnUrl: config[0]?.cdnUrl || '',
+      // provider: config[0]?.provider || 'synology'
+    }
+    const token = await encryptTokenV4(payload) as string;
     return token;
   } catch(error: any){
     console.error(error)
