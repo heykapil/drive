@@ -5,7 +5,7 @@ import HeaderNav, { HeaderSkeleton } from "@/components/header-nav";
 import { ThemeProvider } from "@/hooks/theme-provider";
 import { BucketStoreInitializer } from "@/hooks/use-bucket-store";
 import type { Metadata, Viewport } from "next";
-import { Outfit } from "next/font/google";
+import { Figtree } from "next/font/google";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
 
@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 // const DMSans = DM_Sans({
 //   subsets: ['latin', 'latin-ext']
 //   })
-const OutFit = Outfit({
+const FigTree = Figtree({
   subsets: ['latin']
 })
 
@@ -72,7 +72,7 @@ export default async function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${OutFit.className} antialiased bg-background text-neutral-900 dark:text-white`}>
+      <body className={`${FigTree.className} antialiased bg-background text-neutral-900 dark:text-white`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <QueryProvider>
             <ProgressProviders>

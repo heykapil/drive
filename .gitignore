@@ -44,6 +44,6 @@ certificates
 sql/bucketConfig.json
 sql/buckets.json
 sql/migration.ts
-
+sql/data.sql
 
 package-lock.json

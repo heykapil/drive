@@ -1,4 +1,4 @@
-CREATE TABLE files (
+CREATE TABLE public.files (
 	id serial NOT NULL,
 	filename text NOT NULL,
 	"key" text NOT NULL,
@@ -11,31 +11,87 @@ CREATE TABLE files (
 	bucket_id integer,
 	PRIMARY KEY (id)
 );
-CREATE TABLE folder_buckets (
+
+CREATE TABLE public.folder_buckets (
 	folder_id integer NOT NULL,
 	bucket_id integer NOT NULL,
 	PRIMARY KEY (folder_id,bucket_id)
 );
-CREATE TABLE folders (
+
+CREATE TABLE public.folders (
 	id serial NOT NULL,
 	"name" text NOT NULL,
 	parent_id integer,
 	created_at timestamptz DEFAULT now(),
 	PRIMARY KEY (id)
 );
-CREATE TABLE s3_buckets (
+
+CREATE TABLE public.s3_buckets (
 	id serial NOT NULL,
 	"name" varchar(255) NOT NULL,
+	region varchar(255),
+	endpoint text,
+	is_private bool DEFAULT true,
+	provider varchar(100),
+	total_capacity_gb integer,
+	access_key_encrypted text,
+	secret_key_encrypted text,
+	updated_at timestamptz DEFAULT now(),
+	storage_used_bytes bigint DEFAULT 0,
 	PRIMARY KEY (id)
 );
-CREATE TABLE shared (
+
+CREATE TABLE public.shared (
 	"token" text NOT NULL,
 	id integer NOT NULL,
 	filename text NOT NULL,
 	"size" bigint NOT NULL,
 	"type" text NOT NULL,
-	bucket varchar(50) NOT NULL,
+	bucket_id integer NOT NULL,
 	expires timestamptz,
 	created_at timestamp DEFAULT now(),
 	PRIMARY KEY ("token")
 );
+
+ALTER TABLE public.files
+	ADD FOREIGN KEY (bucket_id)
+	REFERENCES s3_buckets (id);
+
+
+ALTER TABLE public.folder_buckets
+	ADD FOREIGN KEY (folder_id)
+	REFERENCES folders (id);
+
+ALTER TABLE public.folder_buckets
+	ADD FOREIGN KEY (bucket_id)
+	REFERENCES s3_buckets (id);
+
+ALTER TABLE public.folders
+	ADD FOREIGN KEY (parent_id)
+	REFERENCES folders (id);
+
+ALTER TABLE public.shared
+	ADD FOREIGN KEY (id)
+	REFERENCES files (id);
+
+ALTER TABLE public.shared
+	ADD FOREIGN KEY (bucket_id)
+	REFERENCES s3_buckets (id);
+
+CREATE UNIQUE INDEX files_key_key ON public.files USING btree (key);
+
+CREATE UNIQUE INDEX files_pkey ON public.files USING btree (id);
+
+CREATE UNIQUE INDEX folder_buckets_pkey ON public.folder_buckets USING btree (folder_id, bucket_id);
+
+CREATE UNIQUE INDEX folders_parent_id_name_key ON public.folders USING btree (parent_id, name);
+
+CREATE UNIQUE INDEX folders_pkey ON public.folders USING btree (id);
+
+CREATE INDEX idx_files_fav ON public.files USING btree (liked) WHERE (liked = true);
+
+CREATE UNIQUE INDEX s3_buckets_name_key ON public.s3_buckets USING btree (name);
+
+CREATE UNIQUE INDEX s3_buckets_pkey ON public.s3_buckets USING btree (id);
+
+CREATE UNIQUE INDEX shared_pkey ON public.shared USING btree (token);
