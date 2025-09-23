@@ -4,7 +4,6 @@ import { calculateChunkSize } from "@/lib/helpers/chunk-size";
 import { signPasetoToken } from "@/lib/helpers/paseto-ts";
 import { sanitizeFileName } from "@/lib/helpers/sanitize-file-name";
 import { getFileTypeFromFilename } from "@/lib/utils";
-import { encryptBucketConfig } from "@/service/bucket.config";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -43,6 +42,7 @@ export const uploadMultipart = async (
   fileUrl: string,
   selectedBucketId: number,
   setProgress: SetProgress,
+  encryptBucketConfig: (bucketId: number) => Promise<string>,
   proxy?: string,
   isSynologyBucket?: boolean,
   endpoint?: string

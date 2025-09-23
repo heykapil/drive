@@ -34,7 +34,9 @@ interface UploadPart {
   ETag: string;
 }
 
-export function FileUpload() {
+export function FileUpload({
+  testS3ConnectionAction
+}: {testS3ConnectionAction: (bucketIds: number| number[])=> Promise<any>}) {
   const { selectedBucketId, selectedBucketName, isLoading } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
@@ -504,7 +506,7 @@ export function FileUpload() {
         </div>
       </div>
       <div className="flex flex-row gap-2">
-        <BucketSelector testConnection={true} />
+        <BucketSelector testS3ConnectionAction={testS3ConnectionAction} testConnection={true} />
         <Button
           onClick={uploadFiles}
           disabled={state.files.length === 0 || isLoading || Object.values(state.uploadingFiles).some(Boolean)}

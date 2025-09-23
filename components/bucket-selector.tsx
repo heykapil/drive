@@ -1,19 +1,18 @@
 "use client";
 
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import {
-  getBucketIdsFromFolderId,
-  getBucketInfo,
-  useBucketStore,
+    getBucketIdsFromFolderId,
+    getBucketInfo,
+    useBucketStore,
 } from "@/hooks/use-bucket-store";
 import { Bucket } from "@/lib/utils";
-import { testS3Connection } from "@/service/s3-tebi";
 import { Box } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -27,8 +26,10 @@ type ConnectionStatus = {
 };
 
 export function BucketSelector({
+  testS3ConnectionAction,
   testConnection = false,
 }: {
+  testS3ConnectionAction: (bucketIds: number | number[])=> Promise<ConnectionStatus[]>,
   testConnection?: boolean;
 }) {
   const {
@@ -67,8 +68,8 @@ export function BucketSelector({
         setIsTesting(true);
         try {
           const bucketIds = availableBuckets.map((b) => b.bucket_id);
-          const results = await testS3Connection(bucketIds);
-          setStatuses(results as ConnectionStatus[]);
+          const results = await testS3ConnectionAction(bucketIds);
+          setStatuses(results);
         } catch (error) {
           console.error("Failed to test S3 connections:", error);
           toast.error("Could not get bucket connection statuses.");
@@ -101,7 +102,7 @@ export function BucketSelector({
       onValueChange={handleBucketChange}
       disabled={availableBuckets.length === 0}
     >
-      <SelectTrigger className="w-full max-w-xs flex items-center gap-2">
+      <SelectTrigger className="w-full max-w-[16rem] flex items-center gap-2">
         <Box className="h-4 w-4 text-muted-foreground" />
         <SelectValue placeholder="Select a bucket..." />
       </SelectTrigger>

@@ -13,7 +13,6 @@ import { calculateChunkSize } from "@/lib/helpers/chunk-size";
 import { signPasetoToken } from "@/lib/helpers/paseto-ts";
 import { runPromisePool } from "@/lib/helpers/promise-pool";
 import { getFileType, getFileTypeFromFilename } from "@/lib/utils";
-import { encryptBucketConfig } from "@/service/bucket.config";
 import axios from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
@@ -41,7 +40,7 @@ interface UploadPart {
   ETag: string;
 }
 
-export default function FileUploadServer() {
+export default function FileUploadServer({encryptBucketConfigAction, testS3ConnectionAction}: {encryptBucketConfigAction: (bucketId: number)=> Promise<string>, testS3ConnectionAction: (bucketIds: number| number[])=> Promise<any>}) {
   const { selectedBucketId, selectedBucketName, isLoading } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
@@ -258,7 +257,7 @@ export default function FileUploadServer() {
         formData.append("key", key);
         formData.append("partNumber", partNumber.toString());
         formData.append("chunk", new Blob([chunk]));
-        formData.append("s3config", await encryptBucketConfig(selectedBucketId as number));
+        formData.append("s3config", await encryptBucketConfigAction(selectedBucketId as number));
         const payload = {
           uploadId,
           key,
@@ -460,7 +459,7 @@ export default function FileUploadServer() {
 
 
       <div className="flex flex-row items-center gap-2">
-        <BucketSelector testConnection={true} />
+        <BucketSelector testS3ConnectionAction={testS3ConnectionAction} testConnection={true} />
       <Button
         onClick={uploadFiles}
         className="w-fit ml-4"

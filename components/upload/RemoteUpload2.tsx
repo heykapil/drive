@@ -2,8 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { useBucketStore } from "@/hooks/use-bucket-store";
-import { getBucketConfig } from "@/service/bucket.config";
+import { getBucketInfo, useBucketStore } from "@/hooks/use-bucket-store";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BucketSelector } from "../bucket-selector";
@@ -11,7 +10,10 @@ import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { uploadMultipart } from "./RemoteUploadMultipart2";
-export default function RemoteUpload() {
+export default function RemoteUpload({
+  testS3ConnectionAction,
+  encryptBucketConfigAction
+}: {encryptBucketConfigAction: (bucketId: number) => Promise<string>, testS3ConnectionAction: (bucketIds: number| number[])=> Promise<any>}) {
   const { selectedBucketId, selectedBucketName, isLoading: isZustLoading } = useBucketStore()
   const [useProxy, setUseProxy] = useState(true);
   const [proxyUrl, setProxyUrl] = useState("https://stream.kapil.app");
@@ -26,8 +28,8 @@ export default function RemoteUpload() {
   useEffect(() => {
     async function setSynologyBucket(){
       if (!isZustLoading) {
-        const config = await getBucketConfig(selectedBucketId as number)
-         setIsSynologyBucket(config[0]?.provider?.includes('synology') || false);
+        const bucketInfo = getBucketInfo(selectedBucketId as number);
+        setIsSynologyBucket(bucketInfo?.provider?.toLowerCase() === 'synology' || false);
       }
   }
   setSynologyBucket();
@@ -53,7 +55,7 @@ export default function RemoteUpload() {
     setProgress(Object.fromEntries(urlList.map((url) => [url, 0])));
     setIsUploading(true)
     for (const [index, url] of urlList.entries()) {
-      toast.promise(uploadMultipart(url, selectedBucketId as number, setProgress, proxy, synologyBucket), {
+      toast.promise(uploadMultipart(url, selectedBucketId as number, setProgress, encryptBucketConfigAction, proxy, synologyBucket), {
         loading: `Uploading... ${index + 1} of ${urlList.length}`,
         error: `Error occured in number ${index + 1} URL: ${url}`,
       })
@@ -113,7 +115,7 @@ export default function RemoteUpload() {
               )}
             </div>
 
-              <BucketSelector testConnection={true}/>
+              <BucketSelector testS3ConnectionAction={testS3ConnectionAction} testConnection={true}/>
             <Button variant={'secondary'} onClick={async()=>await handleUpload(useProxy, proxyUrl)} disabled={isUploading || isZustLoading} className="w-fit mt-8">
               {isZustLoading ? <span>Loading...</span> : isUploading ? "Uploading..." : `Upload to ${selectedBucketName}`}
             </Button>
