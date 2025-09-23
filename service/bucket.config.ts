@@ -1,5 +1,6 @@
 'use server'
 import { cache } from "react"
+import { toast } from "sonner"
 import { query } from "./postgres"
 
 export interface BucketConfig {
@@ -55,30 +56,40 @@ const getCachedBucketConfig = cache(getSingleBucketConfigFromDb);
  * It intelligently fetches multiple bucket configurations using the cached function.
  */
 export async function getBucketConfig(bucketIds: number | number[]): Promise<BucketConfig[]> {
-  const ids = Array.isArray(bucketIds) ? bucketIds : [bucketIds];
-  const uniqueIds = [...new Set(ids)]; // Ensure we don't process duplicate IDs
+  try {
+    const ids = Array.isArray(bucketIds) ? bucketIds : [bucketIds];
+    const uniqueIds = [...new Set(ids)]; // Ensure we don't process duplicate IDs
 
-  if (uniqueIds.length === 0) {
-    return [];
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    // 3. Use Promise.all to fetch all configs in parallel.
+    // React's `cache` will ensure that if getCachedBucketConfig(1) is called multiple
+    // times across these promises, the database is only hit once for ID 1.
+    const configPromises = uniqueIds.map(id => getCachedBucketConfig(id));
+
+    const results = await Promise.all(configPromises);
+
+    // Filter out any null results for IDs that were not found
+    return results.filter((config: any): config is BucketConfig => config !== null)
+  } catch(error){
+    console.error(error)
+    toast.error('Could not get bucket configuration!')
   }
-
-  // 3. Use Promise.all to fetch all configs in parallel.
-  // React's `cache` will ensure that if getCachedBucketConfig(1) is called multiple
-  // times across these promises, the database is only hit once for ID 1.
-  const configPromises = uniqueIds.map(id => getCachedBucketConfig(id));
-
-  const results = await Promise.all(configPromises);
-
-  // Filter out any null results for IDs that were not found
-  return results.filter((config: any): config is BucketConfig => config !== null);
 }
 
 
 export async function encryptBucketConfig(bucketId: number){
-  const response = await fetch(process.env.NEXT_PUBLIC_APP_URL+'/api/buckets/postgres/encrypt', {
-    method: 'POST',
-    body: JSON.stringify({ bucketId })
-  })
-  const { token } = await response.json();
-  return token;
+  try {
+    const response = await fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/postgres/encrypt', {
+      method: 'POST',
+      body: JSON.stringify({ bucketId })
+    })
+    const { token } = await response.json();
+    return token;
+  } catch(error: any){
+    console.error(error)
+    throw new Error(error)
+  }
 }

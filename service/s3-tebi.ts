@@ -33,26 +33,31 @@ export async function s3WithConfig(bucketConfig: BucketConfig) {
 }
 
 export async function testS3Connection(bucketIds: number | number[]) {
-  const configs = await getBucketConfig(bucketIds);
+  try {
+    const configs = await getBucketConfig(bucketIds);
 
-  if (configs.length === 0) {
-    const ids = Array.isArray(bucketIds) ? bucketIds : [bucketIds];
-    return ids.map(id => ({ bucket: id, name: 'N/A', status: 'Error', message: 'Bucket configuration not found.' }));
+    if (configs.length === 0) {
+      const ids = Array.isArray(bucketIds) ? bucketIds : [bucketIds];
+      return ids.map(id => ({ bucket: id, name: 'N/A', status: 'Error', message: 'Bucket configuration not found.' }));
+    }
+
+    const results = await Promise.all(
+      configs.map(async (config) => {
+        try {
+          const s3 = await s3WithConfig(config);
+          await s3.send(new ListBucketsCommand({}));
+          return { bucket: config.id, name: config.name, status: 'Success', message: 'Bucket is healthy!' };
+        } catch (error: any) {
+          return { bucket: config.id, name: config.name, status: 'Error', message: error.message }
+        }
+      })
+    );
+
+    return results
+  } catch(error: any){
+    console.log(error)
+    throw new Error(error)
   }
-
-  const results = await Promise.all(
-    configs.map(async (config) => {
-      try {
-        const s3 = await s3WithConfig(config);
-        await s3.send(new ListBucketsCommand({}));
-        return { bucket: config.id, name: config.name, status: 'Success', message: 'Bucket is healthy!' };
-      } catch (error: any) {
-        return { bucket: config.id, name: config.name, status: 'Error', message: error.message };
-      }
-    })
-  );
-
-  return results;
 }
 
 const DEFAULT_MAX_BUCKET_CAPACITY_GB = 25; // 25GB limit
@@ -102,6 +107,7 @@ export async function getS3StorageUsage(bucketIds: number | number[]) {
         availableCapacityGB: `${availableStorageGB} GB`,
       };
     } catch (error: any) {
+      console.error(error)
       return {
         bucket: config.id,
         name: config.name,

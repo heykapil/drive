@@ -1,5 +1,5 @@
 import { decryptSecret } from "@/lib/helpers/jose";
-import { decryptTokenV4, encryptTokenV4 } from "@/lib/helpers/paseto-ts";
+import { encryptTokenV4 } from "@/lib/helpers/paseto-ts";
 import { getBucketConfig } from "@/service/bucket.config";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -23,8 +23,5 @@ export async function POST(req: NextRequest){
     provider: config[0]?.provider || 'synology'
   }
   const token = await encryptTokenV4(payload) as string;
-  console.log(token);
-  const decode = await decryptTokenV4(token);
-  console.log(decode)
   return NextResponse.json({ token })
 }
