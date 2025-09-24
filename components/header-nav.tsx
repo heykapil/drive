@@ -9,7 +9,7 @@ import { Check, CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu,
 import { useTheme } from "next-themes"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Card, CardContent } from "./ui/card"
@@ -29,15 +29,19 @@ const navLinks = [
 
 // Sub-component for rendering the hierarchical folder selector
 function FolderSelector () {
-  const { folderTree, isLoading, error, selectedFolderId, selectedFolderName, setSelectedFolder } = useBucketStore();
+  const { folderTree, isLoading, error, selectedFolderId, selectedFolderName } = useBucketStore();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams()
   const handleSelect = (id: number, name: string) => {
-    if (id === selectedFolderId) return;
+      if (id === selectedFolderId) return toast.success('Already selected!');
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.set('folderId', id.toString());
+      newSearchParams.delete('bucketId');
+      router.push(`${pathname}?${newSearchParams.toString()}`);
+      toast.success(`Folder changed to ${name}!`)
+    };
 
-    toast.success(`Folder set to ${name}!`);
-    setSelectedFolder(id, name);
-  };
-
-  // Recursive component to render folder items and sub-menus
   const renderFolderItems = (folders: FolderNode[]) => {
     return folders.map(folder => {
       const hasChildren = folder.children && folder.children.length > 0;

@@ -10,11 +10,9 @@ export default function FileUpload({testS3ConnectionAction}: {testS3ConnectionAc
   const { selectedBucketId } = useBucketStore();
   const [synologyBucket, setIsSynologyBucket] = useState(false);
   useEffect(() => {
-    if (selectedBucketId) {
-      const bucketInfo = getBucketInfo(selectedBucketId);
-      setIsSynologyBucket(bucketInfo?.provider?.toLowerCase() === 'synology' || false);
-    } else {
-      setIsSynologyBucket(false);
+    if(selectedBucketId){
+    const bucketInfo = getBucketInfo(selectedBucketId);
+    setIsSynologyBucket(bucketInfo?.provider?.toLowerCase() === 'synology');
     }
   }, [selectedBucketId]);
   if (synologyBucket) {

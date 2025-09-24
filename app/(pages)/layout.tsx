@@ -3,6 +3,7 @@ import { QueryProvider } from "@/components/QueryProvider";
 import TransitionLayout from "@/components/TransitionLayout";
 import HeaderNav, { HeaderSkeleton } from "@/components/header-nav";
 import { ThemeProvider } from "@/hooks/theme-provider";
+import { UrlStateSync } from "@/hooks/url-query-sync";
 import { BucketStoreInitializer } from "@/hooks/use-bucket-store";
 import type { Metadata, Viewport } from "next";
 import { Figtree } from "next/font/google";
@@ -95,6 +96,7 @@ export default async function RootLayout({
             <main className="min-h-screen flex flex-col items-center p-0">
               <Suspense fallback={<HeaderSkeleton />}>
                 <BucketStoreInitializer />
+                <UrlStateSync />
               <HeaderNav />
               </Suspense>
                <TransitionLayout>

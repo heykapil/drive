@@ -249,3 +249,82 @@ export function getFolderInfoFromBucketId(bucketId: number): { folder_id: number
   traverse(folderTree);
   return foundFolderInfo;
 }
+
+/**
+ * Checks if a bucket with the given ID exists in the folder tree.
+ *
+ * @param bucketId The ID of the bucket to validate.
+ * @returns `true` if the bucket exists, otherwise `false`.
+ */
+export function isValidBucketId(bucketId: number): boolean {
+  const { folderTree } = useBucketStore.getState();
+
+  const findBucket = (nodes: FolderNode[]): boolean => {
+    for (const node of nodes) {
+      // Check if the bucket exists in the current folder
+      if (node.buckets.some(b => b.bucket_id === bucketId)) {
+        return true;
+      }
+      // If not found, recurse into children
+      if (node.children.length > 0) {
+        if (findBucket(node.children)) {
+          return true; // Propagate the 'found' signal up
+        }
+      }
+    }
+    return false; // Not found in this branch
+  };
+
+  return findBucket(folderTree);
+}
+
+/**
+ * Checks if a folder with the given ID exists in the folder tree.
+ *
+ * @param folderId The ID of the folder to validate.
+ * @returns `true` if the folder exists, otherwise `false`.
+ */
+export function isValidFolderId(folderId: number): boolean {
+  const { folderTree } = useBucketStore.getState();
+
+  const findFolder = (nodes: FolderNode[]): boolean => {
+    for (const node of nodes) {
+      // Check if the current node is the one we're looking for
+      if (node.folder_id === folderId) {
+        return true;
+      }
+      // If not, recurse into children
+      if (node.children.length > 0) {
+        if (findFolder(node.children)) {
+          return true; // Propagate the 'found' signal up
+        }
+      }
+    }
+    return false; // Not found in this branch
+  };
+
+  return findFolder(folderTree);
+}
+
+export function getFolderInfo(folderId: number): FolderNode | null {
+  const { folderTree } = useBucketStore.getState();
+  let foundFolder: FolderNode | null = null;
+
+  const traverse = (nodes: FolderNode[]) => {
+    for (const node of nodes) {
+      if (foundFolder) return; // Optimization: stop once found
+
+      if (node.folder_id === folderId) {
+        foundFolder = node;
+        return;
+      }
+
+      if (node.children.length > 0) {
+        traverse(node.children);
+      }
+    }
+  };
+
+  traverse(folderTree);
+  return foundFolder;
+}

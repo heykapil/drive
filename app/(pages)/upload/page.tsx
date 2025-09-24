@@ -10,7 +10,7 @@ export default async function UploadPage() {
   const session = await getSession();
   if(production && session?.user?.username !== 'admin'){
     return notFound()
-  }
+  };
   return (
     <>
       <h1 className="text-2xl font-bold lg:px-4">Upload files</h1>

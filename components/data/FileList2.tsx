@@ -4,7 +4,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FileViewer from "@/components/viewer/FileViewer3";
-import { useBucketStore } from "@/hooks/use-bucket-store";
+import { isValidBucketId, useBucketStore } from "@/hooks/use-bucket-store";
 import { formatBytes } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowDownAZ, ArrowDownNarrowWide, ArrowDownWideNarrow, ArrowDownZA, CalendarDays, CheckSquare, Copy, Edit3, Eye, EyeOff, FileText, Fullscreen, Grid, List, RefreshCw, Share2, Square, Trash2 } from "lucide-react";
@@ -82,7 +82,7 @@ function fileReducer(state: FileState, action: FileAction): FileState {
       return state;
   }
 }
-export default function FileList() {
+export default function FileList({bucketId}: {bucketId?: number}) {
   const { selectedFolderName, selectedFolderId, selectedBucketId } = useBucketStore();
   const [state, dispatch] = useReducer(fileReducer, initialState);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -184,7 +184,7 @@ export default function FileList() {
     } else {
       dispatch({ type: 'RESET' });
     }
-  }, [selectedFolderId, state.sort, state.search, state.page, state.limit]);
+  }, [selectedFolderId, bucketId, state.sort, state.search, state.page, state.limit]);
 
   const fetchFiles = async () => {
     try {
@@ -192,7 +192,7 @@ export default function FileList() {
       dispatch({ type: 'SET_FIELD', field: 'error', value: null });
 
       const res = await fetch(
-        `/api/files?folderId=${selectedFolderId}&sort=${state.sort}&search=${state.search}&page=${state.page}&limit=${state.limit}`, {
+        `/api/files?folderId=${selectedFolderId}&sort=${state.sort}&search=${state.search}&page=${state.page}&limit=${state.limit}${bucketId !== undefined && isValidBucketId(bucketId) ? `&bucketId=${bucketId}` : ''}`, {
           // cache: 'no-store',
         }
       );

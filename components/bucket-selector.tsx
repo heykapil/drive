@@ -1,5 +1,6 @@
 "use client";
 
+// 1. Import the necessary hooks from next/navigation
 import {
     Select,
     SelectContent,
@@ -14,6 +15,7 @@ import {
 } from "@/hooks/use-bucket-store";
 import { Bucket } from "@/lib/utils";
 import { Box } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Skeleton } from "./ui/skeleton";
@@ -29,21 +31,27 @@ export function BucketSelector({
   testS3ConnectionAction,
   testConnection = false,
 }: {
-  testS3ConnectionAction: (bucketIds: number | number[])=> Promise<ConnectionStatus[]>,
+  testS3ConnectionAction: (
+    bucketIds: number | number[],
+  ) => Promise<ConnectionStatus[]>;
   testConnection?: boolean;
 }) {
+  // 2. Instantiate the router hooks
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const {
     selectedFolderId,
     selectedBucketId,
-    setSelectedBucket,
-    folderTree, // Used to trigger re-calculation
+    // We no longer need setSelectedBucket directly in this component
+    folderTree,
     isLoading,
   } = useBucketStore();
 
   const [statuses, setStatuses] = useState<ConnectionStatus[]>([]);
   const [isTesting, setIsTesting] = useState<boolean>(false);
 
-  // Buckets available for current folder
   const availableBuckets = useMemo(() => {
     if (!selectedFolderId) return [];
     const bucketIds = getBucketIdsFromFolderId(selectedFolderId);
@@ -52,7 +60,6 @@ export function BucketSelector({
       .filter((b): b is Bucket => b !== null);
   }, [selectedFolderId, folderTree]);
 
-  // String key for useEffect dependency
   const bucketIdKey = useMemo(() => {
     return availableBuckets.map((b) => b.bucket_id).sort().join(",");
   }, [availableBuckets]);
@@ -62,7 +69,6 @@ export function BucketSelector({
       setStatuses([]);
       return;
     }
-
     if (testConnection) {
       const testConnections = async () => {
         setIsTesting(true);
@@ -79,15 +85,26 @@ export function BucketSelector({
       };
       testConnections();
     }
-  }, [bucketIdKey, isLoading, testConnection]);
+  }, [bucketIdKey, isLoading, testConnection, testS3ConnectionAction, availableBuckets]);
 
+  // 3. Rewrite the handler to update the URL
   const handleBucketChange = (bucketIdStr: string) => {
     const bucketId = parseInt(bucketIdStr, 10);
     const selected = availableBuckets.find((b) => b.bucket_id === bucketId);
 
     if (selected) {
       if (selected.bucket_id === selectedBucketId) return;
-      setSelectedBucket(selected.bucket_id, selected.bucket_name);
+
+      // Create a mutable copy of the current search params
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+
+      // Set the new bucketId. This will be the only change.
+      newSearchParams.set('bucketId', bucketIdStr);
+
+      // Push the new state to the URL.
+      // The UrlStateSync component will detect this and update the Zustand store.
+      router.push(`${pathname}?${newSearchParams.toString()}`);
+
       toast.success(`Bucket switched to ${selected.bucket_name}.`);
     }
   };
@@ -112,7 +129,6 @@ export function BucketSelector({
             const statusInfo = statuses.find(
               (s) => Number(s.bucket) === bucket.bucket_id
             );
-
             const getStatusColor = () => {
               if (isTesting) return "bg-yellow-500";
               if (!statusInfo) return "bg-gray-400";
@@ -120,7 +136,6 @@ export function BucketSelector({
                 ? "bg-green-500"
                 : "bg-red-500";
             };
-
             return (
               <SelectItem
                 key={bucket.bucket_id}
@@ -131,14 +146,12 @@ export function BucketSelector({
                     title={isTesting ? "Testing..." : statusInfo?.status}
                     className={`h-2 w-2 rounded-full mr-3 flex-shrink-0 ${getStatusColor()}`}
                   />
-
                   <div className="flex flex-col text-left">
                     <span className="font-medium">{bucket.bucket_name}</span>
                     <span className="text-xs text-muted-foreground capitalize">
                       {bucket.provider}
                     </span>
                   </div>
-
                   <span className="ml-4 text-xs font-mono text-muted-foreground">
                     {parseFloat(bucket.available_storage_gb.toString()).toFixed(
                       2

@@ -10,6 +10,7 @@ import { getBucketIdsFromFolderId, getBucketInfo, useBucketStore } from "@/hooks
 import { Bucket } from "@/lib/utils";
 import { testS3Connection } from "@/service/s3-tebi"; // Assuming this is the correct path
 import { InfoIcon, RefreshCwIcon, TestTube2Icon } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -145,8 +146,12 @@ function BucketCard({ bucketInfo, statusInfo, isTesting, testS3 }: { bucketInfo:
                 </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
+              <Link href={`/uploads?bucketId=${bucketInfo.bucket_id}`}>
                 <Button variant="outline">Manage Files</Button>
-                <Button>Upload</Button>
+              </Link>
+              <Link href={`/upload?bucketId=${bucketInfo.bucket_id}`}>
+                <Button variant={'secondary'}>Upload</Button>
+              </Link>
             </CardFooter>
         </Card>
     );
