@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
   const secureCookie: boolean = production;
   const cookiePrefix = secureCookie ? '__Secure-' : '';
   const session_token = request.cookies.get(`${cookiePrefix}kapil.app.session_token`)?.value || '';
-  const sessionData = request.cookies.get(`${cookiePrefix}kapil.app.sessionData`)?.value || '';
+  const sessionData = request.cookies.get(`${cookiePrefix}kapil.app.session_data`)?.value || '';
   const midResponse = NextResponse.next();
 
   if (production && !session_token) {
@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
 
     if (production) {
       midResponse.cookies.set({
-        name: `${cookiePrefix}kapil.app.sessionData`,
+        name: `${cookiePrefix}kapil.app.session_data`,
         value: await signJWT(session!),
         httpOnly: true,
         sameSite: 'lax',
