@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { getBucketIdsFromFolderId, getBucketInfo, useBucketStore } from "@/hooks/use-bucket-store";
 import { Bucket } from "@/lib/utils";
 import { testS3Connection } from "@/service/s3-tebi"; // Assuming this is the correct path
-import { InfoIcon, RefreshCwIcon, TestTube2Icon } from "lucide-react";
+import { FileJson, InfoIcon, Move3DIcon, PlusIcon, RefreshCwIcon, Settings2Icon, TestTube2Icon, UploadCloudIcon } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -49,6 +49,10 @@ export function S3BucketViewer() {
     }
   }, []);
 
+  useEffect(()=> {
+    setTestS3(false)
+  },[selectedFolderId])
+
   useEffect(() => {
     if (!isStoreLoading && bucketIds.length > 0 && testS3) {
       runConnectionTest(bucketIds)
@@ -65,20 +69,27 @@ export function S3BucketViewer() {
   if (bucketIds.length === 0) {
     return (
         <div className="flex items-center justify-center h-full p-8 text-center">
-            <p className="text-muted-foreground">No buckets found in this folder. Add a bucket to get started.</p>
+          <p className="text-muted-foreground">No buckets found in this folder. <a href='/buckets/new' className="text-underline">Add a bucket</a> to get started.</p>
         </div>
     );
   }
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center space-y-6 justify-between">
             <h1 className="text-2xl font-semibold">Bucket Management</h1>
-            <Button variant="outline" onClick={() => setTestS3(true)} disabled={isTesting}>
+            <div className="flex flex-row space-x-2">
+            <Button variant="outline" size='sm' onClick={() => setTestS3(true)} disabled={isTesting}>
               {testS3 ? <span className="flex flex-row gap-2 items-center" onClick={()=> runConnectionTest(bucketIds)}> <RefreshCwIcon className={`mr-2 h-4 w-4 ${isTesting ? 'animate-spin' : ''}`} />
                 {isTesting ? 'Testing...' : 'Refresh Status'}
               </span>: <span className="flex flex-row gap-2 items-center"><TestTube2Icon /> Test Connection</span>}
             </Button>
+            <Link href={`/buckets/new?folderId=${selectedFolderId}`}>
+              <Button variant={'outline'} size={'sm'}>
+               <PlusIcon /> New Bucket
+              </Button>
+            </Link>
+            </div>
         </div>
         <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {bucketIds.map(id => {
@@ -146,12 +157,47 @@ function BucketCard({ bucketInfo, statusInfo, isTesting, testS3 }: { bucketInfo:
                 </div>
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
-              <Link href={`/uploads?bucketId=${bucketInfo.bucket_id}`}>
-                <Button variant="outline">Manage Files</Button>
+              <Tooltip>
+              <Link href={`/buckets/move?bucketId=${bucketInfo.bucket_id}`}>
+                <TooltipTrigger>
+                <Button size='icon' variant={'secondary'}><Move3DIcon /></Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Move to folder
+                </TooltipContent>
               </Link>
+              </Tooltip>
+              <Tooltip>
+              <Link href={`/uploads?bucketId=${bucketInfo.bucket_id}`} className="cursor-auto">
+                <TooltipTrigger>
+                  <Button size='icon' variant={'secondary'}><FileJson />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Manage Files
+                </TooltipContent>
+              </Link>
+              </Tooltip>
+              <Tooltip>
               <Link href={`/upload?bucketId=${bucketInfo.bucket_id}`}>
-                <Button variant={'secondary'}>Upload</Button>
+                <TooltipTrigger>
+                <Button size='icon' variant={'secondary'}><UploadCloudIcon /></Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Upload files
+                </TooltipContent>
               </Link>
+              </Tooltip>
+              <Tooltip>
+              <Link href={`/buckets/edit?bucketId=${bucketInfo.bucket_id}`}>
+                <TooltipTrigger>
+                <Button size='icon' variant={'secondary'}><Settings2Icon /></Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Configure
+                </TooltipContent>
+              </Link>
+              </Tooltip>
             </CardFooter>
         </Card>
     );

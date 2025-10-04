@@ -36,12 +36,11 @@ type BucketDetailsValues = z.infer<typeof bucketDetailsSchema>;
 // --- Main Component ---
 export default function AddNewBucketPage() {
     const router = useRouter();
-    const { folderTree } = useBucketStore();
+    const { folderTree, selectedFolderId: selectedFolderIdZustand} = useBucketStore();
     const [step, setStep] = useState(1);
-    const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+    const [selectedFolderId, setSelectedFolderId] = useState<number | null>(selectedFolderIdZustand);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [parentFolderName, setParentFolderName] = useState<string | null>(null);
-
     // --- Form Instances ---
     const newFolderForm = useForm<NewFolderValues>({ resolver: zodResolver(newFolderSchema) });
     const bucketDetailsForm = useForm<BucketDetailsValues>({ resolver: zodResolver(bucketDetailsSchema) });

@@ -153,9 +153,7 @@ export function BucketSelector({
                     </span>
                   </div>
                   <span className="ml-4 text-xs font-mono text-muted-foreground">
-                    {parseFloat(bucket.available_storage_gb.toString()).toFixed(
-                      2
-                    )}{" "}
+                    {bucket.available_storage_gb.toString()}{" "}
                     GB Free
                   </span>
                 </div>

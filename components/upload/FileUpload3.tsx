@@ -505,15 +505,17 @@ export function FileUpload({
         />
         </div>
       </div>
-      <div className="flex flex-row gap-2">
+      <div className="flex flex-col space-y-4">
         <BucketSelector testS3ConnectionAction={testS3ConnectionAction} testConnection={true} />
         <Button
           onClick={uploadFiles}
+          variant={'default'}
+          className="w-full max-w-[16rem]"
           disabled={state.files.length === 0 || isLoading || Object.values(state.uploadingFiles).some(Boolean)}
         >
           {isLoading ? <span>Please wait...</span> : Object.values(state.uploadingFiles).some(Boolean)
             ? "Uploading..."
-            : `Upload to ${selectedBucketName}`}
+            : `Upload`}
         </Button>
       </div>
     </div>

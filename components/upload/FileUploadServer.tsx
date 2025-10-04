@@ -458,7 +458,7 @@ export default function FileUploadServer({encryptBucketConfigAction, testS3Conne
       </div>
 
 
-      <div className="flex flex-row items-center gap-2">
+      <div className="flex flex-col space-y-4">
         <BucketSelector testS3ConnectionAction={testS3ConnectionAction} testConnection={true} />
       <Button
         onClick={uploadFiles}
@@ -467,7 +467,7 @@ export default function FileUploadServer({encryptBucketConfigAction, testS3Conne
       >
         {isLoading ? <span>Please wait...</span> : Object.values(state.uploadingFiles).some(Boolean)
           ? "Uploading..."
-          : `Upload to ${selectedBucketName}`}
+          : `Upload`}
       </Button>
       </div>
     </div>

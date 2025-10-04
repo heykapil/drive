@@ -1,7 +1,7 @@
 'use server'
 import { decryptSecret } from "@/lib/helpers/jose";
 // import { Sha256 } from "@aws-crypto/sha256-js";
-import { HeadBucketCommand, ListBucketsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { HeadBucketCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 // import { Md5 } from "@smithy/md5-js";
 // import { HttpRequest } from "@smithy/protocol-http"; // <-- Add this import
 import { toast } from "sonner";
@@ -45,18 +45,20 @@ export async function testS3Connection(bucketIds: number | number[]) {
       configs.map(async (config) => {
         try {
           const s3 = await s3WithConfig(config);
-          await s3.send(new ListBucketsCommand({}));
-          return { bucket: config.id, name: config.name, status: 'Success', message: 'Bucket is healthy!' };
+          await s3.send(new HeadBucketCommand({ Bucket: config.name }));
+          return { bucket: config.id, name: config.name, status: 'Success', message: 'Connection successful!' };
         } catch (error: any) {
-          return { bucket: config.id, name: config.name, status: 'Error', message: error.message }
+          // Provide a more specific error message for clarity
+          const errorMessage = error.name === 'NotFound' ? 'Bucket not found.' : error.message;
+          return { bucket: config.id, name: config.name, status: 'Error', message: errorMessage };
         }
       })
     );
-
-    return results
-  } catch(error: any){
-    console.log(error)
-    throw new Error(error)
+    return results;
+  } catch (error: any) {
+    console.error("Failed to test S3 connection:", error);
+    // It's better to re-throw the specific error rather than a new generic one
+    throw error;
   }
 }
 

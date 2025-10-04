@@ -1,14 +1,14 @@
 'use client'
+import { BucketSelector } from "@/components/bucket-selector";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getBucketInfo, useBucketStore } from "@/hooks/use-bucket-store";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BucketSelector } from "../bucket-selector";
-import { Card, CardContent } from "../ui/card";
-import { Input } from "../ui/input";
-import { Switch } from "../ui/switch";
 import { uploadMultipart } from "./RemoteUploadMultipart2";
 export default function RemoteUpload({
   testS3ConnectionAction,
@@ -66,7 +66,7 @@ export default function RemoteUpload({
   return (
   <div className="w-full mx-auto lg:ml-4 space-y-6 px-0 py-2">
         <Card className="p-0 mb-6 border-none outline-none shadow-none">
-          <CardContent className="p-0 mt-0 outline-none border-none shadow-none">
+          <CardContent className="p-0 mt-0 outline-none border-none bg-background shadow-none">
             <div className="relative w-full border rounded-md border-muted mx-auto">
                   <div className="flex">
                     <div
@@ -117,7 +117,7 @@ export default function RemoteUpload({
 
               <BucketSelector testS3ConnectionAction={testS3ConnectionAction} testConnection={true}/>
             <Button variant={'secondary'} onClick={async()=>await handleUpload(useProxy, proxyUrl)} disabled={isUploading || isZustLoading} className="w-fit mt-8">
-              {isZustLoading ? <span>Loading...</span> : isUploading ? "Uploading..." : `Upload to ${selectedBucketName}`}
+              {isZustLoading ? <span>Loading...</span> : isUploading ? "Uploading..." : `Upload`}
             </Button>
           </CardContent>
         </Card>
