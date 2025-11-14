@@ -47,3 +47,4 @@ sql/migration.ts
 sql/data.sql
 
 package-lock.json
+.env*.local
