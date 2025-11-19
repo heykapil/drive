@@ -2,16 +2,16 @@
 
 // 1. Import the necessary hooks from next/navigation
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-    getBucketIdsFromFolderId,
-    getBucketInfo,
-    useBucketStore,
+  getBucketIdsFromFolderId,
+  getBucketInfo,
+  useBucketStore,
 } from "@/hooks/use-bucket-store";
 import { Bucket } from "@/lib/utils";
 import { Box } from "lucide-react";
