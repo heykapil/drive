@@ -63,11 +63,11 @@ export async function GET(req: NextRequest) {
                 let continuationToken: string | undefined = undefined;
 
                 do {
-                    const command = new ListObjectsV2Command({
+                    const command: any = new ListObjectsV2Command({
                         Bucket: config.name,
                         ContinuationToken: continuationToken,
                     });
-                    const response = await s3.send(command) as any;
+                    const response: any = await s3.send(command);
 
                     if (response.Contents) {
                         for (const obj of response.Contents) {

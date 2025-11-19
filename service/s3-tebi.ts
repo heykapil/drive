@@ -7,16 +7,24 @@ import { HeadBucketCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/clie
 import { toast } from "sonner";
 import { BucketConfig, getBucketConfig } from './bucket.config';
 
-export async function s3WithConfig(bucketConfig: BucketConfig) {
+// Global cache for S3 clients
+const s3ClientCache = new Map<string, S3Client>();
+
+export async function s3WithConfig(bucketConfig: BucketConfig, uploadId?: string) {
   try {
+    // If uploadId is provided, try to get from cache or store it
+    if (uploadId && s3ClientCache.has(uploadId)) {
+      return s3ClientCache.get(uploadId)!;
+    }
+
     const accessKeyId = await decryptSecret(bucketConfig.accessKey);
     const secretAccessKey = await decryptSecret(bucketConfig.secretKey);
 
     if (!accessKeyId || !secretAccessKey) {
-        throw new Error("Decryption failed. One or both keys are null or empty. Check production environment variables.");
+      throw new Error("Decryption failed. One or both keys are null or empty. Check production environment variables.");
     }
 
-    return new S3Client({
+    const client = new S3Client({
       region: bucketConfig.region || 'auto',
       endpoint: bucketConfig.endpoint,
       credentials: {
@@ -25,11 +33,28 @@ export async function s3WithConfig(bucketConfig: BucketConfig) {
       },
       forcePathStyle: true,
     });
+
+    if (uploadId) {
+      s3ClientCache.set(uploadId, client);
+    }
+
+    return client;
   } catch (error) {
     console.error("FATAL ERROR in s3WithConfig:", error);
     // Re-throw the error to be caught by the API route handler
     throw new Error(`Failed to create S3 client for bucket ${bucketConfig.name}. Please check server logs.`);
   }
+}
+
+export async function removeS3Client(uploadId: string) {
+  if (s3ClientCache.has(uploadId)) {
+    const client = s3ClientCache.get(uploadId);
+    client?.destroy();
+    s3ClientCache.delete(uploadId);
+    console.log(`Cleaned up S3 client for uploadId: ${uploadId}`);
+    return true;
+  }
+  return false;
 }
 
 export async function testS3Connection(bucketIds: number | number[]) {
@@ -138,7 +163,7 @@ export async function verifyBucketConnection(bucketConfig: BucketConfig): Promis
     );
     return true;
   } catch (error) {
-    toast.error('Bucket connection verification failed:', { description: JSON.stringify(error)});
+    toast.error('Bucket connection verification failed:', { description: JSON.stringify(error) });
     return false;
   } finally {
     s3Client.destroy();

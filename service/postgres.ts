@@ -5,20 +5,45 @@ if (!process.env.DATABASE_URL || !process.env.DATABASE_URL_NEON) {
   throw new Error('Database URLs are missing in environment variables.');
 }
 
-// Create primary and fallback DB connections
-const mainDB = postgres(process.env.DATABASE_URL, {
-  ssl: false, // using internal database
-  prepare: false,
-  max: 10,
-});
+// Define a global type to prevent TypeScript errors on the global object
+const globalForDb = globalThis as unknown as {
+  mainDB: postgres.Sql | undefined;
+  fallbackDB: postgres.Sql | undefined;
+};
 
-const fallbackDB = postgres(process.env.DATABASE_URL_NEON, {
-  ssl: false, // using internal database
+// CONFIGURATION
+// Reduce max connections. 10 is often too high for serverless or dev.
+// Use 1 or 2 for serverless/dev, higher for dedicated servers.
+// idle_timeout: Close connection if not used for X seconds.
+const CONFIG = {
+  ssl: false,
   prepare: false,
-  max: 10,
-});
+  max: process.env.NODE_ENV === 'production' ? 5 : 1,
+  idle_timeout: 20,
+  connect_timeout: 10,
+};
 
-// Define primitive types for query values
+// SINGLETON PATTERN:
+// Check if a connection already exists in the global scope.
+// If it does, reuse it. If not, create a new one.
+
+export const mainDB =
+  globalForDb.mainDB ||
+  postgres(process.env.DATABASE_URL, CONFIG);
+
+export const fallbackDB =
+  globalForDb.fallbackDB ||
+  postgres(process.env.DATABASE_URL_NEON, CONFIG);
+
+// Save the instance to global scope if we are not in production
+// This prevents connections from stacking up during hot-reloads in development
+if (process.env.NODE_ENV !== 'production') {
+  globalForDb.mainDB = mainDB;
+  globalForDb.fallbackDB = fallbackDB;
+}
+
+// --- Rest of your logic remains the same ---
+
 export type Primitive =
   | string
   | number
@@ -27,7 +52,6 @@ export type Primitive =
   | undefined
   | Primitive[];
 
-// Determine if a query is a write operation
 const isWriteQuery = (queryString: string) => {
   const writeKeywords =
     /^(INSERT|UPDATE|DELETE|ALTER|CREATE|DROP|TRUNCATE|GRANT|REVOKE|SET|COMMENT|MERGE|CALL)\s/i;
@@ -36,7 +60,6 @@ const isWriteQuery = (queryString: string) => {
 
 export const sql = mainDB;
 
-// **Query function that supports both read and write operations**
 export const query = async <T = any>(
   queryString: string,
   values: Primitive[] = [],
@@ -44,20 +67,19 @@ export const query = async <T = any>(
   const db = isWriteQuery(queryString) ? mainDB : fallbackDB;
   try {
     // @ts-ignore
-    const result = await db.unsafe<T[]>(queryString, values); // Ensure it's an array
-    return { rows: result }; // Directly return result without unnecessary spread
+    const result = await db.unsafe<T[]>(queryString, values);
+    return { rows: result };
   } catch (error) {
     console.error('DB Query Error:', error);
     throw error;
   }
 };
 
-// **Tagged template function for SQL queries**
 export const sqlQuery = async <T = any>(
   strings: TemplateStringsArray,
   ...values: Primitive[]
 ): Promise<T[]> => {
-  const queryString = strings.join('?'); // Approximate the final query string
+  const queryString = strings.join('?');
   const db = isWriteQuery(queryString) ? mainDB : fallbackDB;
   try {
     // @ts-ignore
@@ -68,7 +90,6 @@ export const sqlQuery = async <T = any>(
   }
 };
 
-// **Test database connections for both main and fallback DBs**
 export const testDBConnection = async (): Promise<
   Record<string, { status: string; message?: string }>
 > => {

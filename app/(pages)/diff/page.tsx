@@ -1,11 +1,9 @@
 'use client';
 
-import { BucketSelector } from '@/components/bucket-selector';
 import { DiffTable } from '@/components/diff-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBucketStore } from '@/hooks/use-bucket-store';
-import { testS3Connection } from '@/service/s3-tebi';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -76,16 +74,10 @@ export default function DiffPage() {
                         Compare files in S3 with your database and sync missing entries.
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <BucketSelector
-                        testS3ConnectionAction={testS3Connection}
-                        testConnection={false}
-                    />
-                    <Button variant="outline" onClick={fetchDiff} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                        Refresh
-                    </Button>
-                </div>
+                <Button variant="outline" onClick={fetchDiff} disabled={isLoading}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                    Refresh
+                </Button>
             </div>
 
             <Card>
