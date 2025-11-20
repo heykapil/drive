@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useBucketStore } from "@/hooks/use-bucket-store"
 import { FolderNode } from "@/lib/utils"
-import { Check, CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu, Moon, PaintBucket, Share2, Sun, Upload, VideoIcon } from "lucide-react"
+import { Check, CloudUpload, FolderInputIcon, FolderOpen, LayoutDashboard, Menu, Moon, PaintBucket, RefreshCwIcon, Share2, Sun, Upload, VideoIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import Image from "next/image"
 import Link from "next/link"
@@ -20,7 +20,7 @@ const navLinks = [
   { href: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5 text-muted-foreground" /> },
   { href: '/buckets', label: 'Buckets', icon: <PaintBucket className="h-5 w-5 text-muted-foreground" /> },
   { href: '/upload', label: 'Upload', icon: <Upload className="h-5 w-5 text-muted-foreground" /> },
-  { href: '/upload/remote', label: 'Remote Upload', icon: <CloudUpload className="h-5 w-5 text-muted-foreground" /> },
+  { href: '/diff', label: 'Sync Files', icon: <RefreshCwIcon className="h-5 w-5 text-muted-foreground" /> },
   { href: '/uploads', label: 'My Files', icon: <FolderOpen className="h-5 w-5 text-muted-foreground" /> },
   { href: '/player/yt-dlp', label: 'Player', icon: <VideoIcon className="h-5 w-5 text-muted-foreground" /> },
   { href: '/shared', label: 'Shared Files', icon: <Share2 className="h-5 w-5 text-muted-foreground" /> },
@@ -28,19 +28,19 @@ const navLinks = [
 ];
 
 // Sub-component for rendering the hierarchical folder selector
-function FolderSelector () {
+function FolderSelector() {
   const { folderTree, isLoading, error, selectedFolderId, selectedFolderName } = useBucketStore();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams()
   const handleSelect = (id: number, name: string) => {
-      if (id === selectedFolderId) return toast.success('Already selected!');
-      const newSearchParams = new URLSearchParams(searchParams.toString());
-      newSearchParams.set('folderId', id.toString());
-      newSearchParams.delete('bucketId');
-      router.push(`${pathname}?${newSearchParams.toString()}`);
-      toast.success(`Folder changed to ${name}!`)
-    };
+    if (id === selectedFolderId) return toast.success('Already selected!');
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    newSearchParams.set('folderId', id.toString());
+    newSearchParams.delete('bucketId');
+    router.push(`${pathname}?${newSearchParams.toString()}`);
+    toast.success(`Folder changed to ${name}!`)
+  };
 
   const renderFolderItems = (folders: FolderNode[]) => {
     return folders.map(folder => {
@@ -58,8 +58,8 @@ function FolderSelector () {
               <DropdownMenuSubContent>
                 {/* Add an item for the parent folder itself */}
                 <DropdownMenuItem onSelect={() => handleSelect(folder.folder_id, folder.folder_name)}>
-                   {isSelected && <Check className="w-4 h-4 mr-2" />}
-                   <span className={!isSelected ? "ml-6" : ""}>{folder.folder_name} (root)</span>
+                  {isSelected && <Check className="w-4 h-4 mr-2" />}
+                  <span className={!isSelected ? "ml-6" : ""}>{folder.folder_name} (root)</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {renderFolderItems(folder.children)}
@@ -72,7 +72,7 @@ function FolderSelector () {
       return (
         <DropdownMenuItem key={folder.folder_id} onSelect={() => handleSelect(folder.folder_id, folder.folder_name)}>
           {isSelected ? <Check className="w-4 h-4 mr-2" /> :
-          <FolderOpen className={`mr-2 h-4 w-4`} /> }
+            <FolderOpen className={`mr-2 h-4 w-4`} />}
           <span>{folder.folder_name}</span>
         </DropdownMenuItem>
       );
@@ -134,77 +134,76 @@ export default function HeaderNav() {
     <header className="sticky top-0 z-50 w-full px-4 sm:px-8 border-b backdrop-blur-lg bg-background/10">
       <div className="container flex h-12 items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/icon1.png" alt="Logo" className="h-6 w-6" width={24} height={24}/>
+          <Image src="/icon1.png" alt="Logo" className="h-6 w-6" width={24} height={24} />
           <span className="hidden font-semibold sm:inline-block">drive.kapil.app</span>
         </Link>
 
         {/* Desktop Navigation */}
-                  <div className={`justify-center hidden md:flex items-center w-full`}>
-                    <Card className="w-full border-none shadow-none bg-transparent relative flex items-center justify-center">
-                      <CardContent className="p-0">
-                        <div className="relative">
-                          {/* Hover Highlight */}
-                          <div
-                            className="absolute top-1 h-[30px] transition-all duration-300 ease-out bg-[#0e0f1114] dark:bg-[#ffffff1a] rounded-[6px] flex items-center"
-                            style={{
-                              left: hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetLeft : undefined,
-                              width: hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetWidth : undefined,
-                              opacity: hoveredIndex !== null ? 1 : 0,
-                            }}
-                          />
+        <div className={`justify-center hidden md:flex items-center w-full`}>
+          <Card className="w-full border-none shadow-none bg-transparent relative flex items-center justify-center">
+            <CardContent className="p-0">
+              <div className="relative">
+                {/* Hover Highlight */}
+                <div
+                  className="absolute top-1 h-[30px] transition-all duration-300 ease-out bg-[#0e0f1114] dark:bg-[#ffffff1a] rounded-[6px] flex items-center"
+                  style={{
+                    left: hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetLeft : undefined,
+                    width: hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetWidth : undefined,
+                    opacity: hoveredIndex !== null ? 1 : 0,
+                  }}
+                />
 
-                          {/* Active Indicator */}
-                          <div
-                            className="absolute -bottom-1.75 not-[]:6px] h-[1px] bg-blue-600 dark:bg-green-400 transition-all duration-300 ease-out"
-                            style={activeStyle}
-                          />
+                {/* Active Indicator */}
+                <div
+                  className="absolute -bottom-1.75 not-[]:6px] h-[1px] bg-blue-600 dark:bg-green-400 transition-all duration-300 ease-out"
+                  style={activeStyle}
+                />
 
-                          {/* Tabs */}
-                          <div className="relative flex space-x-[6px] items-center">
-                            {navLinks.map((link, index) => {
-                              const isActive = path === link.href
-                              return (
-                                <Link
-                                  // @ts-ignore
-                                  ref={(el) => (tabRefs.current[index] = el)}
-                                  key={link.href}
-                                  href={link.href}
-                                  onMouseEnter={() => setHoveredIndex(index)}
-                                  onMouseLeave={() => setHoveredIndex(null)}
-                                  className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${
-                                    isActive ? "text-blue-600 dark:text-green-400" : "text-[#0e0f1199] dark:text-[#ffffff99]"
-                                  }`}
-                                >
-                                  {link.label}
-                                </Link>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
+                {/* Tabs */}
+                <div className="relative flex space-x-[6px] items-center">
+                  {navLinks.map((link, index) => {
+                    const isActive = path === link.href
+                    return (
+                      <Link
+                        // @ts-ignore
+                        ref={(el) => (tabRefs.current[index] = el)}
+                        key={link.href}
+                        href={link.href}
+                        onMouseEnter={() => setHoveredIndex(index)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                        className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${isActive ? "text-blue-600 dark:text-green-400" : "text-[#0e0f1199] dark:text-[#ffffff99]"
+                          }`}
+                      >
+                        {link.label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden sm:block">
-             <FolderSelector />
+            <FolderSelector />
           </div>
 
           {/* Theme Toggle remains the same */}
           <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="icon" className="hidden md:flex">
-                                      <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                                      <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                                      <span className="sr-only">Toggle theme</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="hidden md:flex">
+                <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                <span className="sr-only">Toggle theme</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Mobile Menu Sheet */}
           <Sheet>
@@ -218,7 +217,7 @@ export default function HeaderNav() {
               <div className="flex flex-col h-full">
                 <div className="border-b p-3 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-primary">
-                    <Image src="/icon1.png" alt="Logo" className="h-6 w-6" loading="lazy" width={24} height={24}/>
+                    <Image src="/icon1.png" alt="Logo" className="h-6 w-6" loading="lazy" width={24} height={24} />
                     <span className="font-medium">drive</span>
                   </div>
                 </div>
@@ -229,17 +228,19 @@ export default function HeaderNav() {
                       <Link
                         key={link.href}
                         href={link.href}
-                        className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors ${
-                          path === link.href ? 'bg-accent' : 'hover:bg-accent'
-                        }`}
+                        className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors ${path === link.href ? 'bg-accent' : 'hover:bg-accent'
+                          }`}
                       >
                         {link.icon}
                         {link.label}
                       </Link>
                     ))}
                   </nav>
-
-                  <div className="px-4 py-5 mt-2">
+                  <div className="border-t mt-2 px-4 py-5">
+                    <h3 className="text-sm font-medium mb-3">Storage Bucket</h3>
+                    <FolderSelector />
+                  </div>
+                  <div className="px-4 border-t py-5 mt-2">
                     <div className="space-y-1">
                       <h3 className="text-sm font-medium">Theme</h3>
                       <div className="flex items-center gap-2 mt-2">
@@ -263,11 +264,6 @@ export default function HeaderNav() {
                         </Button>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="border-t mt-2 px-4 py-5">
-                    <h3 className="text-sm font-medium mb-3">Storage Bucket</h3>
-                    <FolderSelector />
                   </div>
                 </div>
               </div>

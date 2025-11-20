@@ -1,9 +1,11 @@
 'use client';
 
+import { BucketSelector } from '@/components/bucket-selector';
 import { DiffTable } from '@/components/diff-table';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBucketStore } from '@/hooks/use-bucket-store';
+import { testS3Connection } from '@/service/s3-tebi';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -69,7 +71,7 @@ export default function DiffPage() {
         <div className="container mx-auto py-10 space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">File Synchronization</h1>
+                    <h1 className="text-xl font-bold tracking-tight">File Synchronization</h1>
                     <p className="text-muted-foreground mt-2">
                         Compare files in S3 with your database and sync missing entries.
                     </p>
@@ -80,18 +82,16 @@ export default function DiffPage() {
                 </Button>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>
-                        {selectedBucketId
-                            ? `Bucket: ${selectedBucketName}`
-                            : `Folder: ${selectedFolderName}`}
+            <Card className='p-0 border-none shadow-none bg-background'>
+                <CardHeader className='p-0'>
+                    <CardTitle className='p-0'>
+                        Select the bucket
                     </CardTitle>
                     <CardDescription>
-                        Showing files present in S3 but missing from Postgres.
+                        <BucketSelector testConnection={false} testS3ConnectionAction={testS3Connection} />
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className='p-0'>
                     {isLoading ? (
                         <div className="flex justify-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
