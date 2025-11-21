@@ -20,7 +20,8 @@ export default function LogoutPage() {
     const handleLogout = async () => {
       await deleteSession();
 
-      const betterAuthUrl = process.env.NEXT_PUBLIC_BETTER_AUTH_URL || '';
+      const betterAuthUrl =
+        process.env.BETTER_AUTH_URL || 'https://auth.kapil.app';
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
       const targetUrl = `${betterAuthUrl}/login?redirectTo=${encodeURIComponent(appUrl)}${callbackUrl}`;
