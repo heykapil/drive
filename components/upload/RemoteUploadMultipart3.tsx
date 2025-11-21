@@ -54,10 +54,10 @@ export const uploadMultipart = async (
 
         // 0. Define proxy domain and URL.
         const proxyDomain =
-            proxy ||
-            (process.env.NODE_ENV === "development"
-                ? "/api/proxy"
-                : "https://stream.kapil.app");
+            proxy || "https://stream.kapil.app"
+        // (process.env.NODE_ENV === "development"
+        //     ? "http://localhost:3000/api/proxy"
+        //     : "https://stream.kapil.app");
         const proxyUrl = `${proxyDomain}?url=${encodeURIComponent(fileUrl)}`;
         toast.info("Using proxy", { description: proxyDomain });
 
