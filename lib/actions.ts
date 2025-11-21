@@ -148,18 +148,18 @@ export async function deleteSession() {
   const secureCookie: boolean = production;
   const cookiePrefix = secureCookie ? '__Secure-' : '';
   const keysToRemove = [
-    'kapil.app.session_token', // Matches your token
-    'kapil.app.session_data', // Matches your session_data
-    'kapil.app.state', // Matches your state (was missing)
-    'kapil.app.sessionData', // Kept as fallback for legacy camelCase
+    'kapil.app.session_token',
+    'kapil.app.session_data',
+    'kapil.app.state',
+    'kapil.app.sessionData',
   ];
   try {
     keysToRemove.forEach(key => {
-      cookieStore.delete(`${cookiePrefix}${key}`);
+      cookieStore.delete({ name: `${cookiePrefix}${key}` });
     });
 
     if (production) {
-      cookieStore.delete('Secure-kapil.app.session_token');
+      cookieStore.delete({ name: 'Secure-kapil.app.session_token' });
     }
   } catch (error) {
     redirect(process.env.BETTER_AUTH_URL + '/logout');
