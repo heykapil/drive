@@ -2,6 +2,7 @@
 import { BucketConfig } from '@/service/bucket.config';
 import { JWTPayload } from 'jose';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { Payload } from 'paseto-ts/lib/types';
 import { decryptJWT, encryptJWT } from './helpers/jose';
 import { signPasetoToken } from './helpers/paseto-ts';
@@ -146,11 +147,22 @@ export async function deleteSession() {
   const production = process.env.NODE_ENV === 'production';
   const secureCookie: boolean = production;
   const cookiePrefix = secureCookie ? '__Secure-' : '';
+  const keysToRemove = [
+    'kapil.app.session_token', // Matches your token
+    'kapil.app.session_data', // Matches your session_data
+    'kapil.app.state', // Matches your state (was missing)
+    'kapil.app.sessionData', // Kept as fallback for legacy camelCase
+  ];
   try {
-    cookieStore.delete(`${cookiePrefix}kapil.app.session_token`);
-    cookieStore.delete(`${cookiePrefix}kapil.app.sessionData`);
-    cookieStore.delete(`${cookiePrefix}kapil.app.session_data`);
+    keysToRemove.forEach(key => {
+      cookieStore.delete(`${cookiePrefix}${key}`);
+    });
+
+    if (production) {
+      cookieStore.delete('Secure-kapil.app.session_token');
+    }
   } catch (error) {
+    redirect(process.env.BETTER_AUTH_URL + '/logout');
     console.error('Error deleting cookies:', error);
   }
 }
