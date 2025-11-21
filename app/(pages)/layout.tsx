@@ -1,21 +1,23 @@
-import { ProgressProviders } from "@/components/ProgressBarProvider";
-import { QueryProvider } from "@/components/QueryProvider";
-import TransitionLayout from "@/components/TransitionLayout";
-import HeaderNav, { HeaderSkeleton } from "@/components/header-nav";
-import { ThemeProvider } from "@/hooks/theme-provider";
-import { UrlStateSync } from "@/hooks/url-query-sync";
-import { BucketStoreInitializer } from "@/hooks/use-bucket-store";
-import type { Metadata, Viewport } from "next";
-import { Figtree } from "next/font/google";
-import { Suspense } from "react";
-import { Toaster } from "sonner";
+import { ProgressProviders } from '@/components/ProgressBarProvider';
+import { QueryProvider } from '@/components/QueryProvider';
+import TransitionLayout from '@/components/TransitionLayout';
+import HeaderNav, { HeaderSkeleton } from '@/components/header-nav';
+import { ThemeProvider } from '@/hooks/theme-provider';
+import { UrlStateSync } from '@/hooks/url-query-sync';
+import { BucketStoreInitializer } from '@/hooks/use-bucket-store';
+import { getSession } from '@/lib/auth';
+import type { Metadata, Viewport } from 'next';
+import { Figtree } from 'next/font/google';
+import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+import { Toaster } from 'sonner';
 
 export const viewport: Viewport = {
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#f1f5f9' },
     { media: '(prefers-color-scheme: dark)', color: '#111827' },
   ],
-}
+};
 
 // const readexPro = Readex_Pro({
 //   subsets: ["latin"],
@@ -25,8 +27,8 @@ export const viewport: Viewport = {
 //   subsets: ['latin', 'latin-ext']
 //   })
 const FigTree = Figtree({
-  subsets: ['latin']
-})
+  subsets: ['latin'],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://drive.kapil.app'),
@@ -65,51 +67,66 @@ export const metadata: Metadata = {
   },
 };
 
-
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const production = process.env.NODE_ENV === 'production';
+  const session = await getSession();
+  if (production && session?.user?.username !== 'admin') {
+    return notFound();
+  }
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${FigTree.className} antialiased bg-background text-neutral-900 dark:text-white`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <body
+        className={`${FigTree.className} antialiased bg-background text-neutral-900 dark:text-white`}
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           <QueryProvider>
             <ProgressProviders>
-          <svg
-            className="pointer-events-none fixed top-0 left-0 isolate z-50 opacity-25 dark:opacity-[0.15] mix-blend-normal"
-              width="100%"
-              height="100%"
-            >
-              <filter id="pedroduarteisalegend">
-                <feTurbulence
-                  type="fractalNoise"
-                  baseFrequency="0.80"
-                  numOctaves="4"
-                  stitchTiles="stitch"
-                />
-                <feColorMatrix type="saturate" values="0" />
-              </filter>
-              <rect width="100%" height="100%" filter="url(#pedroduarteisalegend)"></rect>
-            </svg>
-            <main className="min-h-screen flex flex-col items-center p-0">
-              <Suspense fallback={<HeaderSkeleton />}>
-                <BucketStoreInitializer />
-                <UrlStateSync />
-              <HeaderNav />
-              </Suspense>
-               <TransitionLayout>
-                 <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">
-                   <main className="flex flex-col gap-2 row-start-2 items-center sm:items-start">
-                     <div className="w-[95vw] md:w-2xl lg:w-4xl mx-auto py-6 space-y-6">
-                      {children}
-                     </div>
+              <svg
+                className="pointer-events-none fixed top-0 left-0 isolate z-50 opacity-25 dark:opacity-[0.15] mix-blend-normal"
+                width="100%"
+                height="100%"
+              >
+                <filter id="pedroduarteisalegend">
+                  <feTurbulence
+                    type="fractalNoise"
+                    baseFrequency="0.80"
+                    numOctaves="4"
+                    stitchTiles="stitch"
+                  />
+                  <feColorMatrix type="saturate" values="0" />
+                </filter>
+                <rect
+                  width="100%"
+                  height="100%"
+                  filter="url(#pedroduarteisalegend)"
+                ></rect>
+              </svg>
+              <main className="min-h-screen flex flex-col items-center p-0">
+                <Suspense fallback={<HeaderSkeleton />}>
+                  <BucketStoreInitializer />
+                  <UrlStateSync />
+                  <HeaderNav />
+                </Suspense>
+                <TransitionLayout>
+                  <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-0 gap-2 font-[family-name:var(--font-geist-sans)]">
+                    <main className="flex flex-col gap-2 row-start-2 items-center sm:items-start">
+                      <div className="w-[95vw] md:w-2xl lg:w-4xl mx-auto py-6 space-y-6">
+                        {children}
+                      </div>
                     </main>
                   </div>
-               </TransitionLayout>
-            </main>
-              <Toaster theme="system" expand richColors/>
+                </TransitionLayout>
+              </main>
+              <Toaster theme="system" expand richColors />
             </ProgressProviders>
           </QueryProvider>
         </ThemeProvider>

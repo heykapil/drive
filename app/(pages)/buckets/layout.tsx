@@ -11,5 +11,5 @@ export default async function BucketLayout({
   if (production && session?.user?.username !== 'admin') {
     return notFound();
   }
-  return { children };
+  return <>{children}</>;
 }
