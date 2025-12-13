@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const fileId = searchParams.get('fileId');
     const expiresIn = Math.max(
       60,
-      parseInt(searchParams.get('expiresIn') || '300', 10),
+      parseInt(searchParams.get('expiresIn') || '600', 10),
     );
 
     if (!fileId) {

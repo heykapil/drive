@@ -360,7 +360,7 @@ export const VideoPlayer: React.FC<Media> = ({ url, id, poster }) => {
 
           {/* Current Progress */}
           <div
-            className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all duration-100"
+            className="absolute top-0 left-0 h-full bg-blue-500 rounded-full transition-all duration-100"
             style={{ width: `${(currentTime / duration) * 100}%` }}
           >
             <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-md scale-0 group-hover/progress:scale-100 transition-transform" />

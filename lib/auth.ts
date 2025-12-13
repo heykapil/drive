@@ -111,8 +111,6 @@ export const getSession = cache(async function getSession(): Promise<IronSession
   }
 
   return session;
-
-  return session;
 });
 
 export async function getClientConfig() {

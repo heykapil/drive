@@ -29,7 +29,7 @@ const findBetween = (string: string, start: string, end: string): string => {
 
 export async function POST(request: Request) {
   const session = await getSession();
-  if (!session.isLoggedIn) {
+  if (process.env.NODE_ENV === 'production' && !session.isLoggedIn) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {

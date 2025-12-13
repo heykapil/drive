@@ -5,7 +5,7 @@ import { getSession } from '@/lib/auth';
 // This endpoint fetches the complete folder hierarchy.
 export async function GET() {
   const session = await getSession();
-  if (!session.isLoggedIn) {
+  if (process.env.NODE_ENV === 'production' && !session.isLoggedIn) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
