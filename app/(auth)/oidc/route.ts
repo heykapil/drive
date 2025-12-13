@@ -20,9 +20,18 @@ export async function GET(request: NextRequest) {
       expectedState: session.state,
     },
   );
-  const { access_token } = tokenSet;
+  const { access_token, refresh_token, expires_in, id_token } = tokenSet;
   session.isLoggedIn = true;
   session.access_token = access_token;
+  if (id_token) {
+    session.id_token = id_token;
+  }
+  if (refresh_token) {
+    session.refresh_token = refresh_token;
+  }
+  if (expires_in) {
+    session.expires_at = Math.floor(Date.now() / 1000) + expires_in;
+  }
   const claims = tokenSet.claims()!;
   const { sub } = claims;
   // call userinfo endpoint to get user info

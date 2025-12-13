@@ -1,5 +1,6 @@
 // app/api/terabox/route.ts
 import { NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth';
 
 const MY_HEADERS = {
   Accept: 'application/json, text/plain, */*',
@@ -27,6 +28,10 @@ const findBetween = (string: string, start: string, end: string): string => {
 };
 
 export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { url } = await request.json();
 

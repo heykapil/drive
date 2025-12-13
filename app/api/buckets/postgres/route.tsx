@@ -1,8 +1,13 @@
 import { encryptSecret } from '@/lib/helpers/jose';
 import { query, sql } from '@/service/postgres';
 import { NextRequest, NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const {
       name,
@@ -68,7 +73,12 @@ export async function POST(req: NextRequest) {
 }
 
 // --- UPDATE a bucket's folder location ---
+// --- UPDATE a bucket's folder location ---
 export async function PATCH(req: NextRequest) {
+  const session = await getSession();
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { bucketId, newFolderId } = (await req.json()) as {
       bucketId: number;
@@ -108,6 +118,10 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function GET() {
+  const session = await getSession();
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { rows } = await query(
       `SELECT

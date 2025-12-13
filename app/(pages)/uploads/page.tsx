@@ -13,7 +13,7 @@ export default async function UploadsPage({
   const production = process.env.NODE_ENV === 'production';
   const session = await getSession();
   if (production && !session.isLoggedIn) {
-    return redirect('/api/login');
+    return redirect('/login');
   }
   const bucketId = (await searchParams)?.bucketId;
   return (

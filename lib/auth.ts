@@ -15,9 +15,14 @@ export const clientConfig = {
   code_challenge_method: 'S256',
 };
 
+import { cache } from 'react';
+
 export interface SessionData {
   isLoggedIn: boolean;
   access_token?: string;
+  refresh_token?: string;
+  id_token?: string;
+  expires_at?: number;
   code_verifier?: string;
   state?: string;
   userInfo?: {
@@ -33,6 +38,9 @@ export interface SessionData {
 export const defaultSession: SessionData = {
   isLoggedIn: false,
   access_token: undefined,
+  refresh_token: undefined,
+  id_token: undefined,
+  expires_at: undefined,
   code_verifier: undefined,
   state: undefined,
   userInfo: undefined,
@@ -47,7 +55,7 @@ export const sessionOptions: SessionOptions = {
   ttl: 60 * 60 * 24 * 7, // 1 week
 };
 
-export async function getSession(): Promise<IronSession<SessionData>> {
+export const getSession = cache(async function getSession(): Promise<IronSession<SessionData>> {
   const cookiesList = await cookies();
   const session = await getIronSession<SessionData>(
     cookiesList,
@@ -57,8 +65,40 @@ export async function getSession(): Promise<IronSession<SessionData>> {
     session.access_token = defaultSession.access_token;
     session.userInfo = defaultSession.userInfo;
   }
+
+  // Refresh token logic
+  if (session.isLoggedIn && session.expires_at && session.refresh_token) {
+    // Refresh 5 minutes before expiration
+    if (Date.now() >= (session.expires_at * 1000) - (5 * 60 * 1000)) {
+      try {
+        const openIdClientConfig = await getClientConfig();
+        const tokenSet = await client.refreshTokenGrant(
+          openIdClientConfig,
+          session.refresh_token,
+        );
+
+        session.access_token = tokenSet.access_token;
+        if (tokenSet.refresh_token) {
+          session.refresh_token = tokenSet.refresh_token;
+        }
+        if (tokenSet.expires_in) {
+          session.expires_at = Math.floor(Date.now() / 1000) + tokenSet.expires_in;
+        }
+        await session.save();
+      } catch (error) {
+        console.error('Failed to refresh token:', error);
+        session.isLoggedIn = false;
+        session.access_token = undefined;
+        session.refresh_token = undefined;
+        session.id_token = undefined;
+        session.userInfo = undefined;
+        await session.save();
+      }
+    }
+  }
+
   return session;
-}
+});
 
 export async function getClientConfig() {
   return await client.discovery(

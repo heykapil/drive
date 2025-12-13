@@ -3,7 +3,13 @@ import { query } from '@/service/postgres';
 import { s3WithConfig } from '@/service/s3-tebi';
 import { DeleteObjectsCommand } from '@aws-sdk/client-s3';
 import { NextRequest, NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth';
+
 export async function GET(req: NextRequest) {
+  const session = await getSession();
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { searchParams } = new URL(req.url);
     const folderId = searchParams.get('folderId');
@@ -153,6 +159,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const session = await getSession();
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const { fileIds } = await req.json();
 

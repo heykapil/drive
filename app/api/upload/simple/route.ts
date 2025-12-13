@@ -3,8 +3,13 @@ import { query } from '@/service/postgres';
 import { s3WithConfig } from '@/service/s3-tebi';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { NextRequest, NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const formData = await req.formData();
     const { searchParams } = new URL(req.url);
