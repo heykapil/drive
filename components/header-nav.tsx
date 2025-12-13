@@ -82,11 +82,11 @@ const navLinks = [
     label: 'Shared Files',
     icon: <Share2 className="h-5 w-5 text-muted-foreground" />,
   },
-  {
-    href: '/logout',
-    label: 'Logout',
-    icon: <LogOutIcon className="h-5 w-5 text-muted-foreground" />,
-  },
+  // {
+  //   href: '/logout',
+  //   label: 'Logout',
+  //   icon: <LogOutIcon className="h-5 w-5 text-muted-foreground" />,
+  // },
 ];
 
 // Sub-component for rendering the hierarchical folder selector
@@ -270,8 +270,8 @@ export default function HeaderNav() {
                           // @ts-ignore
                           ref={el => (tabRefs.current[index] = el)}
                           className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${isActive
-                              ? 'text-blue-600 dark:text-green-400'
-                              : 'text-[#0e0f1199] dark:text-[#ffffff99]'
+                            ? 'text-blue-600 dark:text-green-400'
+                            : 'text-[#0e0f1199] dark:text-[#ffffff99]'
                             }`}
                         >
                           {link.label}
@@ -287,8 +287,8 @@ export default function HeaderNav() {
                         onMouseEnter={() => setHoveredIndex(index)}
                         onMouseLeave={() => setHoveredIndex(null)}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${isActive
-                            ? 'text-blue-600 dark:text-green-400'
-                            : 'text-[#0e0f1199] dark:text-[#ffffff99]'
+                          ? 'text-blue-600 dark:text-green-400'
+                          : 'text-[#0e0f1199] dark:text-[#ffffff99]'
                           }`}
                       >
                         {link.label}

@@ -51,6 +51,9 @@ export const sessionOptions: SessionOptions = {
   cookieName: 'next_js_session',
   cookieOptions: {
     secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
   },
   ttl: 60 * 60 * 24 * 7, // 1 week
 };
@@ -67,11 +70,16 @@ export const getSession = cache(async function getSession(): Promise<IronSession
   }
 
   // Refresh token logic
-  // Refresh token logic
-  /* 
   if (session.isLoggedIn && session.expires_at && session.refresh_token) {
+    const expiresAtMs = session.expires_at * 1000;
+    const refreshThreshold = expiresAtMs - (5 * 60 * 1000);
+    const now = Date.now();
+
+    // console.log(`[Auth] Checking refresh: Now=${now}, ExpiresAt=${expiresAtMs}, Threshold=${refreshThreshold}, ShouldRefresh=${now >= refreshThreshold}`);
+
     // Refresh 5 minutes before expiration
-    if (Date.now() >= (session.expires_at * 1000) - (5 * 60 * 1000)) {
+    if (now >= refreshThreshold) {
+      console.log('[Auth] Token close to expiry, refreshing...');
       try {
         const openIdClientConfig = await getClientConfig();
         const tokenSet = await client.refreshTokenGrant(
@@ -79,6 +87,7 @@ export const getSession = cache(async function getSession(): Promise<IronSession
           session.refresh_token,
         );
 
+        console.log('[Auth] Token refresh success');
         session.access_token = tokenSet.access_token;
         if (tokenSet.refresh_token) {
           session.refresh_token = tokenSet.refresh_token;
@@ -88,7 +97,7 @@ export const getSession = cache(async function getSession(): Promise<IronSession
         }
         await session.save();
       } catch (error) {
-        console.error('Failed to refresh token:', error);
+        console.error('[Auth] Failed to refresh token:', error);
         session.isLoggedIn = false;
         session.access_token = undefined;
         session.refresh_token = undefined;
@@ -97,8 +106,11 @@ export const getSession = cache(async function getSession(): Promise<IronSession
         await session.save();
       }
     }
+  } else {
+    // console.log(`[Auth] No refresh needed or missing data. LoggedIn=${session.isLoggedIn}`);
   }
-  */
+
+  return session;
 
   return session;
 });
