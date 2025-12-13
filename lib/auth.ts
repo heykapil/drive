@@ -67,6 +67,8 @@ export const getSession = cache(async function getSession(): Promise<IronSession
   }
 
   // Refresh token logic
+  // Refresh token logic
+  /* 
   if (session.isLoggedIn && session.expires_at && session.refresh_token) {
     // Refresh 5 minutes before expiration
     if (Date.now() >= (session.expires_at * 1000) - (5 * 60 * 1000)) {
@@ -96,6 +98,7 @@ export const getSession = cache(async function getSession(): Promise<IronSession
       }
     }
   }
+  */
 
   return session;
 });

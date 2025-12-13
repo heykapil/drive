@@ -260,6 +260,24 @@ export default function HeaderNav() {
                 <div className="relative flex space-x-[6px] items-center">
                   {navLinks.map((link, index) => {
                     const isActive = path === link.href;
+                    if (link.href === '/logout') {
+                      return (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          onMouseEnter={() => setHoveredIndex(index)}
+                          onMouseLeave={() => setHoveredIndex(null)}
+                          // @ts-ignore
+                          ref={el => (tabRefs.current[index] = el)}
+                          className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${isActive
+                              ? 'text-blue-600 dark:text-green-400'
+                              : 'text-[#0e0f1199] dark:text-[#ffffff99]'
+                            }`}
+                        >
+                          {link.label}
+                        </a>
+                      );
+                    }
                     return (
                       <Link
                         // @ts-ignore
@@ -268,11 +286,10 @@ export default function HeaderNav() {
                         href={link.href}
                         onMouseEnter={() => setHoveredIndex(index)}
                         onMouseLeave={() => setHoveredIndex(null)}
-                        className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${
-                          isActive
+                        className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-300 ${isActive
                             ? 'text-blue-600 dark:text-green-400'
                             : 'text-[#0e0f1199] dark:text-[#ffffff99]'
-                        }`}
+                          }`}
                       >
                         {link.label}
                       </Link>
@@ -341,9 +358,8 @@ export default function HeaderNav() {
                       <Link
                         key={link.href}
                         href={link.href}
-                        className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors ${
-                          path === link.href ? 'bg-accent' : 'hover:bg-accent'
-                        }`}
+                        className={`flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors ${path === link.href ? 'bg-accent' : 'hover:bg-accent'
+                          }`}
                       >
                         {link.icon}
                         {link.label}
