@@ -96,7 +96,7 @@ export const useBucketStore = create<BucketState>()(
       // Action to fetch and process folder data
       fetchFolderTree: async () => {
         if (get().folderTree.length > 0 && !get().isLoading) {
-             return;
+          return;
         }
         set({ isLoading: true, error: null });
         try {
@@ -122,7 +122,7 @@ export const useBucketStore = create<BucketState>()(
     }),
     {
       name: 'bucket-store',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => (typeof window !== 'undefined' ? sessionStorage : { getItem: () => null, setItem: () => { }, removeItem: () => { } })),
       partialize: (state) => ({
         folderTree: state.folderTree,
         selectedFolderId: state.selectedFolderId,

@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth';
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 export default async function PlayerLayout({
   children,
@@ -8,8 +8,8 @@ export default async function PlayerLayout({
 }>) {
   const production = process.env.NODE_ENV === 'production';
   const session = await getSession();
-  if (production && session?.user?.username !== 'admin') {
-    return notFound();
+  if (production && !session.isLoggedIn) {
+    return redirect('/login');
   }
   return <>{children}</>;
 }

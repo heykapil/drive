@@ -1,32 +1,35 @@
-import { getBucketConfig } from "@/service/bucket.config";
-import { query } from "@/service/postgres";
-import { s3WithConfig } from "@/service/s3-tebi";
-import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
-import { NextRequest, NextResponse } from "next/server";
+import { getBucketConfig } from '@/service/bucket.config';
+import { query } from '@/service/postgres';
+import { s3WithConfig } from '@/service/s3-tebi';
+import { DeleteObjectsCommand } from '@aws-sdk/client-s3';
+import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const folderId = searchParams.get("folderId");
-    const bucketId = searchParams.get("bucketId");
+    const folderId = searchParams.get('folderId');
+    const bucketId = searchParams.get('bucketId');
     if (!folderId && !bucketId) {
-      return NextResponse.json({ error: "No folder or bucket selected" }, { status: 400 });
+      return NextResponse.json(
+        { error: 'No folder or bucket selected' },
+        { status: 400 },
+      );
     }
 
-    const search = searchParams.get("search") || "";
-    const sort = searchParams.get("sort") || "uploaded_at_desc";
-    const recent = searchParams.get("recent") === "true";
-    const typeGroup = searchParams.get("typeGroup");
+    const search = searchParams.get('search') || '';
+    const sort = searchParams.get('sort') || 'uploaded_at_desc';
+    const recent = searchParams.get('recent') === 'true';
+    const typeGroup = searchParams.get('typeGroup');
     const liked = searchParams.get('liked');
     const is_public = searchParams.get('public');
-    const limit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10));
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.max(1, parseInt(searchParams.get('limit') || '10', 10));
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const offset = (page - 1) * limit;
     let validBucketIds = [];
 
     if (!bucketId) {
       const { rows: bucketIdRows } = await query(
-        "SELECT bucket_id FROM folder_buckets WHERE folder_id = $1",
-        [folderId]
+        'SELECT bucket_id FROM folder_buckets WHERE folder_id = $1',
+        [folderId],
       );
 
       if (bucketIdRows.length === 0) {
@@ -39,12 +42,12 @@ export async function GET(req: NextRequest) {
           limit,
         });
       }
-    validBucketIds = bucketIdRows.map(row => row.bucket_id);
-    }
-    else {
-      validBucketIds = bucketId.split(',')
-          .map(id => parseInt(id.trim(), 10))
-          .filter(id => !isNaN(id));
+      validBucketIds = bucketIdRows.map(row => row.bucket_id);
+    } else {
+      validBucketIds = bucketId
+        .split(',')
+        .map(id => parseInt(id.trim(), 10))
+        .filter(id => !isNaN(id));
     }
 
     const whereConditions = [];
@@ -83,7 +86,9 @@ export async function GET(req: NextRequest) {
           whereConditions.push("f.type LIKE 'image/%'");
           break;
         case 'documents':
-          whereConditions.push("(f.type LIKE 'application/%' OR f.type LIKE 'text/%')");
+          whereConditions.push(
+            "(f.type LIKE 'application/%' OR f.type LIKE 'text/%')",
+          );
           break;
         case 'videos':
           whereConditions.push("f.type LIKE 'video/%'");
@@ -92,27 +97,27 @@ export async function GET(req: NextRequest) {
     }
 
     const sortOptions: Record<string, string> = {
-      name_asc: "f.filename ASC",
-      name_desc: "f.filename DESC",
-      size_asc: "f.size ASC",
-      size_desc: "f.size DESC",
-      type_asc: "f.type ASC",
-      type_desc: "f.type DESC",
-      uploaded_at_asc: "f.uploaded_at ASC",
-      uploaded_at_desc: "f.uploaded_at DESC",
-      liked_asc: "f.liked ASC",
-      liked_desc: "f.liked DESC",
-      public_asc: "f.is_public ASC",
-      public_desc: "f.is_public DESC",
+      name_asc: 'f.filename ASC',
+      name_desc: 'f.filename DESC',
+      size_asc: 'f.size ASC',
+      size_desc: 'f.size DESC',
+      type_asc: 'f.type ASC',
+      type_desc: 'f.type DESC',
+      uploaded_at_asc: 'f.uploaded_at ASC',
+      uploaded_at_desc: 'f.uploaded_at DESC',
+      liked_asc: 'f.liked ASC',
+      liked_desc: 'f.liked DESC',
+      public_asc: 'f.is_public ASC',
+      public_desc: 'f.is_public DESC',
     };
 
-    const orderBy = sortOptions[sort] || "f.uploaded_at DESC";
+    const orderBy = sortOptions[sort] || 'f.uploaded_at DESC';
 
     // 3. Define a reusable base query with the necessary JOIN
     const baseQuery = `
       FROM files f
       JOIN s3_buckets b ON f.bucket_id = b.id
-      WHERE ${whereConditions.join(" AND ")}
+      WHERE ${whereConditions.join(' AND ')}
     `;
 
     // 4. Fetch the files for the current page
@@ -136,38 +141,56 @@ export async function GET(req: NextRequest) {
       total: totalFiles,
       page,
       totalPages,
-      limit
+      limit,
     });
   } catch (error) {
-    console.error("Error fetching files:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('Error fetching files:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 }
-
 
 export async function DELETE(req: NextRequest) {
   try {
     const { fileIds } = await req.json();
 
     if (!Array.isArray(fileIds) || fileIds.length === 0) {
-      return NextResponse.json({ error: "At least one file ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: 'At least one file ID is required' },
+        { status: 400 },
+      );
     }
 
     // 1. Fetch file details from the database
-    const { rows: filesToDelete } = await query<{ id: number; key: string; bucketId: number }>(
+    const { rows: filesToDelete } = await query<{
+      id: number;
+      key: string;
+      bucketId: number;
+    }>(
       `SELECT f.id, f.key, f.bucket_id AS "bucketId" FROM files f WHERE f.id = ANY($1::int[])`,
-      [fileIds]
+      [fileIds],
     );
 
     if (filesToDelete.length === 0) {
-      return NextResponse.json({ error: "No matching files found for the given IDs" }, { status: 404 });
+      return NextResponse.json(
+        { error: 'No matching files found for the given IDs' },
+        { status: 404 },
+      );
     }
 
     // 2. Group files by bucket for batch processing
-    const filesByBucket = filesToDelete.reduce((acc, file) => {
-      (acc[file.bucketId] = acc[file.bucketId] || []).push({ id: file.id, key: file.key });
-      return acc;
-    }, {} as Record<number, { id: number; key: string }[]>);
+    const filesByBucket = filesToDelete.reduce(
+      (acc, file) => {
+        (acc[file.bucketId] = acc[file.bucketId] || []).push({
+          id: file.id,
+          key: file.key,
+        });
+        return acc;
+      },
+      {} as Record<number, { id: number; key: string }[]>,
+    );
 
     // 3. EFFICIENTLY fetch all required bucket configurations at once
     const uniqueBucketIds = Object.keys(filesByBucket).map(Number);
@@ -185,7 +208,9 @@ export async function DELETE(req: NextRequest) {
       const filesInBucket = filesByBucket[bucketId];
 
       if (!bucketConfig) {
-        console.error(`Configuration for bucket ID ${bucketId} not found. Skipping ${filesInBucket.length} files.`);
+        console.error(
+          `Configuration for bucket ID ${bucketId} not found. Skipping ${filesInBucket.length} files.`,
+        );
         continue;
       }
 
@@ -205,38 +230,44 @@ export async function DELETE(req: NextRequest) {
         };
 
         // 1. Create the command instance first
-              const command = new DeleteObjectsCommand(deleteParams);
+        const command = new DeleteObjectsCommand(deleteParams);
 
-              // 2. THIS IS THE FIX: Add a middleware to disable flexible checksums
-              // command.middlewareStack.add(
-              //   (next, context) => (args) => {
-              //     context.disableFlexibleChecksums = true;
-              //     return next(args);
-              //   },
-              //   {
-              //     step: "initialize",
-              //     name: "disableFlexibleChecksumsMiddleware",
-              //   }
-              // );
+        // 2. THIS IS THE FIX: Add a middleware to disable flexible checksums
+        // command.middlewareStack.add(
+        //   (next, context) => (args) => {
+        //     context.disableFlexibleChecksums = true;
+        //     return next(args);
+        //   },
+        //   {
+        //     step: "initialize",
+        //     name: "disableFlexibleChecksumsMiddleware",
+        //   }
+        // );
 
-              // 3. Send the modified command and push the promise
-              const promise = client.send(command)
-                .then(output => {
-                  // ... your existing .then() logic is unchanged ...
-                  const failedKeys = new Set(output.Errors?.map(err => err.Key));
-                  chunk.forEach(file => {
-                    if (!failedKeys.has(file.key)) {
-                      successfullyDeletedIds.push(file.id);
-                    } else {
-                      console.error(`Failed to delete key ${file.key} from bucket ${bucketConfig.name}`);
-                    }
-                  });
-                })
-                .catch(error => {
-                  console.error(`Batch delete failed for bucket ${bucketConfig.name}:`, error);
-                });
+        // 3. Send the modified command and push the promise
+        const promise = client
+          .send(command)
+          .then(output => {
+            // ... your existing .then() logic is unchanged ...
+            const failedKeys = new Set(output.Errors?.map(err => err.Key));
+            chunk.forEach(file => {
+              if (!failedKeys.has(file.key)) {
+                successfullyDeletedIds.push(file.id);
+              } else {
+                console.error(
+                  `Failed to delete key ${file.key} from bucket ${bucketConfig.name}`,
+                );
+              }
+            });
+          })
+          .catch(error => {
+            console.error(
+              `Batch delete failed for bucket ${bucketConfig.name}:`,
+              error,
+            );
+          });
 
-              deletionPromises.push(promise);
+        deletionPromises.push(promise);
       }
     }
 
@@ -245,17 +276,24 @@ export async function DELETE(req: NextRequest) {
 
     // 5. Atomically delete records from the database ONLY for files successfully deleted from S3
     if (successfullyDeletedIds.length > 0) {
-      await query("DELETE FROM files WHERE id = ANY($1::int[])", [successfullyDeletedIds]);
+      await query('DELETE FROM files WHERE id = ANY($1::int[])', [
+        successfullyDeletedIds,
+      ]);
     }
 
-    return NextResponse.json({
-      message: "Operation complete.",
-      deletedCount: successfullyDeletedIds.length,
-      failedCount: fileIds.length - successfullyDeletedIds.length,
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        message: 'Operation complete.',
+        deletedCount: successfullyDeletedIds.length,
+        failedCount: fileIds.length - successfullyDeletedIds.length,
+      },
+      { status: 200 },
+    );
   } catch (error) {
-    console.error("Error deleting files:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error('Error deleting files:', error);
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 },
+    );
   }
 }

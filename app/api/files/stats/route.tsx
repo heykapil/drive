@@ -1,11 +1,14 @@
-import { query } from "@/service/postgres";
-import { NextRequest, NextResponse } from "next/server";
+import { query } from '@/service/postgres';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
     const { bucketIds } = await req.json();
     if (!bucketIds || bucketIds.length === 0) {
-      return NextResponse.json({ error: "Missing or invalid bucketIds" }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing or invalid bucketIds' },
+        { status: 400 },
+      );
     }
     const statsQuery = `
       SELECT
@@ -41,11 +44,14 @@ export async function POST(req: NextRequest) {
       videos_percent: 0,
       images_size_gb: 0,
       documents_size_gb: 0,
-      videos_size_gb: 0
+      videos_size_gb: 0,
     };
     return NextResponse.json(stats);
   } catch (error) {
-    console.error("Error fetching stats:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error('Error fetching stats:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 }

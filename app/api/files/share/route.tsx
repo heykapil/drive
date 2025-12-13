@@ -1,72 +1,81 @@
-import { SharedFile } from "@/components/data/shared-files-table";
-import { generateToken } from "@/lib/helpers/token";
-import { query } from "@/service/postgres";
-import { NextRequest, NextResponse } from "next/server";
+import { SharedFile } from '@/components/data/shared-files-table';
+import { generateToken } from '@/lib/helpers/token';
+import { query } from '@/service/postgres';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { fileId, duration } = body;
 
-    if (!fileId || typeof duration !== "number" || typeof fileId !== "number") {
-      return NextResponse.json({ error: "Invalid request parameters" }, { status: 400 });
+    if (!fileId || typeof duration !== 'number' || typeof fileId !== 'number') {
+      return NextResponse.json(
+        { error: 'Invalid request parameters' },
+        { status: 400 },
+      );
     }
 
-    const { rows } = await query("SELECT id, filename, size, type, bucket_id FROM files WHERE id = $1", [
-      fileId
-    ]);
+    const { rows } = await query(
+      'SELECT id, filename, size, type, bucket_id FROM files WHERE id = $1',
+      [fileId],
+    );
 
     if (rows.length === 0) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
     const { id, filename, size, type, bucket_id } = rows[0];
     const expires = new Date(Date.now() + duration * 24 * 60 * 60 * 1000);
-    const token = generateToken(fileId, duration)
+    const token = generateToken(fileId, duration);
 
     const url = `${process.env.NEXT_PUBLIC_APP_URL}/file?id=${fileId}&token=${token}`;
 
     await query(
-      "INSERT INTO shared (token, id, filename, size, type, bucket_id, expires, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-      [token, id, filename, size, type, bucket_id, expires, new Date()]
+      'INSERT INTO shared (token, id, filename, size, type, bucket_id, expires, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [token, id, filename, size, type, bucket_id, expires, new Date()],
     );
 
-    return NextResponse.json({ message: "File has been shared", url });
+    return NextResponse.json({ message: 'File has been shared', url });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 }
 
-export async function DELETE(req: NextRequest){
-  try{
+export async function DELETE(req: NextRequest) {
+  try {
     const { searchParams } = new URL(req.url);
-    const token = searchParams.get("token") || "";
+    const token = searchParams.get('token') || '';
 
     if (!token) {
-      return NextResponse.json({ success: false, error: "Token not provided" });
+      return NextResponse.json({ success: false, error: 'Token not provided' });
     }
 
-    await query(`DELETE from shared WHERE token = $1`, [token])
-    return NextResponse.json({success: true, message: 'Token deleted'})
-  } catch(error){
+    await query(`DELETE from shared WHERE token = $1`, [token]);
+    return NextResponse.json({ success: true, message: 'Token deleted' });
+  } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 },
+    );
   }
 }
-
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || '1', 10);
-    const pageSize = parseInt(searchParams.get("pageSize") || '10', 10);
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const pageSize = parseInt(searchParams.get('pageSize') || '10', 10);
 
     // Validate pagination parameters
     if (isNaN(page) || isNaN(pageSize) || page < 0 || pageSize <= 0) {
       return NextResponse.json(
-        { success: false, error: "Invalid pagination parameters" },
-        { status: 400 }
+        { success: false, error: 'Invalid pagination parameters' },
+        { status: 400 },
       );
     }
 
@@ -74,7 +83,7 @@ export async function GET(req: NextRequest) {
     const offset = page * pageSize;
 
     // Get total count
-    const countQuery = "SELECT COUNT(*) FROM shared";
+    const countQuery = 'SELECT COUNT(*) FROM shared';
     const countResult = await query<{ count: string }>(countQuery);
     const totalCount = parseInt(countResult.rows[0].count, 10);
 
@@ -86,7 +95,7 @@ export async function GET(req: NextRequest) {
     const files = dataResult.rows.map(row => ({
       ...row,
       expires: row.expires ? new Date(row.expires).toISOString() : null,
-      created_at: new Date(row.created_at).toISOString()
+      created_at: new Date(row.created_at).toISOString(),
     }));
 
     // console.log({files, totalCount, countResult, offset, page, pageSize})
@@ -95,15 +104,14 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         files,
-        totalCount
-      }
+        totalCount,
+      },
     });
-
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { error: error ||"Internal server error" },
-      { status: 500 }
+      { error: error || 'Internal server error' },
+      { status: 500 },
     );
   }
 }

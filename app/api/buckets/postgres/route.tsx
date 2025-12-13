@@ -5,12 +5,21 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const {
-      name, region, endpoint, provider, total_capacity_gb,
-      accessKey, secretKey, folderId
+      name,
+      region,
+      endpoint,
+      provider,
+      total_capacity_gb,
+      accessKey,
+      secretKey,
+      folderId,
     } = await req.json();
 
     if (!folderId) {
-      return NextResponse.json({ error: "A folderId is required to create a bucket." }, { status: 400 });
+      return NextResponse.json(
+        { error: 'A folderId is required to create a bucket.' },
+        { status: 400 },
+      );
     }
 
     // Encrypt secrets before storing
@@ -18,7 +27,7 @@ export async function POST(req: NextRequest) {
     const secret_key_encrypted = await encryptSecret(secretKey);
 
     // Use a transaction to ensure both the bucket and its folder link are created successfully
-    const newBucket = await sql.begin(async (sql) => {
+    const newBucket = await sql.begin(async sql => {
       // 1. Insert the new bucket details
       const [bucket] = await sql`
         INSERT INTO s3_buckets (name, region, endpoint, provider, total_capacity_gb, access_key_encrypted, secret_key_encrypted)
@@ -35,32 +44,46 @@ export async function POST(req: NextRequest) {
       return bucket;
     });
 
-    return NextResponse.json({
-      message: "Bucket created and linked successfully.",
-      bucket: { id: newBucket.id },
-    }, { status: 201 });
-
+    return NextResponse.json(
+      {
+        message: 'Bucket created and linked successfully.',
+        bucket: { id: newBucket.id },
+      },
+      { status: 201 },
+    );
   } catch (error: any) {
-    console.error("Error creating bucket:", error);
-    if (error.code === '23505') { // Handle unique name constraint
-      return NextResponse.json({ error: "A bucket with this name already exists." }, { status: 409 });
+    console.error('Error creating bucket:', error);
+    if (error.code === '23505') {
+      // Handle unique name constraint
+      return NextResponse.json(
+        { error: 'A bucket with this name already exists.' },
+        { status: 409 },
+      );
     }
-    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error.' },
+      { status: 500 },
+    );
   }
 }
-
 
 // --- UPDATE a bucket's folder location ---
 export async function PATCH(req: NextRequest) {
   try {
-    const { bucketId, newFolderId } = (await req.json()) as { bucketId: number; newFolderId: number };
+    const { bucketId, newFolderId } = (await req.json()) as {
+      bucketId: number;
+      newFolderId: number;
+    };
 
     if (!bucketId || !newFolderId) {
-      return NextResponse.json({ error: "Both bucketId and newFolderId are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Both bucketId and newFolderId are required.' },
+        { status: 400 },
+      );
     }
 
     // This transaction guarantees data integrity. It's automatically committed on success or rolled back on error.
-    await sql.begin(async (sql) => {
+    await sql.begin(async sql => {
       // 1. Remove all existing folder associations for this bucket
       await sql`
         DELETE FROM folder_buckets WHERE bucket_id = ${bucketId}
@@ -75,18 +98,19 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       message: `Bucket ${bucketId} was successfully moved to folder ${newFolderId}.`,
     });
-
   } catch (error) {
-    console.error("Error moving bucket:", error);
-    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+    console.error('Error moving bucket:', error);
+    return NextResponse.json(
+      { error: 'Internal server error.' },
+      { status: 500 },
+    );
   }
 }
-
 
 export async function GET() {
   try {
     const { rows } = await query(
-          `SELECT
+      `SELECT
             b.id AS bucket_id,
             b.name AS bucket_name,
             b.is_private AS private,
@@ -121,11 +145,14 @@ export async function GET() {
           JOIN
             folder_buckets AS fb ON b.id = fb.bucket_id
           JOIN
-            folders AS f ON fb.folder_id = f.id`
-        );
+            folders AS f ON fb.folder_id = f.id`,
+    );
     return NextResponse.json({ buckets: rows });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to fetch buckets' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch buckets' },
+      { status: 500 },
+    );
   }
 }

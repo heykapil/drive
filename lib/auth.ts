@@ -1,45 +1,68 @@
-'use server';
+import { IronSession, SessionOptions, getIronSession } from 'iron-session';
 import { cookies } from 'next/headers';
-import { verifyJWT } from './helpers/jose';
+import * as client from 'openid-client';
 
-export async function getSession() {
-  const cookie = await cookies();
-  const secureCookie: boolean =
-    process.env.BETTER_AUTH_URL?.startsWith('https://') || false;
-  const cookiePrefix = secureCookie ? '__Secure-' : '';
-  const session_token =
-    cookie.get(`${cookiePrefix}kapil.app.session_token`)?.value || '';
-  const session_data =
-    cookie.get(`${cookiePrefix}kapil.app.sessionData`)?.value || '';
-  if (!session_token || !session_data) return null;
-  try {
-    const session = (await verifyJWT(session_data)) as Session;
-    return session;
-  } catch (e: any) {
-    console.log(e);
-    return null;
-  }
+export const clientConfig = {
+  url: process.env.NEXT_PUBLIC_OIDC_URL,
+  audience: process.env.NEXT_PUBLIC_OIDC_URL,
+  client_id: process.env.NEXT_PUBLIC_CLIENT_ID,
+  scope: process.env.NEXT_PUBLIC_SCOPE,
+  redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/oidc`,
+  post_logout_redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}`,
+  response_type: 'code',
+  grant_type: 'authorization_code',
+  post_login_route: `${process.env.NEXT_PUBLIC_APP_URL}`,
+  code_challenge_method: 'S256',
+};
+
+export interface SessionData {
+  isLoggedIn: boolean;
+  access_token?: string;
+  code_verifier?: string;
+  state?: string;
+  userInfo?: {
+    sub: string;
+    name: string;
+    email: string;
+    email_verified: boolean;
+    username?: string;
+    role?: string;
+  };
 }
 
-export type Session = {
-  session: {
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
-    userId: string;
-    expiresAt: Date;
-    token: string;
-    ipAddress?: string | null | undefined | undefined;
-    userAgent?: string | null | undefined | undefined;
-  };
-  user: {
-    id: string;
-    email: string;
-    emailVerified: boolean;
-    name: string;
-    createdAt: Date;
-    updatedAt: Date;
-    image?: string | null | undefined | undefined;
-    username?: string | null | undefined;
-  };
-} | null;
+export const defaultSession: SessionData = {
+  isLoggedIn: false,
+  access_token: undefined,
+  code_verifier: undefined,
+  state: undefined,
+  userInfo: undefined,
+};
+
+export const sessionOptions: SessionOptions = {
+  password: process.env.BETTER_AUTH_SECRET!,
+  cookieName: 'next_js_session',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+  ttl: 60 * 60 * 24 * 7, // 1 week
+};
+
+export async function getSession(): Promise<IronSession<SessionData>> {
+  const cookiesList = await cookies();
+  const session = await getIronSession<SessionData>(
+    cookiesList,
+    sessionOptions,
+  );
+  if (!session.isLoggedIn) {
+    session.access_token = defaultSession.access_token;
+    session.userInfo = defaultSession.userInfo;
+  }
+  return session;
+}
+
+export async function getClientConfig() {
+  return await client.discovery(
+    new URL(clientConfig.url!),
+    clientConfig.client_id!,
+  );
+}
