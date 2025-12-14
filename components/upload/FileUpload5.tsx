@@ -1,6 +1,4 @@
-"use client";
-
-import { Button } from "@/components/ui/button";
+import { getUploadToken } from "@/lib/actions/auth-token";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { runPromisePool } from "@/lib/helpers/promise-pool";
 import { cn, getFileType, getFileTypeFromFilename } from "@/lib/utils";
@@ -12,7 +10,7 @@ import { toast } from "sonner";
 import { BucketSelector } from "../bucket-selector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { FileRow2 } from "./FileRow2";
-import { signJWT } from "@/lib/helpers/jose";
+import { Button } from "../ui/button";
 
 // Unique ID Generator
 const generateId = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -147,10 +145,9 @@ export function FileUpload5({
                 formData.append("file", file);
                 formData.append("bucket_id", selectedBucketId!.toString());
                 formData.append("prefix", "/uploads"); // Default prefix
-                const token = await signJWT({
-                    sub: 'user123',
-                    name: 'Test User'
-                }, '1h');
+
+                const token = await getUploadToken();
+
                 await axios.post('https://api.kapil.app/upload/local', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',

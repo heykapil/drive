@@ -3,13 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useBucketStore } from "@/hooks/use-bucket-store";
+import { getUploadToken } from "@/lib/actions/auth-token";
 import { cn } from "@/lib/utils";
 import { CloudUpload, Loader2, Plus, Terminal } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { BucketSelector } from "../bucket-selector";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
-import { signJWT } from "@/lib/helpers/jose";
 
 interface JobStatus {
     job_id: string;
@@ -57,10 +58,7 @@ export default function RemoteUpload4() {
                 bucket_id: selectedBucketId,
                 prefix: "/uploads" // Default prefix as per requirements
             };
-            const token = await signJWT({
-                sub: 'user123',
-                name: 'Test User'
-            }, '1h');
+            const token = await getUploadToken();
             const res = await fetch('https://api.kapil.app/upload/remote', {
                 method: 'POST',
                 headers: {
@@ -93,20 +91,23 @@ export default function RemoteUpload4() {
     useEffect(() => {
         if (!jobId) return;
 
-        // Poll every 2 seconds
-        const interval = setInterval(async () => {
+        let intervalId: NodeJS.Timeout;
+
+        const poll = async () => {
             try {
-                const res = await fetch(`https://api.kapil.app/upload/status/${jobId}`);
+                const token = await getUploadToken();
+                const res = await fetch(`https://api.kapil.app/upload/status/${jobId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
                 if (res.ok) {
                     const data = await res.json();
                     setJobStatus(prev => ({ ...prev, ...data }));
 
-                    // Stop polling if completed or failed (assuming status field indicates this)
-                    // If the API doesn't return an explicit status field for completion, 
-                    // we might need to rely on processed_count matching queued_count or specific messages.
-                    // For now, valid 'completed' or 'failed' status stops it.
                     if (data.status === 'completed' || data.status === 'failed') {
-                        clearInterval(interval);
+                        clearInterval(intervalId);
                         if (data.status === 'completed') toast.success("Remote upload job completed!");
                         if (data.status === 'failed') toast.error("Remote upload job failed.");
                     }
@@ -114,9 +115,12 @@ export default function RemoteUpload4() {
             } catch (err) {
                 console.error("Polling error", err);
             }
-        }, 2000);
+        };
 
-        return () => clearInterval(interval);
+        // Poll every 2 seconds
+        intervalId = setInterval(poll, 2000);
+
+        return () => clearInterval(intervalId);
     }, [jobId]);
 
     const hasJob = !!jobId;
