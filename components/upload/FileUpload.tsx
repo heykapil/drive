@@ -1,7 +1,7 @@
 'use client'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileUpload4 } from "./FileUpload4";
-import RemoteUpload3 from "./RemoteUpload3";
+import { FileUpload5 } from "./FileUpload5";
+import RemoteUpload4 from "./RemoteUpload4";
 
 export default function FileUpload({
   testS3ConnectionAction,
@@ -17,16 +17,12 @@ export default function FileUpload({
         <TabsTrigger value="remote">Remote URL</TabsTrigger>
       </TabsList>
       <TabsContent value="local">
-        <FileUpload4
+        <FileUpload5
           testS3ConnectionAction={testS3ConnectionAction}
-          encryptBucketConfigAction={encryptBucketConfigAction}
         />
       </TabsContent>
       <TabsContent value="remote">
-        <RemoteUpload3
-          encryptBucketConfig={encryptBucketConfigAction}
-          testS3ConnectionAction={testS3ConnectionAction}
-        />
+        <RemoteUpload4 />
       </TabsContent>
     </Tabs>
   );
