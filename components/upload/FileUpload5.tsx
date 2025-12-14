@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { BucketSelector } from "../bucket-selector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { FileRow2 } from "./FileRow2";
+import { signJWT } from "@/lib/helpers/jose";
 
 // Unique ID Generator
 const generateId = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -146,10 +147,14 @@ export function FileUpload5({
                 formData.append("file", file);
                 formData.append("bucket_id", selectedBucketId!.toString());
                 formData.append("prefix", "/uploads"); // Default prefix
-
+                const token = await signJWT({
+                    sub: 'user123',
+                    name: 'Test User'
+                }, '1h');
                 await axios.post('https://api.kapil.app/upload/local', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
+                        "Authorization": `Bearer ${token}`,
                     },
                     signal: controller.signal,
                     onUploadProgress: (progressEvent) => {

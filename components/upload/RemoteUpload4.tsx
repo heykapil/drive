@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { BucketSelector } from "../bucket-selector";
 import { Switch } from "../ui/switch";
+import { signJWT } from "@/lib/helpers/jose";
 
 interface JobStatus {
     job_id: string;
@@ -56,11 +57,15 @@ export default function RemoteUpload4() {
                 bucket_id: selectedBucketId,
                 prefix: "/uploads" // Default prefix as per requirements
             };
-
+            const token = await signJWT({
+                sub: 'user123',
+                name: 'Test User'
+            }, '1h');
             const res = await fetch('https://api.kapil.app/upload/remote', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(payload)
             });
