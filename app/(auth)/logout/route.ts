@@ -11,7 +11,7 @@ export async function GET() {
   const openIdClientConfig = await getClientConfig();
   const endSessionUrl = client.buildEndSessionUrl(openIdClientConfig, {
     post_logout_redirect_uri: clientConfig.post_logout_redirect_uri,
-    id_token_hint: session.id_token!,
+    id_token_hint: session.id_token || undefined,
   });
   session.isLoggedIn = defaultSession.isLoggedIn;
   session.access_token = defaultSession.access_token;

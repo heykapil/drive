@@ -96,18 +96,23 @@ export const getSession = cache(async function getSession(): Promise<IronSession
           session.expires_at = Math.floor(Date.now() / 1000) + tokenSet.expires_in;
         }
         await session.save();
-      } catch (error) {
+      } catch (error: any) {
         console.error('[Auth] Failed to refresh token:', error);
+        // Log the response body if available
+        if (error.response && error.response.body) {
+          console.error('[Auth] Error Body:', error.response.body);
+        }
+
         session.isLoggedIn = false;
-        session.access_token = undefined;
-        session.refresh_token = undefined;
-        session.id_token = undefined;
-        session.userInfo = undefined;
+        session.access_token = defaultSession.access_token;
+        session.refresh_token = defaultSession.refresh_token;
+        session.id_token = defaultSession.id_token;
+        session.userInfo = defaultSession.userInfo;
         await session.save();
       }
     }
   } else {
-    // console.log(`[Auth] No refresh needed or missing data. LoggedIn=${session.isLoggedIn}`);
+    console.log(`[Auth] No refresh needed or missing data. LoggedIn=${session.isLoggedIn}`);
   }
 
   return session;
