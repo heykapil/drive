@@ -1,12 +1,13 @@
 {
   "name": "drive",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "bump": "bunx bumpp --execute 'git add .' --commit 'chore: release v%s' --tag 'v%s' --push",
     "migrate:buckets": "ts-node --require tsconfig-paths/register migration.ts"
   },
   "dependencies": {
