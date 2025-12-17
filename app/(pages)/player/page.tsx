@@ -64,13 +64,18 @@ const TERABOX_DOMAINS = [
     'mirrobox.com',
     'momerybox.com',
     'teraboxshare.com',
+    'terasharefile.com',
 ]
 
 // --- Helper Functions ---
 
 function detectService(url: string): ServiceType {
     try {
-        const urlObj = new URL(url)
+        let text = url.trim()
+        if (!text.match(/^https?:\/\//)) {
+            text = 'https://' + text
+        }
+        const urlObj = new URL(text)
         const hostname = urlObj.hostname.toLowerCase()
         if (TERABOX_DOMAINS.some(domain => hostname.includes(domain))) {
             return 'terabox'
