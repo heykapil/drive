@@ -73,7 +73,7 @@ const navLinks = [
     icon: <FolderOpen className="h-5 w-5 text-muted-foreground" />,
   },
   {
-    href: '/player/yt-dlp',
+    href: '/player',
     label: 'Player',
     icon: <VideoIcon className="h-5 w-5 text-muted-foreground" />,
   },

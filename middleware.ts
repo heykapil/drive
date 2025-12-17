@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
         response,
         sessionOptions
     );
-
+    const production = process.env.NODE_ENV === 'production';
     const path = request.nextUrl.pathname;
 
     // Public paths that don't require authentication
@@ -28,12 +28,12 @@ export async function middleware(request: NextRequest) {
         path.includes('.'); // File extensions like .png, .ico, etc.
 
     // 1. Global Auth Guard
-    if (!session.isLoggedIn && !isPublic) {
+    if (production && !session.isLoggedIn && !isPublic) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
     // 2. Token Refresh Logic
-    if (session.isLoggedIn && session.expires_at && session.refresh_token) {
+    if (production && session.isLoggedIn && session.expires_at && session.refresh_token) {
         const expiresAtMs = session.expires_at * 1000;
         const refreshThreshold = expiresAtMs - (5 * 60 * 1000); // 5 minutes before expiry
         const now = Date.now();
