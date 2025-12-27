@@ -43,9 +43,9 @@ export function FileGridView({ files, selectedFiles, actions }: FileViewProps) {
                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 loading="lazy"
                             />
-                        ) : file.is_public && (file.type.startsWith("video/") || file.filename?.match(/\.(mp4|webm|ogg|mov)$/)) ? (
+                        ) : file.type.startsWith("video/") || file.filename?.match(/\.(mp4|webm|ogg|mov)$/) ? (
                             <div className="w-full h-full">
-                                <VideoPlayer url={file.url} id={file.id} />
+                                <img src={file.thumbnail} alt={file.filename} className="w-full h-full object-cover" id={file.id} />
                             </div>
                         ) : (
                             <div className="w-full h-full flex items-center justify-center p-6">

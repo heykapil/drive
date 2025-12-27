@@ -48,7 +48,7 @@ interface RemoteUploadProps {
 }
 
 export default function RemoteUpload3({ encryptBucketConfig, testS3ConnectionAction }: RemoteUploadProps) {
-    const { selectedBucketId, isLoading } = useBucketStore();
+    const { selectedUniqueId: selectedBucketId, isLoading } = useBucketStore();
 
     const [state, setState] = useState<RemoteFileState>({
         files: [],
@@ -176,7 +176,7 @@ export default function RemoteUpload3({ encryptBucketConfig, testS3ConnectionAct
 
                 await uploadMultipart(
                     url,
-                    selectedBucketId as number,
+                    parseInt(selectedBucketId!, 10),
                     progressAdapter as any,
                     encryptBucketConfig,
                     proxy ? undefined : "",

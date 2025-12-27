@@ -10,6 +10,7 @@ import { VideoPlayer } from '@/components/viewer/VideoPlayer5'
 import { ytDlp } from '@/lib/actions'
 import { getUploadToken } from '@/lib/actions/auth-token'
 import { cn } from '@/lib/utils'
+import { client } from '@/lib/terabox-client'
 import { Download, Info, Link2, Loader2, Play, Search, Video } from 'lucide-react'
 import React, { useState } from 'react'
 
@@ -147,16 +148,12 @@ export default function StandardPlayerPage() {
                 setYtdlpData(json.data)
                 if (json.data.formats?.length) setSelectedFormat(json.data.formats[0].format_id)
             } else {
-                const token = await getUploadToken()
-                const res = await fetch('https://api.kapil.app/terabox/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ url: inputUrl, password: '' }),
-                })
-                if (!res.ok) throw new Error('Network error')
-                const json = await res.json()
-                if (!json.success) throw new Error(json.error || 'Failed to fetch Terabox file')
-                setTeraboxData(json)
+                const res = await client.terabox.teraboxDownload({ url: inputUrl })
+                if (!res.success) throw new Error(res.error || 'Failed to fetch Terabox file')
+                // Mapping the response to TeraboxResponse structure expected by state
+                // The client returns { success, data: { list: [...] } } which matches TeraboxResponse interface roughly
+                // But let's be explicit
+                setTeraboxData(res as unknown as TeraboxResponse)
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Something went wrong')

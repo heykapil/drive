@@ -36,8 +36,8 @@ interface UploadPart {
 
 export function FileUpload({
   testS3ConnectionAction
-}: {testS3ConnectionAction: (bucketIds: number| number[])=> Promise<any>}) {
-  const { selectedBucketId, selectedBucketName, isLoading } = useBucketStore();
+}: { testS3ConnectionAction: (bucketIds: number | number[]) => Promise<any> }) {
+  const { selectedUniqueId: selectedBucketId, selectedBucketName, isLoading } = useBucketStore();
   const [state, setState] = useState<FileState>({
     files: [],
     uploadingFiles: {},
@@ -283,7 +283,7 @@ export function FileUpload({
       );
     }
     const parts: UploadPart[] = await runPromisePool(chunkTasks, maxConcurrentChunks);
-    await completeMultipartUpload(file, uploadId, key,  contentType, parts, fileName);
+    await completeMultipartUpload(file, uploadId, key, contentType, parts, fileName);
   };
 
   // Upload a single chunk with retry logic.
@@ -458,7 +458,7 @@ export function FileUpload({
           </Select>
         </div>
         <div className="flex flex-row space-x-2 items-center">
-           <label className="block text-sm font-medium mb-1">Concurrent Chunks</label>
+          <label className="block text-sm font-medium mb-1">Concurrent Chunks</label>
           <Select
             value={maxConcurrentChunks.toString()}
             onValueChange={(value) => setMaxConcurrentChunks(parseInt(value))}
@@ -496,13 +496,13 @@ export function FileUpload({
           </Select>
         </div>*/}
         <div className="flex flex-row gap-2">
-        <label className="block text-sm font-medium mb-1">
-          Proxy
-        </label>
-        <Switch
-          checked={proxy}
-          onCheckedChange={setProxy}
-        />
+          <label className="block text-sm font-medium mb-1">
+            Proxy
+          </label>
+          <Switch
+            checked={proxy}
+            onCheckedChange={setProxy}
+          />
         </div>
       </div>
       <div className="flex flex-col space-y-4">

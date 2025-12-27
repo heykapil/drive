@@ -20,23 +20,28 @@ export function useFolderStructure() {
         }
 
         // 2. If not cached, fetch from both APIs in parallel for efficiency
-        const [foldersResponse, bucketsResponse] = await Promise.all([
-          fetch(process.env.NEXT_PUBLIC_APP_URL+'/api/folders/all'),
-          fetch(process.env.NEXT_PUBLIC_APP_URL+'/api/buckets/postgres')
+        const [foldersResponse, s3Response, tbResponse] = await Promise.all([
+          fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/folders/all'),
+          fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/postgres'),
+          fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/terabox/postgres')
         ]);
 
         if (!foldersResponse.ok) {
           throw new Error('Failed to fetch folder list');
         }
-        if (!bucketsResponse.ok) {
+        if (!s3Response.ok) {
           throw new Error('Failed to fetch bucket data');
         }
 
         const allFolders: Folder[] = await foldersResponse.json();
-        const bucketsData = await bucketsResponse.json();
+        const s3Data = await s3Response.json();
+        const tbData = await tbResponse.ok ? await tbResponse.json() : { buckets: [] };
+
+        const s3Buckets = (s3Data.buckets || []).map((b: any) => ({ ...b, bucketType: 'S3', uniqueId: `s3_${b.bucket_id}` }));
+        const tbBuckets = (tbData.buckets || []).map((b: any) => ({ ...b, bucketType: 'TB', uniqueId: `tb_${b.bucket_id}` }));
 
         // 3. Build the tree using both data sources
-        const tree = buildFolderTree(allFolders, bucketsData.buckets);
+        const tree = buildFolderTree(allFolders, [...s3Buckets, ...tbBuckets]);
 
         // 4. Save to session storage and update state
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tree));

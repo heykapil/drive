@@ -65,7 +65,7 @@ export function FileUpload4({
     testS3ConnectionAction: (bucketIds: number | number[]) => Promise<any>,
     encryptBucketConfigAction?: (bucketId: number) => Promise<string>
 }) {
-    const { selectedBucketId, isLoading } = useBucketStore();
+    const { selectedUniqueId: selectedBucketId, isLoading } = useBucketStore();
 
     const [state, setState] = useState<FileState>({
         files: [],
@@ -382,7 +382,7 @@ export function FileUpload4({
                     formData.append("chunk", new Blob([chunkBlob]));
 
                     if (encryptBucketConfigAction) {
-                        formData.append("s3config", await encryptBucketConfigAction(selectedBucketId as number));
+                        // formData.append("s3config", await encryptBucketConfigAction(selectedBucketId as number));
                     }
 
                     let url = `/api/upload/multipart/chunk?bucket=${selectedBucketId}`;

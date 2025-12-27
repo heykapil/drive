@@ -20,7 +20,7 @@ export default async function UploadsPage({
     <>
       <h1 className="text-2xl font-bold px-1">My files</h1>
       <Suspense fallback={<Loading />}>
-        <FileList bucketId={parseInt(bucketId, 10)} />
+        <FileList bucketId={bucketId} />
       </Suspense>
     </>
   );

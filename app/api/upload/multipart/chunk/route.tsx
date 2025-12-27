@@ -7,26 +7,46 @@ export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const bucketIdParam = searchParams.get("bucket");
+    let bucketId: number | undefined;
+    let bucketType: 'S3' | 'TB' = 'S3';
 
-    const bucketId = bucketIdParam ? parseInt(bucketIdParam, 10) : NaN;
+    if (bucketIdParam) {
+      if (bucketIdParam.startsWith('s3_')) {
+        bucketId = parseInt(bucketIdParam.replace('s3_', ''), 10);
+        bucketType = 'S3';
+      } else if (bucketIdParam.startsWith('tb_')) {
+        bucketId = parseInt(bucketIdParam.replace('tb_', ''), 10);
+        bucketType = 'TB';
+      } else {
+        bucketId = parseInt(bucketIdParam, 10);
+        bucketType = 'S3';
+      }
+    }
 
     if (!bucketId || isNaN(bucketId) || bucketId <= 0) {
-        return NextResponse.json({
-          success: false,
-          error: "Bucket ID must be a positive integer",
-        });
-      }
+      return NextResponse.json({
+        success: false,
+        error: "Invalid Bucket ID provided",
+      });
+    }
+
+    if (bucketType === 'TB') {
+      return NextResponse.json({
+        success: false,
+        error: "Terabox multipart upload not yet supported",
+      }, { status: 400 });
+    }
 
     const bucketConfigArray = await getBucketConfig(bucketId)
 
-    if(bucketConfigArray.length===0){
-      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
+    if (bucketConfigArray.length === 0) {
+      return NextResponse.json({ success: false, error: 'Wrong bucket id provided' })
     }
 
     const bucketConfig = bucketConfigArray[0];
 
-    if(!bucketConfig.name){
-      return NextResponse.json({success: false, error: 'Wrong bucket id provided'})
+    if (!bucketConfig.name) {
+      return NextResponse.json({ success: false, error: 'Wrong bucket id provided' })
     }
 
     // Parse multipart/form-data
@@ -38,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     // Validate required fields
     if (!uploadId || !key || !partNumber || !chunk) {
-      console.error( "Missing required fields", {
+      console.error("Missing required fields", {
         uploadId,
         key,
         partNumber,

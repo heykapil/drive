@@ -9,7 +9,7 @@ interface CacheItem {
 
 const CACHE_DURATION_MS = 7000 * 1000; // 7000 seconds (slightly less than 7200 to be safe)
 
-export function useFileUrlCache(selectedBucketId: number | null) {
+export function useFileUrlCache(selectedBucketId: string | number | null) {
     const urlCache = useRef<Map<string, CacheItem>>(new Map());
 
     const getDownloadUrl = async (id: string) => {
@@ -26,7 +26,8 @@ export function useFileUrlCache(selectedBucketId: number | null) {
         }
 
         try {
-            const res = await fetch(`/api/files/url?bucket=${selectedBucketId}&fileId=${id}&expiresIn=7200`);
+            const bucketParam = selectedBucketId ? `&bucket=${selectedBucketId}` : '';
+            const res = await fetch(`/api/files/url?fileId=${id}&expiresIn=7200${bucketParam}`);
             const { url, error } = await res.json();
 
             if (error) {
@@ -49,10 +50,19 @@ export function useFileUrlCache(selectedBucketId: number | null) {
     const getPreviewUrl = async (file: any) => {
         // If file is public, check if we can use the direct URL
         if (file.is_public) {
-            const bucket = getBucketInfo(file.bucket_id || selectedBucketId || 0);
-            // If it's not Synology (or assumed safe), use the direct URL. 
-            if (bucket?.provider !== 'synology') {
+            // Use bucket_id from file, or fallback to selected.
+            // If file has specific bucket_id or tb_bucket_id, we should use that to look up info if needed.
+            // For now, passing the selectedBucketId (which might be unified string) is fine as getBucketInfo handles it.
+            const bucketIdToUse = file.bucket_id || selectedBucketId || (file.tb_bucket_id ? `tb_${file.tb_bucket_id}` : 0);
+            const bucket = getBucketInfo(bucketIdToUse);
+            // If it's not Synology (or assumed safe) and NOT Terabox, use the direct URL.
+            // Terabox files (bucketType === 'TB') always need a generated/proxied URL.
+            if (bucket?.provider !== 'synology' && bucket?.bucketType !== 'TB') {
                 return file.url;
+            }
+
+            if (bucket?.bucketType === 'TB') {
+                return `/api/files/stream/${file.id}/index.m3u8`;
             }
         }
         // Fallback to generating a signed/download URL

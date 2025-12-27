@@ -17,9 +17,9 @@ interface BucketState {
   setSelectedFolder: (id: number, name: string) => void;
 
   // State for selected bucket
-  selectedBucketId: number | null;
+  selectedUniqueId: string | null;
   selectedBucketName: string;
-  setSelectedBucket: (id: number, name: string) => void;
+  setSelectedBucket: (uniqueId: string, name: string) => void;
 }
 
 export const useBucketStore = create<BucketState>()(
@@ -31,17 +31,16 @@ export const useBucketStore = create<BucketState>()(
       error: null,
       selectedFolderId: 1,
       selectedFolderName: 'general',
-      selectedBucketId: 9,
+      selectedUniqueId: 's3_9',
       selectedBucketName: 'cdn.kapil.app',
 
       // Action to set the selected bucket manually
-      setSelectedBucket: (id: number, name: string) => set({
-        selectedBucketId: id,
+      setSelectedBucket: (uniqueId: string, name: string) => set({
+        selectedUniqueId: uniqueId,
         selectedBucketName: name
       }),
 
-      // --- CORRECTED ACTION ---
-      // This action now correctly finds the folder and selects the best bucket.
+      // Action now correctly finds the folder and selects the best bucket.
       setSelectedFolder: (id: number, name: string) => {
         const { folderTree } = get();
 
@@ -50,7 +49,6 @@ export const useBucketStore = create<BucketState>()(
         const findStartNode = (nodes: FolderNode[]) => {
           for (const node of nodes) {
             if (startNode) return; // Optimization: stop searching once found
-            // FIX: The property on the node is `folder_id`, not `id`.
             if (node.folder_id === id) {
               startNode = node;
               return;
@@ -66,9 +64,7 @@ export const useBucketStore = create<BucketState>()(
         if (startNode) {
           const traverse = (node: FolderNode) => {
             // Check buckets in the current folder
-            node.buckets.forEach(bucket => {
-              // FIX: Convert storage strings to numbers for correct numerical comparison.
-              // This resolves both the wrong selection and the TypeScript 'never' type error.
+            node.buckets.forEach((bucket: Bucket) => {
               const currentBestStorage = bestBucket ? parseFloat(bestBucket.available_storage_gb as string) : -1;
               const candidateStorage = parseFloat(bucket.available_storage_gb as string);
 
@@ -86,10 +82,8 @@ export const useBucketStore = create<BucketState>()(
         set({
           selectedFolderId: id,
           selectedFolderName: name,
-          // @ts-ignore
-          selectedBucketId: bestBucket ? bestBucket?.bucket_id : null,
-          // @ts-ignore
-          selectedBucketName: bestBucket ? bestBucket?.bucket_name : 'No buckets available',
+          selectedUniqueId: bestBucket ? (bestBucket as Bucket).uniqueId : null,
+          selectedBucketName: bestBucket ? (bestBucket as Bucket).bucket_name : 'No buckets available',
         });
       },
 
@@ -100,21 +94,45 @@ export const useBucketStore = create<BucketState>()(
         }
         set({ isLoading: true, error: null });
         try {
-          const [foldersResponse, bucketsResponse] = await Promise.all([
+          const [foldersResponse, s3Response, tbResponse] = await Promise.all([
             fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/folders/all'),
-            fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/postgres')
+            fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/postgres'),
+            fetch(process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/terabox/postgres')
           ]);
 
           if (!foldersResponse.ok) throw new Error(`Failed to fetch folders: ${foldersResponse.statusText}`);
-          if (!bucketsResponse.ok) throw new Error(`Failed to fetch buckets: ${bucketsResponse.statusText}`);
+          if (!s3Response.ok) throw new Error(`Failed to fetch S3 buckets`);
 
           const allFolders: Folder[] = await foldersResponse.json();
-          const bucketData = await bucketsResponse.json();
-          const tree = buildFolderTree(allFolders, bucketData.buckets);
+          const s3Data = await s3Response.json();
+
+          let tbBuckets: any[] = [];
+          if (tbResponse.ok) {
+            const tbData = await tbResponse.json();
+            tbBuckets = tbData.buckets || [];
+          }
+
+          // Merge and Transform buckets
+          const s3Buckets = (s3Data.buckets || []).map((b: any) => ({
+            ...b,
+            bucketType: 'S3',
+            uniqueId: `s3_${b.bucket_id}`
+          }));
+
+          const teraboxBuckets = tbBuckets.map((b: any) => ({
+            ...b,
+            bucketType: 'TB',
+            uniqueId: `tb_${b.bucket_id}`
+          }));
+
+          const allBuckets = [...s3Buckets, ...teraboxBuckets];
+
+          const tree = buildFolderTree(allFolders, allBuckets);
 
           set({ folderTree: tree, isLoading: false });
 
         } catch (err) {
+          console.error(err);
           const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
           set({ error: errorMessage, isLoading: false });
         }
@@ -127,7 +145,7 @@ export const useBucketStore = create<BucketState>()(
         folderTree: state.folderTree,
         selectedFolderId: state.selectedFolderId,
         selectedFolderName: state.selectedFolderName,
-        selectedBucketId: state.selectedBucketId,
+        selectedUniqueId: state.selectedUniqueId,
         selectedBucketName: state.selectedBucketName,
       }),
     }
@@ -183,30 +201,35 @@ export function getBucketIdsFromFolderId(folderId: number): number[] {
 }
 
 /**
- * Finds and returns the complete information for a specific bucket by its ID.
+ * Finds and returns the complete information for a specific bucket by its uniqueID (or numeric ID legacy).
  *
- * @param bucketId The ID of the bucket to find.
+ * @param bucketId The uniqueID (string) or ID (number) of the bucket to find.
  * @returns The full Bucket object if found, otherwise null.
  */
-export function getBucketInfo(bucketId: number): Bucket | null {
+export function getBucketInfo(bucketIdentifier: string | number): Bucket | null {
   const { folderTree } = useBucketStore.getState();
   let foundBucket: Bucket | null = null;
+  const isNumeric = typeof bucketIdentifier === 'number' || (typeof bucketIdentifier === 'string' && !isNaN(Number(bucketIdentifier)) && !bucketIdentifier.includes('_'));
+  const numericId = isNumeric ? Number(bucketIdentifier) : -1;
 
   const traverse = (nodes: FolderNode[]) => {
     for (const node of nodes) {
       if (foundBucket) return; // Optimization
 
-      // Search for the bucket in the current node's bucket list
-      const bucket = node.buckets.find(b => b.bucket_id === bucketId);
+      // Search (try uniqueId match first, then fallback to bucket_id match for S3 backward compat)
+      const bucket = node.buckets.find(b => {
+        if (b.uniqueId === bucketIdentifier) return true;
+        // Legacy: if passing number, assume S3 or first match
+        if (isNumeric && b.bucket_id === numericId) return true;
+        return false;
+      });
+
       if (bucket) {
         foundBucket = bucket;
         return;
       }
 
-      // If not found, continue searching in children
-      if (node.children.length > 0) {
-        traverse(node.children);
-      }
+      if (node.children.length > 0) traverse(node.children);
     }
   };
 
@@ -215,21 +238,24 @@ export function getBucketInfo(bucketId: number): Bucket | null {
 }
 
 /**
- * Finds and returns the parent folder's information for a specific bucket by its ID.
- *
- * @param bucketId The ID of the bucket whose parent folder you want to find.
- * @returns An object with the folder's details if found, otherwise null.
+ * Finds and returns the parent folder's information for a specific bucket.
  */
-export function getFolderInfoFromBucketId(bucketId: number): { folder_id: number; folder_name: string; folder_parent_id: number | null } | null {
+export function getFolderInfoFromBucketId(bucketIdentifier: string | number): { folder_id: number; folder_name: string; folder_parent_id: number | null } | null {
   const { folderTree } = useBucketStore.getState();
   let foundFolderInfo: { folder_id: number; folder_name: string; folder_parent_id: number | null } | null = null;
+  const isNumeric = typeof bucketIdentifier === 'number' || (typeof bucketIdentifier === 'string' && !isNaN(Number(bucketIdentifier)) && !bucketIdentifier.includes('_'));
+  const numericId = isNumeric ? Number(bucketIdentifier) : -1;
 
   const traverse = (nodes: FolderNode[]) => {
     for (const node of nodes) {
-      if (foundFolderInfo) return; // Optimization
+      if (foundFolderInfo) return;
 
-      // Check if the bucket exists in the current folder
-      const bucketExists = node.buckets.some(b => b.bucket_id === bucketId);
+      const bucketExists = node.buckets.some(b => {
+        if (b.uniqueId === bucketIdentifier) return true;
+        if (isNumeric && b.bucket_id === numericId) return true;
+        return false;
+      });
+
       if (bucketExists) {
         foundFolderInfo = {
           folder_id: node.folder_id,
@@ -239,10 +265,7 @@ export function getFolderInfoFromBucketId(bucketId: number): { folder_id: number
         return;
       }
 
-      // If not found, continue searching in children
-      if (node.children.length > 0) {
-        traverse(node.children);
-      }
+      if (node.children.length > 0) traverse(node.children);
     }
   };
 
@@ -251,31 +274,10 @@ export function getFolderInfoFromBucketId(bucketId: number): { folder_id: number
 }
 
 /**
- * Checks if a bucket with the given ID exists in the folder tree.
- *
- * @param bucketId The ID of the bucket to validate.
- * @returns `true` if the bucket exists, otherwise `false`.
+ * Checks if a bucket with the given ID exists.
  */
-export function isValidBucketId(bucketId: number): boolean {
-  const { folderTree } = useBucketStore.getState();
-
-  const findBucket = (nodes: FolderNode[]): boolean => {
-    for (const node of nodes) {
-      // Check if the bucket exists in the current folder
-      if (node.buckets.some(b => b.bucket_id === bucketId)) {
-        return true;
-      }
-      // If not found, recurse into children
-      if (node.children.length > 0) {
-        if (findBucket(node.children)) {
-          return true; // Propagate the 'found' signal up
-        }
-      }
-    }
-    return false; // Not found in this branch
-  };
-
-  return findBucket(folderTree);
+export function isValidBucketId(bucketIdentifier: string | number): boolean {
+  return getBucketInfo(bucketIdentifier) !== null;
 }
 
 /**

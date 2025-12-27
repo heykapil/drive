@@ -116,13 +116,17 @@ export const getFileTypeFromFilename = (filename: string): string => {
 export interface Bucket {
   bucket_id: number;
   bucket_name: string;
-  private: boolean;
-  provider: string;
+  private?: boolean; // S3 specific
+  provider: string; // 'AWS', 'Terabox', etc.
   storage_used_bytes: number | string;
   total_capacity_gb: number | string;
   available_storage_gb: number | string;
   usage_percentage: number | string;
   updated_at: string | Date;
+
+  // Frontend specific unique ID to handle ID collisions between S3 and TB
+  uniqueId?: string; // e.g. "s3_123" or "tb_456"
+  bucketType?: 'S3' | 'TB';
 }
 
 // Represents a folder row from the new `/api/folders/all` endpoint

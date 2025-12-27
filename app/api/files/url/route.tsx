@@ -1,10 +1,10 @@
+import { getStreamLink } from '@/lib/actions/terabox';
 import { getBucketConfig } from '@/service/bucket.config';
 import { query } from '@/service/postgres';
 import { s3WithConfig } from '@/service/s3-tebi'; // Assuming this is the correct path
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { NextRequest, NextResponse } from 'next/server';
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { rows } = await query(
-      'SELECT key, bucket_id FROM files WHERE id = $1',
+      'SELECT key, share_id, bucket_id, tb_bucket_id FROM files WHERE id = $1',
       [fileId],
     );
 
@@ -30,12 +30,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    const bucketId = rows[0].bucket_id;
-    const bucketConfigArray = await getBucketConfig(bucketId); // Assuming getBucketConfig returns an array
+    const { key, share_id, bucket_id, tb_bucket_id } = rows[0];
+    if (tb_bucket_id) {
+      // Import dynamically to avoid circular deps if any, or just consistent with previous
+      const { getTBFileDownloadLink } = await import('@/lib/actions/terabox');
+      const downloadUrl = await getTBFileDownloadLink(tb_bucket_id, share_id || key); // Fallback to key if share_id empty? unlikely if logic correct
+      return NextResponse.json({ url: downloadUrl });
+    }
+
+    // Handle S3 Files
+    const bucketConfigArray = await getBucketConfig(bucket_id);
 
     if (!bucketConfigArray || bucketConfigArray.length === 0) {
       return NextResponse.json(
-        { error: `Configuration for bucket ${bucketId} not found` },
+        { error: `Configuration for bucket ${bucket_id} not found` },
         { status: 500 },
       );
     }
@@ -45,7 +53,7 @@ export async function GET(req: NextRequest) {
 
     const command = new GetObjectCommand({
       Bucket: bucketConfig.name,
-      Key: rows[0].key,
+      Key: key,
     });
     const url = await getSignedUrl(client, command, { expiresIn: expiresIn });
 

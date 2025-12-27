@@ -74,14 +74,14 @@ export async function getBucketConfig(bucketIds: number | number[]): Promise<Buc
 
     // Filter out any null results for IDs that were not found
     return results.filter((config: any): config is BucketConfig => config !== null)
-  } catch(error){
+  } catch (error) {
     console.error(error)
     return []
   }
 }
 
 
-export async function encryptBucketConfig(bucketId: number){
+export async function encryptBucketConfig(bucketId: number) {
   try {
     const config = await getBucketConfig(bucketId)
     const payload = {
@@ -93,13 +93,13 @@ export async function encryptBucketConfig(bucketId: number){
     }
     const token = await encryptTokenV4(payload) as string;
     return token;
-  } catch(error: any){
+  } catch (error: any) {
     console.error(error)
     throw new Error(error)
   }
 }
 
-export async function refreshBucketUsage(bucketIds: number[]){
+export async function refreshBucketUsage(bucketIds: number[]) {
   try {
     let bucketsToRefresh: { id: number }[];
     if (bucketIds && bucketIds.length > 0) {
@@ -130,7 +130,7 @@ export async function refreshBucketUsage(bucketIds: number[]){
 
     await Promise.all(updatePromises);
     return { success: true, refreshed: updatePromises.length }
-  } catch(error: any){
+  } catch (error: any) {
     throw new Error(error)
   }
 }

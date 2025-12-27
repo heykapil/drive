@@ -43,7 +43,7 @@ export function BucketSelector({
 
   const {
     selectedFolderId,
-    selectedBucketId,
+    selectedUniqueId: selectedBucketId, // Alias for component compatibility
     // We no longer need setSelectedBucket directly in this component
     folderTree,
     isLoading,
@@ -55,13 +55,22 @@ export function BucketSelector({
   const availableBuckets = useMemo(() => {
     if (!selectedFolderId) return [];
     const bucketIds = getBucketIdsFromFolderId(selectedFolderId);
+    // getBucketIds currently returns number[], which is fine for iteration 
+    // but lookup should ideally use uniqueIds if getBucketIds returned them.
+    // Since getBucketIds is still legacy number[], we rely on getBucketInfo(number) wrapper.
     return bucketIds
       .map((id) => getBucketInfo(id))
-      .filter((b): b is Bucket => b !== null);
+      .filter((b): b is Bucket => b !== null)
+      .filter((b, index, self) =>
+        index === self.findIndex((t) => (
+          t.uniqueId === b.uniqueId
+        ))
+      );
   }, [selectedFolderId, folderTree]);
 
+  // Use uniqueId for the key
   const bucketIdKey = useMemo(() => {
-    return availableBuckets.map((b) => b.bucket_id).sort().join(",");
+    return availableBuckets.map((b) => b.uniqueId).sort().join(",");
   }, [availableBuckets]);
 
   useEffect(() => {
@@ -73,9 +82,16 @@ export function BucketSelector({
       const testConnections = async () => {
         setIsTesting(true);
         try {
-          const bucketIds = availableBuckets.map((b) => b.bucket_id);
-          const results = await testS3ConnectionAction(bucketIds);
-          setStatuses(results);
+          // Only test S3 buckets for now as action expects number[]
+          // TODO: Update testS3ConnectionAction to handle uniqueIds or create testUnifiedConnection
+          const s3Ids = availableBuckets
+            .filter(b => b.bucketType === 'S3')
+            .map(b => b.bucket_id);
+
+          if (s3Ids.length > 0) {
+            const results = await testS3ConnectionAction(s3Ids);
+            setStatuses(results);
+          }
         } catch (error) {
           console.error("Failed to test S3 connections:", error);
           toast.error("Could not get bucket connection statuses.");
@@ -88,18 +104,17 @@ export function BucketSelector({
   }, [bucketIdKey, isLoading, testConnection, testS3ConnectionAction, availableBuckets]);
 
   // 3. Rewrite the handler to update the URL
-  const handleBucketChange = (bucketIdStr: string) => {
-    const bucketId = parseInt(bucketIdStr, 10);
-    const selected = availableBuckets.find((b) => b.bucket_id === bucketId);
+  const handleBucketChange = (uniqueId: string) => {
+    const selected = availableBuckets.find((b) => b.uniqueId === uniqueId); // Match by uniqueId
 
     if (selected) {
-      if (selected.bucket_id === selectedBucketId) return;
+      if (selected.uniqueId === selectedBucketId) return;
 
       // Create a mutable copy of the current search params
       const newSearchParams = new URLSearchParams(searchParams.toString());
 
       // Set the new bucketId. This will be the only change.
-      newSearchParams.set('bucketId', bucketIdStr);
+      newSearchParams.set('bucketId', uniqueId);
 
       // Push the new state to the URL.
       // The UrlStateSync component will detect this and update the Zustand store.
@@ -115,7 +130,7 @@ export function BucketSelector({
 
   return (
     <Select
-      value={selectedBucketId ? selectedBucketId.toString() : ""}
+      value={selectedBucketId || ""}
       onValueChange={handleBucketChange}
       disabled={availableBuckets.length === 0}
     >
@@ -138,8 +153,8 @@ export function BucketSelector({
             };
             return (
               <SelectItem
-                key={bucket.bucket_id}
-                value={bucket.bucket_id.toString()}
+                key={bucket.uniqueId || bucket.bucket_id}
+                value={bucket.uniqueId || bucket.bucket_id.toString()}
               >
                 <div className="flex items-center justify-between w-full">
                   <span

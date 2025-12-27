@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { ConfirmModal } from "./ConfirmModal";
 import FileIcon from "./FileIcon";
 export default function FileList() {
-  const { selectedBucketId: selectedBucket } = useBucketStore();
+  const { selectedUniqueId: selectedBucket } = useBucketStore();
   const [state, setState] = useState<Record<string, any>>({
     files: [],
     loading: false,
@@ -38,7 +38,7 @@ export default function FileList() {
     try {
       const res = await fetch(
         `/api/files?sort=${state.sort}&search=${state.search}&page=${state.page}&limit=${state.limit}`, {
-        }
+      }
       );
       const data = await res.json();
 
@@ -55,7 +55,7 @@ export default function FileList() {
         loading: false,
       }));
     } catch (error) {
-      toast.error("Error fetching files:"+ error);
+      toast.error("Error fetching files:" + error);
       setState((prev) => ({ ...prev, loading: false }));
     }
   };
@@ -64,10 +64,10 @@ export default function FileList() {
     if (!state.selectedFile) return;
     setState((prev => ({ ...prev, loading: true })));
     const { message, error } = await fetch(`/api/files`, { method: "DELETE", body: JSON.stringify({ fileId: state.selectedFile.id }) }).then((res) => res.json());
-    if(error){
+    if (error) {
       toast.error(error)
     }
-    if(message){
+    if (message) {
       toast.success(message)
     }
     setState((prev) => ({ ...prev, loading: false, modals: { ...prev.modals, delete: false } }));
@@ -81,10 +81,10 @@ export default function FileList() {
       method: "PATCH",
       body: JSON.stringify({ fileId: state.selectedFile.id, isPublic: !state.selectedFile.is_public }),
     }).then((res) => res.json());
-    if(error){
+    if (error) {
       toast.error(error)
     }
-    if(message){
+    if (message) {
       toast.success(message)
     }
     setState((prev) => ({ ...prev, loading: false, modals: { ...prev.modals, privacy: false } }));
@@ -105,13 +105,13 @@ export default function FileList() {
     }
   };
 
-  const getDownloadUrl = async(id: string) =>{
-      if (!id) return null;
-      const res = await fetch(`/api/files/url?fileId=${id}&expiresIn=7200`);
-      const {url, error} = await res.json();
-      if(error){
-        return null
-      }
+  const getDownloadUrl = async (id: string) => {
+    if (!id) return null;
+    const res = await fetch(`/api/files/url?fileId=${id}&expiresIn=7200`);
+    const { url, error } = await res.json();
+    if (error) {
+      return null
+    }
     return url;
   }
 
@@ -137,14 +137,14 @@ export default function FileList() {
           <Select onValueChange={(val) => setState({ ...state, sort: val })} defaultValue="name_asc">
             <SelectTrigger><SelectValue placeholder="Sort by" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="name_asc"><ArrowDownAZ className="mr-2"/> Alphabatically</SelectItem>
-              <SelectItem value="name_desc"><ArrowDownZA className="mr-2"/> Alphabatically</SelectItem>
-              <SelectItem value="size_asc"><ArrowDownNarrowWideIcon className="mr-2"/> Size</SelectItem>
-              <SelectItem value="size_desc"><ArrowDownWideNarrowIcon className="mr-2"/> Size</SelectItem>
-              <SelectItem value="type_asc"><ArrowUp className="mr-2"/> Type</SelectItem>
-              <SelectItem value="type_desc"><ArrowDown className="mr-2"/> Type</SelectItem>
-              <SelectItem value="uploaded_at_asc"><CalendarArrowUp className="mr-2"/> Date</SelectItem>
-              <SelectItem value="uploaded_at_desc"><CalendarArrowDown className="mr-2"/> Date</SelectItem>
+              <SelectItem value="name_asc"><ArrowDownAZ className="mr-2" /> Alphabatically</SelectItem>
+              <SelectItem value="name_desc"><ArrowDownZA className="mr-2" /> Alphabatically</SelectItem>
+              <SelectItem value="size_asc"><ArrowDownNarrowWideIcon className="mr-2" /> Size</SelectItem>
+              <SelectItem value="size_desc"><ArrowDownWideNarrowIcon className="mr-2" /> Size</SelectItem>
+              <SelectItem value="type_asc"><ArrowUp className="mr-2" /> Type</SelectItem>
+              <SelectItem value="type_desc"><ArrowDown className="mr-2" /> Type</SelectItem>
+              <SelectItem value="uploaded_at_asc"><CalendarArrowUp className="mr-2" /> Date</SelectItem>
+              <SelectItem value="uploaded_at_desc"><CalendarArrowDown className="mr-2" /> Date</SelectItem>
             </SelectContent>
           </Select>
           <Select onValueChange={(val) => setState({ ...state, limit: parseInt(val) })} defaultValue="10">
@@ -171,7 +171,7 @@ export default function FileList() {
       {state.view === "grid" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {state.files.map((file: any) => (
-             <div
+            <div
               key={file?.id}
               className="relative group border rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all bg-gray-500"
             >
@@ -189,7 +189,7 @@ export default function FileList() {
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full">
                     <FileIcon fileType={file.filename} />
-                    <span className="text-sm text-gray-500">{file.type.startsWith("image/") ? 'Image file': (file.type.startsWith('video/') ? 'Video file': 'Unknown file')}</span>
+                    <span className="text-sm text-gray-500">{file.type.startsWith("image/") ? 'Image file' : (file.type.startsWith('video/') ? 'Video file' : 'Unknown file')}</span>
                   </div>
                 )}
               </div>
@@ -202,12 +202,12 @@ export default function FileList() {
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity">
                   <Button
                     onClick={async () => {
-                      const link:string = await getDownloadUrl(file.id);
+                      const link: string = await getDownloadUrl(file.id);
                       await copyToClipboard(link)
                     }}
                     size="icon"
                     variant="outline"
-                   >
+                  >
                     <Copy className="w-4 h-4" />
                   </Button>
                   <Button
@@ -245,11 +245,11 @@ export default function FileList() {
               {/* File Info */}
               <div className="flex items-center gap-3 truncate">
                 <div className="w-8 h-8 bg-gray-200 rounded-md flex items-center justify-center">
-                  <FileIcon fileType={file.filename}  />
+                  <FileIcon fileType={file.filename} />
                 </div>
                 <div className="truncate">
                   <p className="text-sm font-medium truncate max-w-[150px] sm:max-w-none">{file.filename}</p>
-                  <p className="text-xs truncate text-neutral-500 max-w-[150px] sm:max-w-none">{(file.size / 1024).toFixed(2)} KB <br/> uploaded on {new Date(file.uploaded_at).toLocaleString('en-IN', {month: 'short', day: 'numeric', year: 'numeric'})}</p>
+                  <p className="text-xs truncate text-neutral-500 max-w-[150px] sm:max-w-none">{(file.size / 1024).toFixed(2)} KB <br /> uploaded on {new Date(file.uploaded_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                 </div>
               </div>
 
@@ -259,9 +259,9 @@ export default function FileList() {
                   variant="default"
                   size="icon"
                   onClick={async () => {
-                  const link:string = await getDownloadUrl(file.id);
-                  await copyToClipboard(link)
-                }}>
+                    const link: string = await getDownloadUrl(file.id);
+                    await copyToClipboard(link)
+                  }}>
                   <Copy className="w-4 h-4" />
                 </Button>
                 <Button
@@ -285,49 +285,49 @@ export default function FileList() {
       )}
       {state.view === "list" && (
         <div className="overflow-x-auto">
-        <Table className="w-full border border-muted rounded-lg ">
-          <TableHeader>
-            <TableRow>
-              <TableHead className="font-bold">Filename</TableHead>
-              <TableHead className="font-bold">Size</TableHead>
-              <TableHead className="font-bold">Uploaded</TableHead>
-              <TableHead className="sr-only lg:not-sr-only font-bold">Visibility</TableHead>
-              <TableHead className="font-bold" align="right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {state.files.length >0 ? (state.files.map((file: any) => (
-              <TableRow key={file.id}>
-                <TableCell className="truncate max-w-[150px] sm:max-w-none">{file.filename}</TableCell>
-                <TableCell>{(file.size / 1024).toFixed(2)} KB</TableCell>
-                <TableCell>{new Date(file.uploaded_at).toLocaleDateString('en-IN')}</TableCell>
-                <TableCell className="sr-only lg:not-sr-only">{file.is_public ? "Public" : "Private"}</TableCell>
-                <TableCell align="right" className="mr-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="secondary" size="icon">...</Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setState({ ...state, selectedFile: file, modals: { ...state.modals, privacy: true } })}>
-                        {file.is_public ? <><EyeOff className="mr-2 h-4 w-4" /> Make file private</> : <><Eye className="mr-2 h-4 w-4" /> Make file public</>}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={async () => {
-                        const link:string = await getDownloadUrl(file.id);
-                        await copyToClipboard(link)
-                      }}>
-                        <Copy className="mr-2 h-4 w-4" /> Copy Link
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => setState({ ...state, selectedFile: file, modals: { ...state.modals, delete: true } })}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete file
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+          <Table className="w-full border border-muted rounded-lg ">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="font-bold">Filename</TableHead>
+                <TableHead className="font-bold">Size</TableHead>
+                <TableHead className="font-bold">Uploaded</TableHead>
+                <TableHead className="sr-only lg:not-sr-only font-bold">Visibility</TableHead>
+                <TableHead className="font-bold" align="right">Actions</TableHead>
               </TableRow>
-            ))): <TableRow><TableCell colSpan={5} className="text-left text-primary/80">No files found!</TableCell></TableRow>}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {state.files.length > 0 ? (state.files.map((file: any) => (
+                <TableRow key={file.id}>
+                  <TableCell className="truncate max-w-[150px] sm:max-w-none">{file.filename}</TableCell>
+                  <TableCell>{(file.size / 1024).toFixed(2)} KB</TableCell>
+                  <TableCell>{new Date(file.uploaded_at).toLocaleDateString('en-IN')}</TableCell>
+                  <TableCell className="sr-only lg:not-sr-only">{file.is_public ? "Public" : "Private"}</TableCell>
+                  <TableCell align="right" className="mr-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="secondary" size="icon">...</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setState({ ...state, selectedFile: file, modals: { ...state.modals, privacy: true } })}>
+                          {file.is_public ? <><EyeOff className="mr-2 h-4 w-4" /> Make file private</> : <><Eye className="mr-2 h-4 w-4" /> Make file public</>}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={async () => {
+                          const link: string = await getDownloadUrl(file.id);
+                          await copyToClipboard(link)
+                        }}>
+                          <Copy className="mr-2 h-4 w-4" /> Copy Link
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => setState({ ...state, selectedFile: file, modals: { ...state.modals, delete: true } })}>
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete file
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))) : <TableRow><TableCell colSpan={5} className="text-left text-primary/80">No files found!</TableCell></TableRow>}
+            </TableBody>
+          </Table>
         </div>
       )}
 
@@ -336,16 +336,16 @@ export default function FileList() {
       <ConfirmModal open={state.modals.privacy} onClose={() => setState({ ...state, modals: { ...state.modals, privacy: false } })} onConfirm={togglePrivacy} title="Change Privacy" description="Are you sure? You want to change the privacy of this file." confirmText={state.loading ? `Waiting...` : `Change`} />
       {/* Pagination */}
       <div className="flex justify-between items-center mt-12">
-          <Button onClick={goToPreviousPage} disabled={state.page === 1}>
-            Previous
-          </Button>
-          <span>
-            Page {state.page} of {state.totalPages}
-          </span>
-          <Button onClick={goToNextPage} disabled={state.page === state.totalPages}>
-            Next
-          </Button>
-        </div>
+        <Button onClick={goToPreviousPage} disabled={state.page === 1}>
+          Previous
+        </Button>
+        <span>
+          Page {state.page} of {state.totalPages}
+        </span>
+        <Button onClick={goToNextPage} disabled={state.page === state.totalPages}>
+          Next
+        </Button>
+      </div>
     </div>
   );
 }

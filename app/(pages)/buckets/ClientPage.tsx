@@ -23,6 +23,7 @@ import {
   useBucketStore,
 } from '@/hooks/use-bucket-store';
 import { Bucket } from '@/lib/utils';
+import { refreshBucketUsage } from '@/service/bucket.config';
 import { testS3Connection } from '@/service/s3-tebi'; // Assuming this is the correct path
 import {
   FileJson,
@@ -280,6 +281,16 @@ function BucketCard({
             </TooltipTrigger>
             <TooltipContent>Configure</TooltipContent>
           </Link>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger>
+            <Button size="icon" variant={'secondary'} onClick={async () => {
+              refreshBucketUsage([bucketInfo.bucket_id]);
+            }}>
+              <RefreshCwIcon />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Refresh usage</TooltipContent>
         </Tooltip>
       </CardFooter>
     </Card>

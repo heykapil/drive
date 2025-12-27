@@ -16,6 +16,7 @@ interface FileViewerProps {
     uploaded_at: string
     size: string
     is_public: boolean
+    thumbnail?: string | null
   }
   onClose: () => void
 }
@@ -127,7 +128,7 @@ export default function FileViewer({ previewFile, onClose }: FileViewerProps) {
           {isVideo && (
             <div className="w-full h-full flex items-center justify-center bg-black">
               <div className="w-full max-w-6xl aspect-video max-h-full">
-                <VideoPlayer url={url} id={id} />
+                <VideoPlayer url={url} id={id} poster={previewFile.thumbnail || undefined} />
               </div>
             </div>
           )}

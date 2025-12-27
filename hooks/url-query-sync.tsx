@@ -3,13 +3,13 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import {
-    getBucketInfo,
-    getFolderInfo,
-    getFolderInfoFromBucketId, // New helper function
-    isValidBucketId,
-    isValidFolderId,
+  getBucketInfo,
+  getFolderInfo,
+  getFolderInfoFromBucketId, // New helper function
+  isValidBucketId,
+  isValidFolderId,
 
-    useBucketStore
+  useBucketStore
 } from './use-bucket-store';
 
 export function UrlStateSync() {
@@ -19,7 +19,7 @@ export function UrlStateSync() {
     setSelectedFolder,
     setSelectedBucket,
     selectedFolderId,
-    selectedBucketId,
+    selectedUniqueId: selectedBucketId, // Alias for backward compatibility in this component logic
     isLoading,
     folderTree
   } = useBucketStore();
@@ -35,16 +35,16 @@ export function UrlStateSync() {
 
     // 2. Prioritize bucketId from URL if it exists and is valid.
     if (bucketIdStr) {
-      const bucketIdNum = parseInt(bucketIdStr, 10);
+      // The param can now be a string "s3_1" or classic "1"
 
       // Validate the ID before using it and check if a state change is needed.
-      if (isValidBucketId(bucketIdNum) && bucketIdNum !== selectedBucketId) {
-        const bucketInfo = getBucketInfo(bucketIdNum)!; // We know it's not null
-        const folderInfo = getFolderInfoFromBucketId(bucketIdNum)!; // We know this exists too
+      if (isValidBucketId(bucketIdStr) && bucketIdStr !== selectedBucketId) {
+        const bucketInfo = getBucketInfo(bucketIdStr)!; // We know it's not null
+        const folderInfo = getFolderInfoFromBucketId(bucketIdStr)!; // We know this exists too
 
         // Update both folder and bucket for perfect sync.
         setSelectedFolder(folderInfo.folder_id, folderInfo.folder_name);
-        setSelectedBucket(bucketInfo.bucket_id, bucketInfo.bucket_name);
+        setSelectedBucket(bucketInfo.uniqueId!, bucketInfo.bucket_name);
       }
       return; // Stop further processing if we synced based on bucketId
     }

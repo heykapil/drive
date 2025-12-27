@@ -34,7 +34,7 @@ export function FileUpload5({
 }: {
     testS3ConnectionAction: (bucketIds: number | number[]) => Promise<any>,
 }) {
-    const { selectedBucketId, isLoading } = useBucketStore();
+    const { selectedUniqueId: selectedBucketId, isLoading } = useBucketStore();
 
     const [state, setState] = useState<FileState>({
         files: [],

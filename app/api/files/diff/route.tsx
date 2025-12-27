@@ -42,7 +42,14 @@ export async function GET(req: NextRequest) {
 
     // 1. Determine Bucket IDs
     if (bucketIdParam) {
-      bucketIds = [parseInt(bucketIdParam)];
+      if (bucketIdParam.startsWith('tb_')) {
+        return NextResponse.json({ error: 'Diff not supported for Terabox yet' }, { status: 400 });
+      }
+      if (bucketIdParam.startsWith('s3_')) {
+        bucketIds = [parseInt(bucketIdParam.replace('s3_', ''), 10)];
+      } else {
+        bucketIds = [parseInt(bucketIdParam, 10)];
+      }
     } else if (folderIdParam) {
       const folderId = parseInt(folderIdParam);
       // Get buckets associated with the folder
@@ -50,7 +57,7 @@ export async function GET(req: NextRequest) {
         `SELECT bucket_id FROM folder_buckets WHERE folder_id = $1`,
         [folderId],
       );
-      bucketIds = rows.map((r: FolderBucketRow) => r.bucket_id);
+      bucketIds = rows.map((r: FolderBucketRow) => r.bucket_id).filter((id: number) => id != null);
     }
 
     if (bucketIds.length === 0) {

@@ -17,7 +17,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function DiffPage() {
-  const { selectedFolderId, selectedBucketId } = useBucketStore();
+  const { selectedFolderId, selectedUniqueId: selectedBucketId } = useBucketStore();
   type FileItem = {
     key: string;
     size: number;

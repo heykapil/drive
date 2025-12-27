@@ -22,8 +22,8 @@ import { FileGridView } from "./views/FileGridView";
 import { FileListView } from "./views/FileListView";
 import { FileActions } from "./views/types";
 
-export default function FileList({ bucketId }: { bucketId?: number }) {
-  const { selectedFolderName, selectedFolderId, selectedBucketId } = useBucketStore();
+export default function FileList({ bucketId }: { bucketId?: string }) {
+  const { selectedFolderName, selectedFolderId, selectedUniqueId: selectedBucketId } = useBucketStore();
   const { getPreviewUrl, getDownloadUrl } = useFileUrlCache(selectedBucketId);
   const [state, dispatch] = useReducer(fileReducer, initialState);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -143,7 +143,9 @@ export default function FileList({ bucketId }: { bucketId?: number }) {
       const data = await res.json();
       const publicFilesWithUrls = data.files.map((file: any) => ({
         ...file,
-        url: `https://s3.tebi.io/${file.bucket}/${file.key}`,
+        url: file.bucketType === 'TB'
+          ? null // Terabox files don't have a direct static public URL like S3
+          : `https://s3.tebi.io/${file.bucket}/${file.key}`,
       }));
 
       dispatch({ type: 'SET_FIELD', field: 'files', value: publicFilesWithUrls });
@@ -298,6 +300,7 @@ export default function FileList({ bucketId }: { bucketId?: number }) {
         type: file.type,
         uploaded_at: formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true }),
         size: formatBytes(file.size),
+        thumbnail: file.thumbnail,
       },
     });
   };

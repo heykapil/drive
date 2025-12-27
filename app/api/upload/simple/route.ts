@@ -14,14 +14,34 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const { searchParams } = new URL(req.url);
     const bucketIdParam = searchParams.get('bucket');
+    let bucketId: number | undefined;
+    let bucketType: 'S3' | 'TB' = 'S3'; // Default to S3
 
-    const bucketId = bucketIdParam ? parseInt(bucketIdParam, 10) : NaN;
+    if (bucketIdParam) {
+      if (bucketIdParam.startsWith('s3_')) {
+        bucketId = parseInt(bucketIdParam.replace('s3_', ''), 10);
+        bucketType = 'S3';
+      } else if (bucketIdParam.startsWith('tb_')) {
+        bucketId = parseInt(bucketIdParam.replace('tb_', ''), 10);
+        bucketType = 'TB';
+      } else {
+        bucketId = parseInt(bucketIdParam, 10);
+        bucketType = 'S3';
+      }
+    }
 
     if (!bucketId || isNaN(bucketId) || bucketId <= 0) {
       return NextResponse.json({
         success: false,
-        error: 'Bucket ID must be a positive integer',
+        error: 'Invalid Bucket ID provided',
       });
+    }
+
+    if (bucketType === 'TB') {
+      return NextResponse.json({
+        success: false,
+        error: 'Direct Terabox uploads via this endpoint are not yet supported. Please use the unified upload manager.',
+      }, { status: 400 });
     }
 
     const bucketConfigArray = await getBucketConfig(bucketId);

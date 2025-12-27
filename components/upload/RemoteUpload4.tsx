@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useBucketStore } from "@/hooks/use-bucket-store";
 import { getUploadToken } from "@/lib/actions/auth-token";
 import { cn } from "@/lib/utils";
+import { client } from "@/lib/terabox-client";
 import { CloudUpload, Loader2, Plus, Terminal } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -22,7 +23,7 @@ interface JobStatus {
 }
 
 export default function RemoteUpload4() {
-    const { selectedBucketId, isLoading: isBucketLoading } = useBucketStore();
+    const { selectedUniqueId: selectedBucketId, isLoading: isBucketLoading } = useBucketStore();
     const [inputUrls, setInputUrls] = useState("");
     const [proxy, setProxy] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,29 +56,20 @@ export default function RemoteUpload4() {
 
             const payload = {
                 urls: processedUrls,
-                bucket_id: selectedBucketId,
+                bucket_id: parseInt(selectedBucketId!, 10),
                 prefix: "/uploads" // Default prefix as per requirements
             };
-            const token = await getUploadToken();
-            const res = await fetch('https://api.kapil.app/upload/remote', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payload)
-            });
 
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.message || `Upload failed with status ${res.status}`);
-            }
-
-            const data: JobStatus = await res.json();
+            const data = await client.upload.remoteUpload(payload);
 
             toast.success(`Job started: ${data.message}`);
             setJobId(data.job_id);
-            setJobStatus(data);
+            setJobStatus({
+                job_id: data.job_id,
+                queued_count: data.queued_count,
+                message: data.message,
+                status: 'pending' // Initial status
+            });
 
         } catch (error: any) {
             console.error("Remote upload error:", error);
@@ -95,22 +87,21 @@ export default function RemoteUpload4() {
 
         const poll = async () => {
             try {
-                const token = await getUploadToken();
-                const res = await fetch(`https://api.kapil.app/upload/status/${jobId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                const data = await client.upload.getJobStatus(jobId);
 
-                if (res.ok) {
-                    const data = await res.json();
-                    setJobStatus(prev => ({ ...prev, ...data }));
+                setJobStatus(prev => ({
+                    job_id: data.job_id,
+                    status: data.status,
+                    message: prev?.message || `Status: ${data.status}`,
+                    queued_count: data.total_urls,
+                    processed_count: data.completed,
+                    failed_count: data.failed
+                }));
 
-                    if (data.status === 'completed' || data.status === 'failed') {
-                        clearInterval(intervalId);
-                        if (data.status === 'completed') toast.success("Remote upload job completed!");
-                        if (data.status === 'failed') toast.error("Remote upload job failed.");
-                    }
+                if (data.status === 'completed' || data.status === 'failed') {
+                    clearInterval(intervalId);
+                    if (data.status === 'completed') toast.success("Remote upload job completed!");
+                    if (data.status === 'failed') toast.error("Remote upload job failed.");
                 }
             } catch (err) {
                 console.error("Polling error", err);

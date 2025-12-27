@@ -58,15 +58,22 @@ export default function EditBucketPage() {
   const [selectedFolderName, setSelectedFolderName] = useState<string | null>(
     null,
   );
-  const { selectedBucketId, isLoading } = useBucketStore();
+  const { selectedUniqueId: selectedBucketId, isLoading } = useBucketStore();
   // Create a flat list of all buckets from the tree
-  // Each bucket object is expected to at least contain `bucket_id` and `bucket_name`.
-  type BucketOption = { bucket_id: number; bucket_name: string };
+  // Each bucket object is expected to use uniqueId.
+  type BucketOption = { uniqueId: string; bucket_name: string; bucketType?: 'S3' | 'TB' };
   const allBuckets = (nodes: FolderNode[]): BucketOption[] => {
     let buckets: BucketOption[] = [];
     nodes.forEach(node => {
+      // buckets in node are typed as Bucket[] which has uniqueId
       if (Array.isArray(node.buckets) && node.buckets.length > 0) {
-        buckets = buckets.concat(node.buckets as BucketOption[]);
+        // Map to BucketOption ensuring uniqueId is used
+        const mapped = node.buckets.map(b => ({
+          uniqueId: b.uniqueId || (b.bucketType === 'TB' ? `tb_${b.bucket_id}` : `s3_${b.bucket_id}`), // Fallback if uniqueId missing
+          bucket_name: b.bucket_name,
+          bucketType: b.bucketType
+        }));
+        buckets = buckets.concat(mapped);
       }
       if (node.children) {
         buckets = buckets.concat(allBuckets(node.children));
@@ -83,13 +90,26 @@ export default function EditBucketPage() {
   const handleMoveBucket = async (values: MoveBucketValues) => {
     setIsSubmitting(true);
     try {
+      let url = process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/postgres';
+      let numericId: number;
+
+      // Determine correct API endpoint and ID based on uniqueId prefix
+      if (values.bucketId.startsWith('tb_')) {
+        url = process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/terabox/postgres';
+        numericId = parseInt(values.bucketId.replace('tb_', ''), 10);
+      } else if (values.bucketId.startsWith('s3_')) {
+        numericId = parseInt(values.bucketId.replace('s3_', ''), 10);
+      } else {
+        numericId = Number(values.bucketId); // Legacy fallback
+      }
+
       const res = await fetch(
-        process.env.NEXT_PUBLIC_APP_URL + '/api/buckets/postgres',
+        url,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            bucketId: Number(values.bucketId),
+            bucketId: numericId,
             newFolderId: Number(values.newFolderId),
           }),
         },
@@ -182,7 +202,7 @@ export default function EditBucketPage() {
                       onValueChange={field.onChange}
                       defaultValue={
                         !isLoading && selectedBucketId
-                          ? selectedBucketId.toString()
+                          ? selectedBucketId
                           : field.value
                       }
                     >
@@ -200,8 +220,8 @@ export default function EditBucketPage() {
                       <SelectContent>
                         {bucketOptions.map(bucket => (
                           <SelectItem
-                            key={bucket.bucket_id}
-                            value={bucket.bucket_id.toString()}
+                            key={bucket.uniqueId}
+                            value={bucket.uniqueId}
                           >
                             {bucket.bucket_name}
                           </SelectItem>
