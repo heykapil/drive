@@ -200,6 +200,38 @@ export function getBucketIdsFromFolderId(folderId: number): number[] {
   return bucketIds;
 }
 
+export function getBucketsFromFolder(folderId: number): Bucket[] {
+  const { folderTree } = useBucketStore.getState();
+  const buckets: Bucket[] = [];
+
+  // 1. Find the starting folder node in the tree.
+  let startNode: FolderNode | null = null;
+  const findStartNode = (nodes: FolderNode[]) => {
+    for (const node of nodes) {
+      if (startNode) return; // Optimization
+      if (node.folder_id === folderId) {
+        startNode = node;
+        return;
+      }
+      if (node.children.length > 0) findStartNode(node.children);
+    }
+  };
+  findStartNode(folderTree);
+
+  // 2. If the folder is found, traverse it and its children to collect bucket objects.
+  if (startNode) {
+    const traverse = (node: FolderNode) => {
+      // Add buckets from the current node
+      node.buckets.forEach(bucket => buckets.push(bucket));
+      // Recurse into children
+      node.children.forEach(traverse);
+    };
+    traverse(startNode);
+  }
+
+  return buckets;
+}
+
 /**
  * Finds and returns the complete information for a specific bucket by its uniqueID (or numeric ID legacy).
  *

@@ -1,5 +1,5 @@
 import Loading from '@/app/loading';
-import RemoteUploadForm from '@/components/upload/RemoteUpload2';
+import RemoteUploadForm from '@/components/upload/RemoteUpload4';
 import { getSession } from '@/lib/auth';
 import { encryptBucketConfig } from '@/service/bucket.config';
 import { testS3Connection } from '@/service/s3-tebi';

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import {
   getBucketIdsFromFolderId,
+  getBucketsFromFolder,
   getBucketInfo,
   useBucketStore,
 } from "@/hooks/use-bucket-store";
@@ -54,13 +55,11 @@ export function BucketSelector({
 
   const availableBuckets = useMemo(() => {
     if (!selectedFolderId) return [];
-    const bucketIds = getBucketIdsFromFolderId(selectedFolderId);
-    // getBucketIds currently returns number[], which is fine for iteration 
-    // but lookup should ideally use uniqueIds if getBucketIds returned them.
-    // Since getBucketIds is still legacy number[], we rely on getBucketInfo(number) wrapper.
-    return bucketIds
-      .map((id) => getBucketInfo(id))
-      .filter((b): b is Bucket => b !== null)
+
+    // Use the new helper that returns full Bucket objects
+    const buckets = getBucketsFromFolder(selectedFolderId);
+
+    return buckets
       .filter((b, index, self) =>
         index === self.findIndex((t) => (
           t.uniqueId === b.uniqueId

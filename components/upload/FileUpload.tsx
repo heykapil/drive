@@ -22,7 +22,7 @@ export default function FileUpload({
         />
       </TabsContent>
       <TabsContent value="remote">
-        <RemoteUpload4 />
+        <RemoteUpload4 testS3ConnectionAction={testS3ConnectionAction} encryptBucketConfigAction={encryptBucketConfigAction} />
       </TabsContent>
     </Tabs>
   );
