@@ -48,24 +48,15 @@ export function useFileUrlCache(selectedBucketId: string | number | null) {
     };
 
     const getPreviewUrl = async (file: any) => {
-        // If file is public, check if we can use the direct URL
-        if (file.is_public) {
-            // Use bucket_id from file, or fallback to selected.
-            // If file has specific bucket_id or tb_bucket_id, we should use that to look up info if needed.
-            // For now, passing the selectedBucketId (which might be unified string) is fine as getBucketInfo handles it.
-            const bucketIdToUse = file.bucket_id || selectedBucketId || (file.tb_bucket_id ? `tb_${file.tb_bucket_id}` : 0);
-            const bucket = getBucketInfo(bucketIdToUse);
-            // If it's not Synology (or assumed safe) and NOT Terabox, use the direct URL.
-            // Terabox files (bucketType === 'TB') always need a generated/proxied URL.
-            if (bucket?.provider !== 'synology' && bucket?.bucketType !== 'TB') {
-                return file.url;
-            }
-
-            if (bucket?.bucketType === 'TB') {
-                return `/api/files/stream/${file.id}/index.m3u8`;
-            }
+        const bucketIdToUse = file.bucket_id || selectedBucketId || (file.tb_bucket_id ? `tb_${file.tb_bucket_id}` : 0);
+        const bucket = getBucketInfo(bucketIdToUse);
+        if (bucket?.provider !== 'synology' && bucket?.bucketType !== 'TB') {
+            return file.url;
         }
-        // Fallback to generating a signed/download URL
+
+        if (bucket?.bucketType === 'TB') {
+            return `/api/files/stream/${file.id}/index.m3u8`;
+        }
         return await getDownloadUrl(file.id);
     };
 

@@ -288,7 +288,7 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
 
   const handlePreview = async (file: any) => {
     dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
-    const url = await getPreviewUrl(file);
+    const url = await getPreviewUrl(file) || await getDownloadUrl(file.id);
     dispatch({
       type: "SET_FIELD",
       field: "previewFile",
@@ -306,7 +306,7 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
   };
 
   const handleCopyLink = async (file: any) => {
-    const url = await getPreviewUrl(file);
+    const url = await getDownloadUrl(file.id);
     if (url) copyToClipboard(url);
   };
 
