@@ -288,7 +288,26 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
 
   const handlePreview = async (file: any) => {
     dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
-    const url = await getPreviewUrl(file) || await getDownloadUrl(file.id);
+    const url = await getPreviewUrl(file)
+    dispatch({
+      type: "SET_FIELD",
+      field: "previewFile",
+      value: {
+        url: url,
+        id: file.id,
+        name: file.filename,
+        is_public: file.is_public,
+        type: file.type,
+        uploaded_at: formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true }),
+        size: formatBytes(file.size),
+        thumbnail: file.thumbnail,
+      },
+    });
+  };
+
+  const handleDownload = async (file: any) => {
+    dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
+    const url = await getDownloadUrl(file.id)
     dispatch({
       type: "SET_FIELD",
       field: "previewFile",
@@ -312,6 +331,7 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
 
   const actions: FileActions = {
     onPreview: handlePreview,
+    onDownload: handleDownload,
     onRename: (file) => {
       dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
       dispatch({ type: "SET_MODAL", modal: "rename", value: true });

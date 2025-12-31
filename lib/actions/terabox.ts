@@ -66,7 +66,7 @@ export async function getTBFileDownloadLink(tb_bucket_id: number, share_id: stri
             return null
         }
 
-        return `https://api.kapil.app/terabox/proxy?url=${encodeURIComponent(response.data.list[0].dlink)}`
+        return `https://api.kapil.app/terabox/proxy?bucket_id=${tb_bucket_id}&url=${encodeURIComponent(response.data.list[0].dlink)}`
     } catch (error) {
         console.error('Error fetching download link:', error)
         return null

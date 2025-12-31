@@ -2,6 +2,7 @@ export interface FileActions {
     onPreview: (file: any) => void;
     onRename: (file: any) => void;
     onDelete: (file: any) => void;
+    onDownload: (file: any) => void;
     onShare: (file: any, days: number) => void;
     onTogglePrivacy: (file: any) => void;
     onCopyLink: (file: any) => void;
