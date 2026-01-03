@@ -215,7 +215,7 @@ export async function GET() {
         const { rows } = await query(
             `SELECT
             tb.id AS bucket_id,
-            tb.email AS bucket_name,
+            tb.account_id AS bucket_name,
             'Terabox' as provider,
             tb.account_name,
             tb.is_vip,
