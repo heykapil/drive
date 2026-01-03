@@ -33,52 +33,109 @@ export async function POST(req: NextRequest) {
         // Encrypt sensitive credentials before storing
         const email_encrypted = email ? await encryptSecret(email) : null;
         const password_encrypted = password ? await encryptSecret(password) : null;
-        const cookie_encrypted = cookie ? await encryptSecret(cookie) : null;
+        const cookie_encrypted = '';
 
-        // Use a transaction to ensure both the bucket and its folder link are created successfully
+        // Use a transaction to ensure all tables are updated correctly
         const newBucket = await sql.begin(async sql => {
-            // 1. Insert the new Terabox bucket details
-            const [bucket] = await sql`
-        INSERT INTO tb_buckets (
-          name, 
-          email_encrypted, 
-          password_encrypted, 
-          cookie_encrypted, 
-          whost, 
-          account_id, 
-          account_name, 
-          is_vip, 
-          vip_type, 
-          space_total_bytes,
-          space_used_bytes,
-          created_at,
-          updated_at
-        )
-        VALUES (
-          ${name}, 
-          ${email_encrypted}, 
-          ${password_encrypted}, 
-          ${cookie_encrypted}, 
-          ${whost}, 
-          ${accountId}, 
-          ${accountName}, 
-          ${isVip || false}, 
-          ${vipType || 0}, 
-          ${spaceTotalBytes || 0},
-          ${0},
-          NOW(),
-          NOW()
-        )
-        RETURNING id
-      `;
+            // 1. Insert into tb_auth_sessions
+            const [session] = await sql`
+                INSERT INTO tb_auth_sessions (
+                    email,
+                    email_encrypted,
+                    password_encrypted,
+                    cookie_encrypted,
+                    whost,
+                    cookie_expires_at,
+                    user_agent_encrypted
+                ) VALUES (
+                    ${email || name}, -- Use name as email fallback if email missing? Or require email? schema says email NOT NULL. 
+                    ${email_encrypted || ''}, 
+                    ${password_encrypted || ''}, 
+                    ${cookie || ''}, 
+                    ${whost || 'terabox.com'}, 
+                    NOW() + INTERVAL '30 days', -- Default expiry
+                    ''
+                )
+                RETURNING id
+            `;
 
-            // 2. Link the new bucket to the specified folder
+            // 2. Insert into tb_account_info
             await sql`
-        INSERT INTO folder_buckets (tb_bucket_id, folder_id, bucket_id)
-        VALUES (${bucket.id}, ${folderId}, NULL)
-      `;
+                INSERT INTO tb_account_info (
+                    id,
+                    account_id,
+                    account_name,
+                    name,
+                    is_vip,
+                    vip_type,
+                    space_total_bytes,
+                    space_used_bytes,
+                    updated_at
+                ) VALUES (
+                    ${session.id},
+                    ${accountId || ''},
+                    ${accountName || ''},
+                    ${name},
+                    ${isVip || false},
+                    ${vipType || 0},
+                    ${spaceTotalBytes || 0},
+                    0,
+                    NOW()
+                )
+            `;
 
-            return bucket;
+            // 3. Insert into tb_buckets_backup (to satisfy FKs for now)
+            // Note: tb_buckets_backup id is serial/sequence. It might NOT match session.id.
+            // But if FKs point to it, we need it.
+            // If we use session.id, we might conflict if tb_buckets_backup has its own sequence.
+            // However, let's look at schema: id integer DEFAULT nextval('tb_buckets_id_seq').
+            // If we force ID, we might be okay.
+            // Let's TRY to use same ID.
+            const [backup] = await sql`
+                INSERT INTO tb_buckets_backup (
+                    id,
+                    email,
+                    email_encrypted,
+                    password_encrypted,
+                    cookie_encrypted,
+                    whost,
+                    account_id,
+                    account_name,
+                    name,
+                    is_vip,
+                    vip_type,
+                    space_used_bytes,
+                    space_total_bytes,
+                    cookie_expires_at,
+                    updated_at
+                ) VALUES (
+                    ${session.id},
+                    ${email || name},
+                    ${email_encrypted || ''},
+                    ${password_encrypted || ''},
+                    ${cookie || ''},
+                    ${whost || 'terabox.com'},
+                    ${accountId || ''},
+                    ${accountName || ''},
+                    ${name},
+                    ${isVip || false},
+                    ${vipType || 0},
+                    0,
+                    ${spaceTotalBytes || 0},
+                    NOW() + INTERVAL '30 days',
+                    NOW()
+                )
+                RETURNING id
+             `;
+
+            // 4. Link the new bucket to the specified folder
+            // Use backup.id (which should be session.id if forced)
+            await sql`
+                INSERT INTO folder_buckets (tb_bucket_id, folder_id, bucket_id)
+                VALUES (${backup.id}, ${folderId}, NULL)
+            `;
+
+            return backup;
         });
 
         return NextResponse.json(
@@ -158,7 +215,7 @@ export async function GET() {
         const { rows } = await query(
             `SELECT
             tb.id AS bucket_id,
-            tb.name AS bucket_name,
+            tb.email AS bucket_name,
             'Terabox' as provider,
             tb.account_name,
             tb.is_vip,

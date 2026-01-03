@@ -1,7 +1,6 @@
 import Loading from '@/app/loading';
 import FileUpload from '@/components/upload/FileUpload';
 import { getSession } from '@/lib/auth';
-import { encryptBucketConfig } from '@/service/bucket.config';
 import { testS3Connection } from '@/service/s3-tebi';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
@@ -19,7 +18,6 @@ export default async function UploadPage() {
         {/* {production ? <FileUpload /> : <FileUploadServer />} */}
         <FileUpload
           testS3ConnectionAction={testS3Connection}
-          encryptBucketConfigAction={encryptBucketConfig}
         />
       </Suspense>
     </>

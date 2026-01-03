@@ -338,9 +338,7 @@ export async function DELETE(req: NextRequest) {
       for (const bucketId of uniqueTBBucketIds) {
         const filesInBucket = tbFilesByBucket[bucketId];
         const fileKeys = filesInBucket.map(f => f.key);
-        const shareIds = filesInBucket.map(f => f.shareId).filter((id): id is string => id !== undefined);
-
-        const promise = deleteTBFiles(bucketId, fileKeys, shareIds.length > 0 ? shareIds : undefined)
+        const promise = deleteTBFiles(bucketId, fileKeys)
           .then(result => {
             // Mark successfully deleted files
             filesInBucket.forEach(file => {
@@ -358,8 +356,6 @@ export async function DELETE(req: NextRequest) {
               `Batch delete failed for Terabox bucket ${bucketId}:`,
               error,
             );
-            // If Terabox deletion fails (e.g., backend API not implemented),
-            // we don't add these files to successfullyDeletedIds
           });
 
         deletionPromises.push(promise);

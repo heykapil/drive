@@ -1,7 +1,7 @@
 'use server'
 
 import { getTBBucketConfig } from '@/service/tb-bucket.config'
-import { client } from '@/lib/terabox-client'
+import { getQuota, downloadFile, streamVideo, deleteFiles } from '@/lib/terabox-client'
 
 /**
  * Get Terabox bucket usage statistics from backend API
@@ -15,9 +15,9 @@ export async function getTBBucketUsage(bucketId: number): Promise<{
     message?: string
 }> {
     try {
-        const response = await client.terabox.teraboxQuota({ bucket_id: bucketId })
-
-        if (!response.success) {
+        const response = await getQuota({ bucket_id: bucketId })
+        console.log(response)
+        if (!response.success && response.errno !== 0) {
             return {
                 bucket: bucketId,
                 status: 'Error',
@@ -56,17 +56,17 @@ export async function getTBFileDownloadLink(tb_bucket_id: number, share_id: stri
     }
 
     try {
-        const response = await client.terabox.teraboxDownload({
+        const response = await downloadFile({
             bucket_id: tb_bucket_id,
             share_id: share_id
         })
 
-        if (!response.success || !response.data?.list?.[0]?.dlink) {
+        if ((!response.success && response.errno !== 0) || !response.data?.list?.[0]?.dlink) {
             console.error('Failed to get download link:', response.error)
             return null
         }
-
-        return `https://api.kapil.app/terabox/proxy?bucket_id=${tb_bucket_id}&url=${encodeURIComponent(response.data.list[0].dlink)}`
+        return response.data.list[0].dlink;
+        // return `https://api.kapil.app/terabox/proxy?bucket_id=${tb_bucket_id}&url=${encodeURIComponent(response.data.list[0].dlink)}`
     } catch (error) {
         console.error('Error fetching download link:', error)
         return null
@@ -85,15 +85,7 @@ export async function getStreamLink(bucketId: number, fileKey: string,): Promise
     }
 
     try {
-        // Note: teraboxStream returns a Response object because it's a streaming endpoint in the client definition
-        // We need to call the API endpoint that returns the M3U8 content or stream URL
-        // However, the generated client definition for teraboxStream takes (method, body, options) -> Response
-        // This is generic. Let's look at how we can use it or if we should use a different approach.
-        // Actually, for stream we might want the m3u8 TEXT content, not the stream bytes itself if it's HLS.
-        // The previous implementation fetched text.
-
-        // Let's use the client to fetch the m3u8 content
-        const response = await client.terabox.teraboxStream('POST',
+        const response = await streamVideo('POST',
             JSON.stringify({
                 path: fileKey,
                 bucket_id: bucketId
@@ -140,8 +132,8 @@ export async function testTBConnection(bucketIds: number | number[]): Promise<{
         }
 
         try {
-            const response = await client.terabox.teraboxQuota({ bucket_id: id })
-            if (response.success) {
+            const response = await getQuota({ bucket_id: id })
+            if (response.success || response.errno === 0) {
                 return {
                     bucket: id,
                     name: config.name,
@@ -172,20 +164,20 @@ export async function testTBConnection(bucketIds: number | number[]): Promise<{
 /**
  * Delete files from Terabox bucket
  */
-export async function deleteTBFiles(bucketId: number, fileKeys: string[], shareIds?: string[]): Promise<{ success: boolean; deleted: string[]; failed: string[] }> {
+export async function deleteTBFiles(bucketId: number, fileKeys: string[]): Promise<{ success: boolean; deleted: string[]; failed: string[] }> {
     try {
-        const response = await client.terabox.teraboxDelete({
+        const response = await deleteFiles({
             bucket_id: bucketId,
             paths: fileKeys
         })
 
-        if (!response.success) {
+        if (!response.success && response.errno !== 0) {
             throw new Error(response.error || 'Failed to delete files')
         }
 
         return {
             success: true,
-            deleted: response.data?.deleted || [],
+            deleted: response.data?.info?.map((i: any) => i.path) || [],
             failed: response.data?.failed || []
         }
     } catch (error: any) {

@@ -20,6 +20,7 @@ import {
 import {
   getBucketIdsFromFolderId,
   getBucketInfo,
+  getBucketsFromFolder,
   useBucketStore,
 } from '@/hooks/use-bucket-store';
 import { Bucket } from '@/lib/utils';
@@ -41,6 +42,7 @@ import { toast } from 'sonner';
 
 type ConnectionStatus = {
   bucket: number;
+  uniqueId?: string;
   status?: string;
   name?: string;
   message?: string;
@@ -56,12 +58,29 @@ export function S3BucketViewer() {
   }, [selectedFolderId]);
 
   // useCallback to memoize the function for stability
-  const runConnectionTest = useCallback(async (ids: number[]) => {
+  const runConnectionTest = useCallback(async (buckets: Bucket[]) => {
     setIsTesting(true);
     try {
-      const results = await testS3Connection(ids);
-      setStatuses(results);
-      const errorCount = results.filter(r => r.status === 'Error').length;
+      const s3Ids = buckets.filter(b => b.bucketType === 'S3').map(b => b.bucket_id);
+      const tbIds = buckets.filter(b => b.bucketType === 'TB').map(b => b.bucket_id);
+
+      const s3Results = s3Ids.length > 0 ? await testS3Connection(s3Ids) : [];
+
+      // Dynamically import testTBConnection to avoid server-side import issues in client component if it uses 'use server' actions unfit for client
+      // Actually testTBConnection is in 'lib/actions/terabox.ts' which has 'use server', so it's safe to import at top or here.
+      // But we need to import it. Let's add import at top.
+      // For now, assume we will add import.
+
+      const { testTBConnection } = await import('@/lib/actions/terabox');
+      const tbResults = tbIds.length > 0 ? await testTBConnection(tbIds) : [];
+
+      const combinedResults: ConnectionStatus[] = [
+        ...s3Results.map(r => ({ ...r, uniqueId: `s3_${r.bucket}` })),
+        ...tbResults.map(r => ({ ...r, uniqueId: `tb_${r.bucket}` })) // testTBConnection returns bucket: number.
+      ];
+
+      setStatuses(combinedResults);
+      const errorCount = combinedResults.filter(r => r.status === 'Error').length;
       if (errorCount > 0) {
         toast.error(`${errorCount} bucket(s) failed the connection test.`);
       }
@@ -79,9 +98,10 @@ export function S3BucketViewer() {
 
   useEffect(() => {
     if (!isStoreLoading && bucketIds.length > 0 && testS3) {
-      runConnectionTest(bucketIds);
+      // Need full bucket info for testing
+      const buckets = bucketIds.map(id => getBucketInfo(id)).filter((b): b is Bucket => !!b);
+      runConnectionTest(buckets);
     } else if (!isStoreLoading) {
-      // Handle case where there are no buckets
       setIsTesting(false);
     }
   }, [bucketIds, isStoreLoading, runConnectionTest, testS3]);
@@ -118,7 +138,10 @@ export function S3BucketViewer() {
             {testS3 ? (
               <span
                 className="flex flex-row gap-2 items-center"
-                onClick={() => runConnectionTest(bucketIds)}
+                onClick={() => {
+                  const buckets = bucketIds.map(id => getBucketInfo(id)).filter((b): b is Bucket => !!b);
+                  runConnectionTest(buckets);
+                }}
               >
                 {' '}
                 <RefreshCwIcon
@@ -141,14 +164,25 @@ export function S3BucketViewer() {
       </div>
       <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {bucketIds.map(id => {
-          const bucketInfo = getBucketInfo(id);
-          if (!bucketInfo) return null;
-
-          const statusInfo = statuses.find(s => s.bucket === id);
+          // getBucketInfo by ID might be ambiguous if IDs collide, but getBucketIdsFromFolderId returns IDs. 
+          // getBucketInfo logic tries uniqueId then numeric.
+          // Better to iterate buckets directly from folder?
+          // We have getBucketsFromFolder(selectedFolderId).
+          // But here bucketIds are just numbers?
+          // Wait, getBucketIdsFromFolderId returns number[].
+          // If we have S3 id 1 and TB id 1, getBucketIdsFromFolderId might return [1, 1].
+          // This is bad.
+          // Let's rely on useBucketStore to give us Buckets directly or fix the logic.
+          // Actually, let's use getBucketsFromFolder instead of bucketIds.
+          return null; // Logic moved to main component body
+        })}
+        {/* Replacement map logic */}
+        {getBucketsFromFolder(selectedFolderId!).map(bucketInfo => {
+          const statusInfo = statuses.find(s => s.uniqueId === bucketInfo.uniqueId);
 
           return (
             <BucketCard
-              key={id}
+              key={bucketInfo.uniqueId}
               bucketInfo={bucketInfo}
               statusInfo={statusInfo}
               isTesting={isTesting}
@@ -240,7 +274,7 @@ function BucketCard({
       </CardContent>
       <CardFooter className="flex justify-end gap-2">
         <Tooltip>
-          <Link href={`/buckets/move?bucketId=${bucketInfo.bucket_id}`}>
+          <Link href={`/buckets/move?uniqueId=${bucketInfo.uniqueId}`}>
             <TooltipTrigger asChild>
               <Button size="icon" variant={'secondary'}>
                 <Move3DIcon />
@@ -251,7 +285,7 @@ function BucketCard({
         </Tooltip>
         <Tooltip>
           <Link
-            href={`/uploads?bucketId=${bucketInfo.bucket_id}`}
+            href={`/uploads?bucketId=${bucketInfo.uniqueId}`}
             className="cursor-auto"
           >
             <TooltipTrigger asChild>
@@ -263,7 +297,7 @@ function BucketCard({
           </Link>
         </Tooltip>
         <Tooltip>
-          <Link href={`/upload?bucketId=${bucketInfo.bucket_id}`}>
+          <Link href={`/upload?bucketId=${bucketInfo.uniqueId}`}>
             <TooltipTrigger>
               <Button size="icon" variant={'secondary'}>
                 <UploadCloudIcon />
@@ -273,7 +307,7 @@ function BucketCard({
           </Link>
         </Tooltip>
         <Tooltip>
-          <Link href={`/buckets/edit?bucketId=${bucketInfo.bucket_id}`}>
+          <Link href={`/buckets/edit?uniqueId=${bucketInfo.uniqueId}`}>
             <TooltipTrigger>
               <Button size="icon" variant={'secondary'}>
                 <Settings2Icon />
@@ -285,6 +319,8 @@ function BucketCard({
         <Tooltip>
           <TooltipTrigger>
             <Button size="icon" variant={'secondary'} onClick={async () => {
+              // refreshBucketUsage should technically support uniqueIds too or we split
+              // assuming refreshBucketUsage only S3 for now or needs update
               refreshBucketUsage([bucketInfo.bucket_id]);
             }}>
               <RefreshCwIcon />

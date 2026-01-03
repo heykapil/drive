@@ -362,3 +362,4 @@ export function getFolderInfo(folderId: number): FolderNode | null {
   traverse(folderTree);
   return foundFolder;
 }
+

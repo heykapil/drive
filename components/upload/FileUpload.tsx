@@ -4,11 +4,10 @@ import { FileUpload5 } from "./FileUpload5";
 import RemoteUpload4 from "./RemoteUpload4";
 
 export default function FileUpload({
-  testS3ConnectionAction,
-  encryptBucketConfigAction
+  testS3ConnectionAction
 }: {
-  testS3ConnectionAction: (bucketIds: number | number[]) => Promise<any>,
-  encryptBucketConfigAction: (bucketId: number) => Promise<string>
+  testS3ConnectionAction: (bucketIds: number | number[]) => Promise<any>
+
 }) {
   return (
     <Tabs defaultValue="local" className="w-full">
@@ -22,7 +21,7 @@ export default function FileUpload({
         />
       </TabsContent>
       <TabsContent value="remote">
-        <RemoteUpload4 testS3ConnectionAction={testS3ConnectionAction} encryptBucketConfigAction={encryptBucketConfigAction} />
+        <RemoteUpload4 />
       </TabsContent>
     </Tabs>
   );

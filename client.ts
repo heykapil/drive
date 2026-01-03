@@ -10,13 +10,13 @@
  */
 export type BaseURL = string
 
-export const Local: BaseURL = "https://api.kapil.app"
+export const Local: BaseURL = "http://localhost:4000"
 
 /**
  * Environment returns a BaseURL for calling the cloud environment with the given name.
  */
 export function Environment(name: string): BaseURL {
-    return `https://${name}-api-hszi.encr.app`
+    return `https://${name}.kapil.app`
 }
 
 /**
@@ -32,8 +32,8 @@ const BROWSER = typeof globalThis === "object" && ("window" in globalThis);
  * Client is an API client for the api-hszi Encore application.
  */
 export default class Client {
+    public readonly s3: s3.ServiceClient
     public readonly terabox: terabox.ServiceClient
-    public readonly upload: upload.ServiceClient
     private readonly options: ClientOptions
     private readonly target: string
 
@@ -48,8 +48,8 @@ export default class Client {
         this.target = target
         this.options = options ?? {}
         const base = new BaseClient(this.target, this.options)
+        this.s3 = new s3.ServiceClient(base)
         this.terabox = new terabox.ServiceClient(base)
-        this.upload = new upload.ServiceClient(base)
     }
 
     /**
@@ -93,7 +93,96 @@ export namespace gateway {
     }
 }
 
+export namespace s3 {
+    export interface JobStatusResponse {
+        "job_id": string
+        status: "pending" | "processing" | "completed" | "failed"
+        "total_urls": number
+        completed: number
+        failed: number
+        "created_at": string
+        "updated_at": string
+    }
+
+    export interface RemoteUploadRequest {
+        /**
+         * URLs to download and upload to S3
+         */
+        urls: string[]
+
+        /**
+         * Target bucket ID (required)
+         */
+        "bucket_id": number
+
+        /**
+         * Optional folder/prefix for uploaded files
+         */
+        prefix?: string
+    }
+
+    export interface RemoteUploadResponse {
+        /**
+         * Job ID for tracking
+         */
+        "job_id": string
+
+        /**
+         * Number of URLs queued
+         */
+        "queued_count": number
+
+        /**
+         * Status message
+         */
+        message: string
+    }
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.getJobStatus = this.getJobStatus.bind(this)
+            this.localUpload = this.localUpload.bind(this)
+            this.remoteUpload = this.remoteUpload.bind(this)
+        }
+
+        /**
+         * Get job status by ID
+         */
+        public async getJobStatus(job_id: string): Promise<JobStatusResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("GET", `/job/status/${encodeURIComponent(job_id)}`)
+            return await resp.json() as JobStatusResponse
+        }
+
+        /**
+         * Local file upload endpoint
+         * Accepts multipart/form-data with file and bucket_id
+         */
+        public async localUpload(method: "POST", body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
+            return this.baseClient.callAPI(method, `/s3/local`, body, options)
+        }
+
+        /**
+         * Submit URLs for remote upload (fire and forget)
+         * Returns immediately after queuing the URLs for processing
+         */
+        public async remoteUpload(params: RemoteUploadRequest): Promise<RemoteUploadResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/s3/remote`, JSON.stringify(params))
+            return await resp.json() as RemoteUploadResponse
+        }
+    }
+}
+
 export namespace terabox {
+    export interface CreateBucketRequest {
+        email: string
+        password: string
+    }
+
     export interface DeleteRequest {
         paths: string[]
         "bucket_id"?: number
@@ -154,16 +243,40 @@ export namespace terabox {
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
+            this.createBucket = this.createBucket.bind(this)
             this.teraboxDelete = this.teraboxDelete.bind(this)
             this.teraboxDownload = this.teraboxDownload.bind(this)
             this.teraboxFileManager = this.teraboxFileManager.bind(this)
             this.teraboxGetUploadHost = this.teraboxGetUploadHost.bind(this)
+            this.teraboxLocalUpload = this.teraboxLocalUpload.bind(this)
             this.teraboxPrecreateFile = this.teraboxPrecreateFile.bind(this)
             this.teraboxProxy = this.teraboxProxy.bind(this)
             this.teraboxQuota = this.teraboxQuota.bind(this)
             this.teraboxRemoteUpload = this.teraboxRemoteUpload.bind(this)
             this.teraboxSaveVideo = this.teraboxSaveVideo.bind(this)
             this.teraboxStream = this.teraboxStream.bind(this)
+            this.teraboxUpdateThumbnail = this.teraboxUpdateThumbnail.bind(this)
+        }
+
+        /**
+         * Create new Terabox bucket (auto-fetches all other info)
+         */
+        public async createBucket(params: CreateBucketRequest): Promise<{
+            success: boolean
+            data?: any
+            error?: string
+            cause?: any
+            errno?: number
+        }> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/buckets`, JSON.stringify(params))
+            return await resp.json() as {
+                success: boolean
+                data?: any
+                error?: string
+                cause?: any
+                errno?: number
+            }
         }
 
         /**
@@ -233,7 +346,7 @@ export namespace terabox {
         }
 
         /**
-         * File manager - perform file operations (move, copy, rename, delete)
+         * File Manager
          */
         public async teraboxFileManager(params: FileManagerRequest): Promise<{
             success: boolean
@@ -266,7 +379,7 @@ export namespace terabox {
         }
 
         /**
-         * Get upload host - retrieves the upload endpoint for chunked uploads
+         * Get Upload Host
          */
         public async teraboxGetUploadHost(params: GetUploadHostRequest): Promise<{
             success: boolean
@@ -297,8 +410,15 @@ export namespace terabox {
         }
 
         /**
-         * Precreate file - prepare for chunked upload
-         * Returns upload_id and block list
+         * Upload local file via multipart/form-data
+         * Uses api.raw to handle large files (up to 1GB)
+         */
+        public async teraboxLocalUpload(method: "POST", body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
+            return this.baseClient.callAPI(method, `/terabox/local-upload`, body, options)
+        }
+
+        /**
+         * Precreate File
          */
         public async teraboxPrecreateFile(params: PrecreateFileRequest): Promise<{
             success: boolean
@@ -373,10 +493,6 @@ export namespace terabox {
             }
         }
 
-        /**
-         * Remote upload a file from URL to Terabox via Buffer (max 1GB)
-         * This fetches the file to memory first, then uploads it like a local file.
-         */
         public async teraboxRemoteUpload(params: RemoteUploadRequest): Promise<{
             success: boolean
             data?: any
@@ -414,7 +530,7 @@ export namespace terabox {
          * Save Terabox file video (Async via Pub/Sub)
          */
         public async teraboxSaveVideo(params: {
-            url: string
+            urls: string[]
             "bucket_id": number
             userAgent?: string
         }): Promise<{
@@ -432,7 +548,7 @@ export namespace terabox {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
                 "bucket_id": params["bucket_id"],
-                url: params.url,
+                urls: params.urls,
             }
 
             // Now make the actual call to the API
@@ -452,89 +568,22 @@ export namespace terabox {
         public async teraboxStream(method: "POST", body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
             return this.baseClient.callAPI(method, `/terabox/stream`, body, options)
         }
-    }
-}
 
-export namespace upload {
-    export interface JobStatusResponse {
-        "job_id": string
-        status: "pending" | "processing" | "completed" | "failed"
-        "total_urls": number
-        completed: number
-        failed: number
-        "created_at": string
-        "updated_at": string
-    }
+        public async teraboxUpdateThumbnail(params: {
+            "file_id": number
+            userAgent?: string
+        }): Promise<void> {
+            // Convert our params into the objects we need for the request
+            const headers = makeRecord<string, string>({
+                "user-agent": params.userAgent,
+            })
 
-    export interface RemoteUploadRequest {
-        /**
-         * URLs to download and upload to S3
-         */
-        urls: string[]
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                "file_id": params["file_id"],
+            }
 
-        /**
-         * Target bucket ID (required)
-         */
-        "bucket_id": number
-
-        /**
-         * Optional folder/prefix for uploaded files
-         */
-        prefix?: string
-    }
-
-    export interface RemoteUploadResponse {
-        /**
-         * Job ID for tracking
-         */
-        "job_id": string
-
-        /**
-         * Number of URLs queued
-         */
-        "queued_count": number
-
-        /**
-         * Status message
-         */
-        message: string
-    }
-
-    export class ServiceClient {
-        private baseClient: BaseClient
-
-        constructor(baseClient: BaseClient) {
-            this.baseClient = baseClient
-            this.getJobStatus = this.getJobStatus.bind(this)
-            this.localUpload = this.localUpload.bind(this)
-            this.remoteUpload = this.remoteUpload.bind(this)
-        }
-
-        /**
-         * Get job status by ID
-         */
-        public async getJobStatus(job_id: string): Promise<JobStatusResponse> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI("GET", `/upload/status/${encodeURIComponent(job_id)}`)
-            return await resp.json() as JobStatusResponse
-        }
-
-        /**
-         * Local file upload endpoint
-         * Accepts multipart/form-data with file and bucket_id
-         */
-        public async localUpload(method: "POST", body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
-            return this.baseClient.callAPI(method, `/upload/local`, body, options)
-        }
-
-        /**
-         * Submit URLs for remote upload (fire and forget)
-         * Returns immediately after queuing the URLs for processing
-         */
-        public async remoteUpload(params: RemoteUploadRequest): Promise<RemoteUploadResponse> {
-            // Now make the actual call to the API
-            const resp = await this.baseClient.callTypedAPI("POST", `/upload/remote`, JSON.stringify(params))
-            return await resp.json() as RemoteUploadResponse
+            await this.baseClient.callTypedAPI("POST", `/terabox/thumbnail/update`, JSON.stringify(body), { headers })
         }
     }
 }

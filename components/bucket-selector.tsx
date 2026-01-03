@@ -14,7 +14,6 @@ import {
   getBucketInfo,
   useBucketStore,
 } from "@/hooks/use-bucket-store";
-import { Bucket } from "@/lib/utils";
 import { Box } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";

@@ -3,18 +3,15 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useBucketStore } from "@/hooks/use-bucket-store";
-import { getUploadToken } from "@/lib/actions/auth-token";
 import { cn } from "@/lib/utils";
-import { client } from "@/lib/terabox-client";
+import { client, isTeraboxUrl, saveVideo, remoteUpload as tbRemoteUpload } from "@/lib/terabox-client";
 import { CloudUpload, Loader2, Plus, Terminal } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { BucketSelector } from "../bucket-selector";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 
-import { uploadMultipart } from "./RemoteUploadMultipart2";
-import { isTeraboxUrl, remoteUpload, saveVideo } from "@/lib/terabox-client";
+import { remoteUpload } from "@/lib/s3-client";
 
 interface JobStatus {
     job_id: string;
@@ -25,10 +22,7 @@ interface JobStatus {
     failed_count?: number;
 }
 
-export default function RemoteUpload4({
-    testS3ConnectionAction,
-    encryptBucketConfigAction
-}: { encryptBucketConfigAction: (bucketId: number) => Promise<string>, testS3ConnectionAction: (bucketIds: number | number[]) => Promise<any> }) {
+export default function RemoteUpload4() {
     const { selectedUniqueId: selectedBucketId, isLoading: isBucketLoading } = useBucketStore();
     const [inputUrls, setInputUrls] = useState("");
     const [proxy, setProxy] = useState<boolean>(false);
@@ -81,40 +75,30 @@ export default function RemoteUpload4({
 
         try {
             if (isS3) {
-                // S3 Upload Logic
                 const urlList = urls;
-                const proxyUrl = "https://stream.kapil.app"; // Default or state? RemoteUpload2 has state.
-                const proxyToUse = proxy ? proxyUrl : undefined;
 
-                setProgress(Object.fromEntries(urlList.map((url) => [url, 0])));
+                const processedUrls = proxy
+                    ? urlList.map(url => `https://stream.kapil.app?url=${encodeURIComponent(url)}`)
+                    : urlList;
 
-                for (const [index, url] of urlList.entries()) {
-                    // We don't await the promise here if we want parallel, but RemoteUpload2 awaited toast.promise?
-                    // Actually RemoteUpload2 loops and fires promises. "await handleUpload" finished loop but promises float?
-                    // No, it calls toast.promise inside loop.
-                    // Wait, toast.promise returns the promise result?
-                    // Let's use Promise.all or similar if we want to track completion of batch.
-                    // But for progress bar, we just blast them.
+                const payload = {
+                    urls: processedUrls,
+                    bucket_id: bucketId!,
+                    prefix: "/uploads"
+                };
 
-                    // Using simple sequential to match RemoteUpload2 essentially
-                    const finalParams = {
-                        url,
-                        bucketId: bucketId!,
-                        setProgress,
-                        encryptBucketConfigAction,
-                        proxy: proxyToUse,
-                        synologyBucket: false // Assuming false for now or fetch from store
-                    };
+                const data = await remoteUpload(payload);
+                toast.success(`S3 Remote Upload Job started: ${data.message}`);
 
-                    // We need to call uploadMultipart manually
-                    await uploadMultipart(url, bucketId!, setProgress, encryptBucketConfigAction, proxyToUse, false);
-                }
-                toast.success("S3 Uploads processed");
+                setJobId(data.job_id);
+                setJobStatus({
+                    job_id: data.job_id,
+                    queued_count: data.queued_count,
+                    message: data.message,
+                    status: 'pending'
+                });
+
             } else if (isTB) {
-                // Terabox Logic
-                // We need to separate Save Video (TB Links) and Remote Upload (Other Links)
-
-                // Group URLs
                 const saveVideoUrls: string[] = [];
                 const remoteUploadUrls: string[] = [];
 
@@ -126,38 +110,21 @@ export default function RemoteUpload4({
                     }
                 }
 
-                // Handle Save Video
                 if (saveVideoUrls.length > 0) {
-                    for (const url of saveVideoUrls) {
-                        const payload = { url, bucket_id: bucketId! };
-                        // Calling saveVideo individually
-                        await saveVideo(payload);
-                        toast.success(`Video save requested for ${url}`);
-                    }
+                    const payload = { urls: saveVideoUrls, bucket_id: bucketId! };
+                    await saveVideo(payload);
+                    toast.success(`Video save requested for ${saveVideoUrls.length} items`);
                 }
 
-                // Handle Remote Upload
                 if (remoteUploadUrls.length > 0) {
-                    // Process URLs if proxy is enabled (only for remote upload likely?)
-                    const processedUrls = proxy
-                        ? remoteUploadUrls.map(url => `https://stream.kapil.app?url=${encodeURIComponent(url)}`)
-                        : remoteUploadUrls;
-
-                    const payload = {
-                        urls: processedUrls,
+                    const promises = remoteUploadUrls.map(url => tbRemoteUpload({
+                        url,
                         bucket_id: bucketId!,
-                        prefix: "/uploads"
-                    };
+                        remote_dir: "/uploads"
+                    }));
 
-                    const data = await remoteUpload(payload);
-                    toast.success(`Remote Upload Job started: ${data.message}`);
-                    setJobId(data.job_id); // Only track one job for now?
-                    setJobStatus({
-                        job_id: data.job_id,
-                        queued_count: data.queued_count,
-                        message: data.message,
-                        status: 'pending'
-                    });
+                    await Promise.all(promises);
+                    toast.success(`Requested ${remoteUploadUrls.length} remote uploads to Terabox`);
                 }
             }
 
@@ -165,11 +132,6 @@ export default function RemoteUpload4({
             console.error("Upload error:", error);
             toast.error(error.message || "Failed to process upload");
         } finally {
-            if (!jobId) setIsSubmitting(false); // If no job ID (e.g. only S3 or Save Video), stop submitting state.
-            // If job ID exists (Terabox Remote Upload), we keep submitting/polling?
-            // Existing logic kept IsSubmitting false unless polling?
-            // Actually existing logic set setIsSubmitting(false) in finally.
-            // But we want to show Job Polling if job exists.
             if (!jobId) setIsSubmitting(false);
         }
     };
@@ -182,7 +144,7 @@ export default function RemoteUpload4({
 
         const poll = async () => {
             try {
-                const data = await client.upload.getJobStatus(jobId);
+                const data = await client.s3.getJobStatus(jobId);
 
                 setJobStatus(prev => ({
                     job_id: data.job_id,

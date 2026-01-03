@@ -141,28 +141,46 @@ export function FileUpload5({
             abortControllers.current[id] = controller;
 
             try {
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("bucket_id", selectedBucketId!.toString());
-                formData.append("prefix", "/uploads"); // Default prefix
+                // Determine provider and call appropriate client
+                let promise;
+                const onProgress = (percent: number) => {
+                    setState(prev => ({
+                        ...prev,
+                        uploadProgress: { ...prev.uploadProgress, [id]: percent }
+                    }));
+                    updateStatus(id, `Uploading ${percent}%`);
+                };
 
-                const token = await getUploadToken();
+                if (selectedBucketId?.startsWith('tb_')) {
+                    const bucketId = parseInt(selectedBucketId.replace('tb_', ''), 10);
+                    const { localUpload } = await import('@/lib/terabox-client');
+                    promise = localUpload({
+                        file,
+                        bucket_id: bucketId,
+                        remote_dir: '/uploads',
+                        onProgress,
+                        signal: controller.signal
+                    });
+                } else {
+                    // Default to S3
+                    let bucketId = parseInt(selectedBucketId?.replace('s3_', '') || selectedBucketId || '0', 10);
+                    if (isNaN(bucketId)) throw new Error("Invalid Bucket ID");
 
-                await axios.post('https://api.kapil.app/upload/local', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                        "Authorization": `Bearer ${token}`,
-                    },
-                    signal: controller.signal,
-                    onUploadProgress: (progressEvent) => {
-                        const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || file.size));
-                        setState(prev => ({
-                            ...prev,
-                            uploadProgress: { ...prev.uploadProgress, [id]: percentCompleted }
-                        }));
-                        updateStatus(id, `Uploading ${percentCompleted}%`);
-                    }
-                });
+                    const { localUpload } = await import('@/lib/s3-client');
+                    promise = localUpload({
+                        file,
+                        bucket_id: bucketId,
+                        prefix: '/uploads',
+                        onProgress,
+                        signal: controller.signal
+                    });
+                }
+
+                const result = await promise;
+
+                if (result && (result as any).success === false) {
+                    throw new Error((result as any).error || "Upload failed");
+                }
 
                 toast.success(`${file.name} uploaded!`);
                 setState(prev => ({
@@ -172,10 +190,10 @@ export function FileUpload5({
                     uploadProgress: { ...prev.uploadProgress, [id]: 100 }
                 }));
             } catch (error: any) {
-                if (axios.isCancel(error)) {
+                if (axios.isCancel(error) || error.name === 'CanceledError') {
                     updateStatus(id, "Cancelled");
                 } else {
-                    const msg = error.response?.data?.error || error.message || "Upload failed";
+                    const msg = error.message || "Upload failed";
                     console.error(`Error uploading ${file.name}:`, error);
                     toast.error(`${file.name}: ${msg}`);
                     setState(prev => ({
@@ -306,7 +324,7 @@ export function FileUpload5({
                 {/* Bottom Actions */}
                 <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between pt-4 border-t border-border/50">
                     <div className="w-full md:w-auto min-w-[200px]">
-                        <BucketSelector testS3ConnectionAction={testS3ConnectionAction} testConnection={true} />
+                        <BucketSelector testS3ConnectionAction={testS3ConnectionAction} testConnection={false} />
                     </div>
 
                     <Button
