@@ -21,6 +21,7 @@ import { FileCompactView } from "./views/FileCompactView";
 import { FileGridView } from "./views/FileGridView";
 import { FileListView } from "./views/FileListView";
 import { FileActions } from "./views/types";
+import { updateThumb } from "@/lib/terabox-client";
 
 export default function FileList({ bucketId }: { bucketId?: string }) {
   const { selectedFolderName, selectedFolderId, selectedUniqueId: selectedBucketId } = useBucketStore();
@@ -305,23 +306,19 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
     });
   };
 
-  const handleDownload = async (file: any) => {
+  const handleUpdateThumbnail = async (file: any) => {
     dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
-    const url = await getDownloadUrl(file.id)
-    dispatch({
-      type: "SET_FIELD",
-      field: "previewFile",
-      value: {
-        url: url,
-        id: file.id,
-        name: file.filename,
-        is_public: file.is_public,
-        type: file.type,
-        uploaded_at: formatDistanceToNow(new Date(file?.uploaded_at), { addSuffix: true }),
-        size: formatBytes(file.size),
-        thumbnail: file.thumbnail,
-      },
-    });
+    const data = await updateThumb({ file_id: file.id, seconds: 10 })
+    if (data?.success) {
+      toast.success('thumbnail-updated')
+    }
+  }
+
+  const handleDownload = async (file: any) => {
+    const url = await getDownloadUrl(file.id);
+    if (url) {
+      window.open(url, '_blank');
+    }
   };
 
   const handleCopyLink = async (file: any) => {
@@ -346,12 +343,11 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
       dispatch({ type: "SET_MODAL", modal: "privacy", value: true });
     },
     onCopyLink: handleCopyLink,
+    onUpdateThumbnail: handleUpdateThumbnail,
     onToggleSelection: toggleFileSelection,
     onSelectAll: () => setSelectedFiles(new Set(state.files.map((file) => file.id))),
     onClearSelection: () => setSelectedFiles(new Set()),
   };
-
-
 
   const LoadingSkeleton = () => (
     <div className="space-y-4">

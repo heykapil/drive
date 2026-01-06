@@ -21,6 +21,11 @@ export async function createBucket(params: terabox.CreateBucketRequest) {
     return await client.terabox.createBucket(params);
 }
 
+export async function debugFileInfo(params: { fileId: number }) {
+    return await client.terabox.debugFileInfo(params);
+}
+
+
 
 export async function deleteFiles(params: terabox.DeleteRequest) {
     return await client.terabox.teraboxDelete(params);
@@ -107,6 +112,15 @@ export async function saveVideo(params: { urls: string[]; bucket_id: number; use
     return await client.terabox.teraboxSaveVideo(params);
 }
 
+export async function serveStreamM3U8(method: "GET", fileId: string, body?: RequestInit["body"], options?: any) {
+    return await client.terabox.serveStreamM3U8(method, fileId, body, options);
+}
+
+export async function generateGifPreview(params: { file_id: number }) {
+    return await client.terabox.teraboxGenerateGifPreview(params);
+}
+
+
 export async function streamVideo(method: "POST", body?: RequestInit["body"], options?: any) {
     return await client.terabox.teraboxStream(method, body, options);
 }
@@ -114,3 +128,8 @@ export async function streamVideo(method: "POST", body?: RequestInit["body"], op
 export async function updateThumbnail(params: { file_id: number; userAgent?: string }) {
     return await client.terabox.teraboxUpdateThumbnail(params);
 }
+
+export async function updateThumb(params: terabox.UpdateThumbnailRequest) {
+    return await client.terabox.teraboxUpdateThumb(params);
+}
+

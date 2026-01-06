@@ -9,6 +9,7 @@ export interface FileActions {
     onToggleSelection: (fileId: string) => void;
     onSelectAll: () => void;
     onClearSelection: () => void;
+    onUpdateThumbnail: (file: any) => void;
 }
 
 export interface FileViewProps {

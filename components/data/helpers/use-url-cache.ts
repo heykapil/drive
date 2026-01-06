@@ -55,7 +55,7 @@ export function useFileUrlCache(selectedBucketId: string | number | null) {
         }
 
         if (bucket?.bucketType === 'TB') {
-            return `/api/files/stream/${file.id}/index.m3u8`;
+            return `https://api.kapil.app/terabox/stream/${file.id}.m3u8`;
         }
         return await getDownloadUrl(file.id);
     };

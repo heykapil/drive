@@ -1,5 +1,4 @@
-
-import { getStreamLink } from '@/lib/actions/terabox';
+import { getStreamLinkCached } from "@/lib/data/terabox";
 import { query } from '@/service/postgres';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -30,7 +29,7 @@ export async function GET(
             return new NextResponse('Not a Terabox file', { status: 400 });
         }
 
-        const m3u8Content = await getStreamLink(tb_bucket_id, key);
+        const m3u8Content = await getStreamLinkCached(tb_bucket_id, key);
 
         if (!m3u8Content) {
             return new NextResponse('Failed to retrieve stream', { status: 500 });
@@ -41,7 +40,8 @@ export async function GET(
             headers: {
                 'Content-Type': 'application/vnd.apple.mpegurl',
                 'Content-Disposition': 'inline; filename="video.m3u8"',
-                'Cache-Control': 'no-cache, no-store, must-revalidate'
+                // Cache for 5 minutes (matches roughly half of the server cache time)
+                'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=60'
             },
         });
 

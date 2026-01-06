@@ -106,14 +106,22 @@ export default function RemoteUpload4() {
                     if (isTeraboxUrl(url)) {
                         saveVideoUrls.push(url);
                     } else {
-                        remoteUploadUrls.push(url);
+                        remoteUploadUrls.push(proxy ? `https://stream.kapil.app?url=${encodeURIComponent(url)}` : url);
                     }
                 }
 
                 if (saveVideoUrls.length > 0) {
                     const payload = { urls: saveVideoUrls, bucket_id: bucketId! };
-                    await saveVideo(payload);
-                    toast.success(`Video save requested for ${saveVideoUrls.length} items`);
+                    const data = await saveVideo(payload);
+                    if (data?.success) {
+                        toast.success(`Video save requested for ${saveVideoUrls.length} items`);
+                        // @ts-ignore
+                        setJobId(data?.job_id);
+                        setJobStatus({
+                            // @ts-ignore
+                            job_id: data.job_id, queued_count: data.queued_count, message: data.message, status: 'pending'
+                        });
+                    }
                 }
 
                 if (remoteUploadUrls.length > 0) {

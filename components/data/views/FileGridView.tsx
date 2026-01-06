@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatBytes } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { CheckSquare, Copy, Edit3, Eye, EyeOff, Fullscreen, Share2, Trash2 } from "lucide-react";
+import { CheckSquare, Copy, Download, Edit3, Eye, EyeOff, Fullscreen, RefreshCcw, Share2, Trash2 } from "lucide-react";
 import { VideoPlayer } from "../../viewer/VideoPlayer";
 import FileIcon from "../FileIcon";
 import { FileViewProps } from "./types";
@@ -88,8 +88,20 @@ export function FileGridView({ files, selectedFiles, actions }: FileViewProps) {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => actions.onPreview(file)}>
+                                        <Fullscreen className="mr-2 h-4 w-4" /> Preview File
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => actions.onDownload(file)}>
+                                        <Download className="mr-2 h-4 w-4" /> Download File
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => actions.onRename(file)}>
                                         <Edit3 className="mr-2 h-4 w-4" /> Rename
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => actions.onCopyLink(file)}>
+                                        <Copy className="mr-2 h-4 w-4" /> Copy Link
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => actions.onUpdateThumbnail(file)}>
+                                        <RefreshCcw className="mr-2 h-4 w-4" /> Update Thumbnail
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem className="text-destructive" onClick={() => actions.onDelete(file)}>

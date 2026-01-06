@@ -87,28 +87,6 @@ CREATE TABLE drive.public.tb_auth_sessions (
 	PRIMARY KEY (id)
 );
 
-create sequence tb_buckets_id_seq;
-CREATE TABLE drive.public.tb_buckets_backup (
-	id integer DEFAULT nextval('tb_buckets_id_seq'::regclass) NOT NULL,
-	email_encrypted text NOT NULL,
-	password_encrypted text NOT NULL,
-	cookie_encrypted text NOT NULL,
-	whost text NOT NULL,
-	account_id text,
-	account_name text,
-	is_vip bool DEFAULT false,
-	vip_type integer DEFAULT 0,
-	space_used_bytes bigint,
-	space_total_bytes bigint,
-	space_available_gb numeric(10,2),
-	created_at timestamp DEFAULT now(),
-	updated_at timestamp DEFAULT now(),
-	cookie_expires_at timestamp NOT NULL,
-	email text,
-	"name" varchar(50),
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE drive.public.upload_jobs (
 	id text NOT NULL,
 	status text DEFAULT 'pending'::text NOT NULL,
@@ -128,15 +106,7 @@ ALTER TABLE drive.public.files
 
 ALTER TABLE drive.public.files
 	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
-
-ALTER TABLE drive.public.files
-	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
-
-ALTER TABLE drive.public.files
-	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
+	REFERENCES tb_auth_sessions (id);
 
 
 
@@ -150,11 +120,7 @@ ALTER TABLE drive.public.folder_buckets
 
 ALTER TABLE drive.public.folder_buckets
 	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
-
-ALTER TABLE drive.public.folder_buckets
-	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
+	REFERENCES tb_auth_sessions (id);
 
 
 
@@ -169,16 +135,8 @@ ALTER TABLE drive.public.shared
 	REFERENCES s3_buckets (id);
 
 ALTER TABLE drive.public.shared
-	ADD FOREIGN KEY (id) 
-	REFERENCES files (id);
-
-ALTER TABLE drive.public.shared
 	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
-
-ALTER TABLE drive.public.shared
-	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
+	REFERENCES tb_auth_sessions (id);
 
 
 
@@ -194,11 +152,7 @@ ALTER TABLE drive.public.upload_jobs
 
 ALTER TABLE drive.public.upload_jobs
 	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
-
-ALTER TABLE drive.public.upload_jobs
-	ADD FOREIGN KEY (tb_bucket_id) 
-	REFERENCES tb_buckets_backup (id);
+	REFERENCES tb_auth_sessions (id);
 
 
 
@@ -269,12 +223,6 @@ CREATE INDEX idx_files_tb_bucket_id ON public.files USING btree (tb_bucket_id);
 
 CREATE INDEX idx_folder_buckets_tb_bucket_id ON public.folder_buckets USING btree (tb_bucket_id);
 
-CREATE INDEX idx_tb_buckets_account_id ON public.tb_buckets_backup USING btree (account_id);
-
-CREATE INDEX idx_tb_buckets_cookie_expires ON public.tb_buckets_backup USING btree (cookie_expires_at);
-
-CREATE UNIQUE INDEX idx_tb_buckets_email ON public.tb_buckets_backup USING btree (email);
-
 CREATE INDEX idx_upload_jobs_created_at ON public.upload_jobs USING btree (created_at DESC);
 
 CREATE UNIQUE INDEX s3_buckets_name_key ON public.s3_buckets USING btree (name);
@@ -288,8 +236,6 @@ CREATE UNIQUE INDEX tb_account_info_pkey ON public.tb_account_info USING btree (
 CREATE UNIQUE INDEX tb_auth_sessions_email_key ON public.tb_auth_sessions USING btree (email);
 
 CREATE UNIQUE INDEX tb_auth_sessions_pkey ON public.tb_auth_sessions USING btree (id);
-
-CREATE UNIQUE INDEX tb_buckets_pkey ON public.tb_buckets_backup USING btree (id);
 
 CREATE UNIQUE INDEX upload_jobs_pkey ON public.upload_jobs USING btree (id);
 

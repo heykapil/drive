@@ -1,4 +1,4 @@
-import { getTBBucketUsage } from '@/lib/actions/terabox';
+import { getTBBucketUsage } from "@/lib/data/terabox";
 import { query } from '@/service/postgres';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';

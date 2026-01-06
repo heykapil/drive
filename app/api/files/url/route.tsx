@@ -1,4 +1,4 @@
-import { getStreamLink } from '@/lib/actions/terabox';
+import { getStreamLink } from '@/lib/data/terabox';
 import { getBucketConfig } from '@/service/bucket.config';
 import { query } from '@/service/postgres';
 import { s3WithConfig } from '@/service/s3-tebi'; // Assuming this is the correct path

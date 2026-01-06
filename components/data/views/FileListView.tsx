@@ -3,7 +3,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatBytes } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Download, Edit3, Eye, EyeOff, FileWarning, Fullscreen, Share2, Trash2 } from "lucide-react";
+import { Copy, Download, Edit3, Eye, EyeOff, FileWarning, Fullscreen, RefreshCcw, Share2, Trash2 } from "lucide-react";
 import FileIcon from "../FileIcon";
 import { FileViewProps } from "./types";
 import { toast } from "sonner";
@@ -117,6 +117,10 @@ export function FileListView({ files, selectedFiles, actions }: FileViewProps) {
                                         <DropdownMenuItem onClick={() => actions.onCopyLink(file)}>
                                             <Copy className="mr-2 h-4 w-4" />
                                             Copy Link
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => actions.onUpdateThumbnail(file)}>
+                                            <RefreshCcw className="mr-2 h-4 w-4" />
+                                            Update Thumbnail
                                         </DropdownMenuItem>
                                         <DropdownMenuSub>
                                             <DropdownMenuSubTrigger>

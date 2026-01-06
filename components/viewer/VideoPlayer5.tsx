@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import { getUploadToken } from '@/lib/actions/auth-token';
 import Hls from 'hls.js';
 import {
   Download,
@@ -71,24 +72,36 @@ export const VideoPlayer: React.FC<Media> = ({ url, id, poster }) => {
     const video = videoRef.current;
     if (!video) return;
 
-    if (Hls.isSupported() && url.endsWith('.m3u8')) {
-      hlsRef.current?.destroy();
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-      });
-      hlsRef.current = hls;
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setQualityLevels(hls.levels.map((_, idx) => idx));
-      });
-      hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-        setSelectedQuality(data.level);
-      });
-    } else {
-      video.src = url;
-    }
+    const initHls = async () => {
+      if (Hls.isSupported() && url.endsWith('.m3u8')) {
+        hlsRef.current?.destroy();
+
+        // Fetch auth token for authenticated streaming
+        const token = await getUploadToken();
+
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          xhrSetup: (xhr, url) => {
+            // Add authorization header to all HLS requests (manifest + segments)
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+          },
+        });
+        hlsRef.current = hls;
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setQualityLevels(hls.levels.map((_, idx) => idx));
+        });
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+          setSelectedQuality(data.level);
+        });
+      } else {
+        video.src = url;
+      }
+    };
+
+    initHls();
 
     return () => { hlsRef.current?.destroy(); };
   }, [url]);

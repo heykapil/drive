@@ -183,6 +183,16 @@ export namespace terabox {
         password: string
     }
 
+    export interface DebugFileResponse {
+        file: any
+        meta: any
+        list: any
+        manualMeta: any
+        manualSearch: any
+        categoryList: any
+        shortUrlList: any
+    }
+
     export interface DeleteRequest {
         paths: string[]
         "bucket_id"?: number
@@ -238,15 +248,23 @@ export namespace terabox {
         headers?: { [key: string]: string }
     }
 
+    export interface UpdateThumbnailRequest {
+        "file_id": number
+        seconds?: number
+    }
+
     export class ServiceClient {
         private baseClient: BaseClient
 
         constructor(baseClient: BaseClient) {
             this.baseClient = baseClient
             this.createBucket = this.createBucket.bind(this)
+            this.debugFileInfo = this.debugFileInfo.bind(this)
+            this.serveStreamM3U8 = this.serveStreamM3U8.bind(this)
             this.teraboxDelete = this.teraboxDelete.bind(this)
             this.teraboxDownload = this.teraboxDownload.bind(this)
             this.teraboxFileManager = this.teraboxFileManager.bind(this)
+            this.teraboxGenerateGifPreview = this.teraboxGenerateGifPreview.bind(this)
             this.teraboxGetUploadHost = this.teraboxGetUploadHost.bind(this)
             this.teraboxLocalUpload = this.teraboxLocalUpload.bind(this)
             this.teraboxPrecreateFile = this.teraboxPrecreateFile.bind(this)
@@ -255,6 +273,7 @@ export namespace terabox {
             this.teraboxRemoteUpload = this.teraboxRemoteUpload.bind(this)
             this.teraboxSaveVideo = this.teraboxSaveVideo.bind(this)
             this.teraboxStream = this.teraboxStream.bind(this)
+            this.teraboxUpdateThumb = this.teraboxUpdateThumb.bind(this)
             this.teraboxUpdateThumbnail = this.teraboxUpdateThumbnail.bind(this)
         }
 
@@ -277,6 +296,21 @@ export namespace terabox {
                 cause?: any
                 errno?: number
             }
+        }
+
+        public async debugFileInfo(params: {
+            fileId: number
+        }): Promise<DebugFileResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/debug/file-info`, JSON.stringify(params))
+            return await resp.json() as DebugFileResponse
+        }
+
+        /**
+         * Serve a playable M3U8 stream for a file
+         */
+        public async serveStreamM3U8(method: "GET", fileId: string, body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
+            return this.baseClient.callAPI(method, `/terabox/stream/${encodeURIComponent(fileId)}`, body, options)
         }
 
         /**
@@ -375,6 +409,25 @@ export namespace terabox {
                 error?: string
                 cause?: any
                 errno?: number
+            }
+        }
+
+        /**
+         * Generate a GIF preview for a file
+         */
+        public async teraboxGenerateGifPreview(params: {
+            "file_id": number
+        }): Promise<{
+            success: boolean
+            url: string | null
+            message: string
+        }> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/generate-gif-preview`, JSON.stringify(params))
+            return await resp.json() as {
+                success: boolean
+                url: string | null
+                message: string
             }
         }
 
@@ -567,6 +620,20 @@ export namespace terabox {
          */
         public async teraboxStream(method: "POST", body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
             return this.baseClient.callAPI(method, `/terabox/stream`, body, options)
+        }
+
+        public async teraboxUpdateThumb(params: UpdateThumbnailRequest): Promise<{
+            success: boolean
+            url: string | null
+            message: string
+        }> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/update-thumbnail`, JSON.stringify(params))
+            return await resp.json() as {
+                success: boolean
+                url: string | null
+                message: string
+            }
         }
 
         public async teraboxUpdateThumbnail(params: {
