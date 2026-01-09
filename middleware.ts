@@ -8,7 +8,7 @@ import {
 } from './lib/auth-config';
 import * as client from 'openid-client';
 import { cookies } from 'next/headers';
-import { createNewSession, refreshSession } from './lib/s3-client';
+import { createNewSession, refreshSession } from './lib/edge-session';
 
 export async function middleware(request: NextRequest) {
     const response = NextResponse.next();
@@ -82,18 +82,20 @@ export async function middleware(request: NextRequest) {
     const cookieStore = await cookies();
     const apiSession = cookieStore.get('session')?.value;
     const expiryCookie = cookieStore.get('session-expiry')?.value;
+    const domain = process.env.NODE_ENV === 'development' ? undefined : '.kapil.app';
+    const secure = process.env.NODE_ENV !== 'development';
 
     if (!apiSession || !expiryCookie) {
         try {
-            const apiResponse = await createNewSession();
+            const apiResponse = await createNewSession(session);
             const json = await apiResponse.json();
 
             response.cookies.set('session', json.data.session, {
                 httpOnly: true,
                 sameSite: 'lax',
                 maxAge: 60 * 60,
-                secure: process.env.NODE_ENV === 'development' ? false : true,
-                domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+                secure,
+                domain,
             });
             // Set expiry cookie (non-httpOnly so client can read it)
             const expiryTimestamp = Date.now() + (3600 * 1000);
@@ -101,8 +103,8 @@ export async function middleware(request: NextRequest) {
                 httpOnly: false,
                 sameSite: 'lax',
                 maxAge: 60 * 60,
-                secure: process.env.NODE_ENV === 'development' ? false : true,
-                domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+                secure,
+                domain,
             });
         } catch (error) {
             console.log(error)
@@ -119,8 +121,8 @@ export async function middleware(request: NextRequest) {
                     httpOnly: true,
                     sameSite: 'lax',
                     maxAge: 60 * 60,
-                    secure: process.env.NODE_ENV === 'development' ? false : true,
-                    domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+                    secure,
+                    domain,
                 });
                 // Set expiry cookie
                 const expiryTimestamp = Date.now() + (3600 * 1000);
@@ -128,8 +130,8 @@ export async function middleware(request: NextRequest) {
                     httpOnly: false,
                     sameSite: 'lax',
                     maxAge: 60 * 60,
-                    secure: process.env.NODE_ENV === 'development' ? false : true,
-                    domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+                    secure,
+                    domain,
                 });
             } catch (error) {
                 console.log(error)

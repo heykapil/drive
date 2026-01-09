@@ -18,18 +18,6 @@ export async function getJobStatus(jobId: string) {
     return await client.s3.getJobStatus(jobId);
 }
 
-export async function createNewSession() {
-    return await client.gateway.newAuthSession('POST', null, {
-        headers: {
-            'Authorization': `Bearer ${await getUploadToken()}`,
-        },
-    });
-}
-
-export async function refreshSession() {
-    return await client.gateway.refreshSession('POST')
-}
-
 export interface LocalUploadRequest {
     file: File | Blob;
     bucket_id: number;
