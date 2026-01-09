@@ -77,24 +77,54 @@ export async function middleware(request: NextRequest) {
                 return redirectRes;
             }
         }
+    }
 
-        const cookieStore = await cookies();
-        const apiSession = cookieStore.get('session')?.value;
-        const expiryCookie = cookieStore.get('session-expiry')?.value;
-        if (!apiSession || !expiryCookie) {
+    const cookieStore = await cookies();
+    const apiSession = cookieStore.get('session')?.value;
+    const expiryCookie = cookieStore.get('session-expiry')?.value;
+
+    if (!apiSession || !expiryCookie) {
+        try {
+            const apiResponse = await createNewSession();
+            const json = await apiResponse.json();
+
+            response.cookies.set('session', json.data.session, {
+                httpOnly: true,
+                sameSite: 'lax',
+                maxAge: 60 * 60,
+                secure: process.env.NODE_ENV === 'development' ? false : true,
+                domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+            });
+            // Set expiry cookie (non-httpOnly so client can read it)
+            const expiryTimestamp = Date.now() + (3600 * 1000);
+            response.cookies.set('session-expiry', expiryTimestamp.toString(), {
+                httpOnly: false,
+                sameSite: 'lax',
+                maxAge: 60 * 60,
+                secure: process.env.NODE_ENV === 'development' ? false : true,
+                domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+            });
+        } catch (error) {
+            console.log(error)
+        }
+    } else {
+        const expiresAt = parseInt(expiryCookie, 10);
+        const timeRemaining = expiresAt - Date.now();
+        if (timeRemaining < 10 * 60 * 1000) {
             try {
-                const response = await createNewSession();
-                const json = await response.json()
-                cookieStore.set('session', json.data.session, {
+                const apiResponse = await refreshSession();
+                const json = await apiResponse.json();
+
+                response.cookies.set('session', json.data.session, {
                     httpOnly: true,
                     sameSite: 'lax',
                     maxAge: 60 * 60,
                     secure: process.env.NODE_ENV === 'development' ? false : true,
                     domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
                 });
-                // Set expiry cookie (non-httpOnly so client can read it)
+                // Set expiry cookie
                 const expiryTimestamp = Date.now() + (3600 * 1000);
-                cookieStore.set('session-expiry', expiryTimestamp.toString(), {
+                response.cookies.set('session-expiry', expiryTimestamp.toString(), {
                     httpOnly: false,
                     sameSite: 'lax',
                     maxAge: 60 * 60,
@@ -103,33 +133,6 @@ export async function middleware(request: NextRequest) {
                 });
             } catch (error) {
                 console.log(error)
-            }
-        } else {
-            const expiresAt = parseInt(expiryCookie, 10);
-            const timeRemaining = expiresAt - Date.now();
-            if (timeRemaining < 10 * 60 * 1000) {
-                try {
-                    const response = await refreshSession();
-                    const json = await response.json()
-                    cookieStore.set('session', json.data.session, {
-                        httpOnly: true,
-                        sameSite: 'lax',
-                        maxAge: 60 * 60,
-                        secure: process.env.NODE_ENV === 'development' ? false : true,
-                        domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
-                    });
-                    // Set expiry cookie
-                    const expiryTimestamp = Date.now() + (3600 * 1000);
-                    cookieStore.set('session-expiry', expiryTimestamp.toString(), {
-                        httpOnly: false,
-                        sameSite: 'lax',
-                        maxAge: 60 * 60,
-                        secure: process.env.NODE_ENV === 'development' ? false : true,
-                        domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
-                    });
-                } catch (error) {
-                    console.log(error)
-                }
             }
         }
     }
