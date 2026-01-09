@@ -5,9 +5,10 @@ import {
     sessionOptions,
     SessionData,
     clientConfig,
-    defaultSession
 } from './lib/auth-config';
 import * as client from 'openid-client';
+import { cookies } from 'next/headers';
+import { createNewSession, refreshSession } from './lib/s3-client';
 
 export async function middleware(request: NextRequest) {
     const response = NextResponse.next();
@@ -74,6 +75,61 @@ export async function middleware(request: NextRequest) {
                 await sessionToDestroy.save();
 
                 return redirectRes;
+            }
+        }
+
+        const cookieStore = await cookies();
+        const apiSession = cookieStore.get('session')?.value;
+        const expiryCookie = cookieStore.get('session-expiry')?.value;
+        if (!apiSession || !expiryCookie) {
+            try {
+                const response = await createNewSession();
+                const json = await response.json()
+                cookieStore.set('session', json.data.session, {
+                    httpOnly: true,
+                    sameSite: 'lax',
+                    maxAge: 60 * 60,
+                    secure: process.env.NODE_ENV === 'development' ? false : true,
+                    domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+                });
+                // Set expiry cookie (non-httpOnly so client can read it)
+                const expiryTimestamp = Date.now() + (3600 * 1000);
+                cookieStore.set('session-expiry', expiryTimestamp.toString(), {
+                    httpOnly: false,
+                    sameSite: 'lax',
+                    maxAge: 60 * 60,
+                    secure: process.env.NODE_ENV === 'development' ? false : true,
+                    domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+                });
+            } catch (error) {
+                console.log(error)
+            }
+        } else {
+            const expiresAt = parseInt(expiryCookie, 10);
+            const timeRemaining = expiresAt - Date.now();
+            if (timeRemaining < 10 * 60 * 1000) {
+                try {
+                    const response = await refreshSession();
+                    const json = await response.json()
+                    cookieStore.set('session', json.data.session, {
+                        httpOnly: true,
+                        sameSite: 'lax',
+                        maxAge: 60 * 60,
+                        secure: process.env.NODE_ENV === 'development' ? false : true,
+                        domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+                    });
+                    // Set expiry cookie
+                    const expiryTimestamp = Date.now() + (3600 * 1000);
+                    cookieStore.set('session-expiry', expiryTimestamp.toString(), {
+                        httpOnly: false,
+                        sameSite: 'lax',
+                        maxAge: 60 * 60,
+                        secure: process.env.NODE_ENV === 'development' ? false : true,
+                        domain: process.env.NODE_ENV === 'development' ? 'localhost' : '*.kapil.app',
+                    });
+                } catch (error) {
+                    console.log(error)
+                }
             }
         }
     }

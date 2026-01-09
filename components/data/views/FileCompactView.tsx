@@ -54,8 +54,20 @@ export function FileCompactView({ files, selectedFiles, actions }: FileViewProps
                             <DropdownMenuItem onClick={() => actions.onCopyLink(file)}>
                                 <Copy className="mr-2 h-4 w-4" /> Copy Link
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => actions.onUpdateThumbnail(file)}>
+                            <DropdownMenuItem onClick={() => {
+                                const seconds = prompt("Enter seconds for thumbnail (e.g. 10):", "10");
+                                if (seconds) actions.onUpdateThumbnail(file, parseInt(seconds));
+                            }}>
                                 <RefreshCcw className="mr-2 h-4 w-4" /> Update Thumbnail
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => actions.onUpdateDuration(file)}>
+                                <RefreshCcw className="mr-2 h-4 w-4" /> Update Duration
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => actions.onUpdateQuality(file)}>
+                                <RefreshCcw className="mr-2 h-4 w-4" /> Update Quality
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => actions.onUpdateShareId(file)}>
+                                <RefreshCcw className="mr-2 h-4 w-4" /> Update Share ID
                             </DropdownMenuItem>
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>

@@ -1,12 +1,12 @@
-import Client, { s3, Environment } from '@/client';
+import Client, { s3, Environment, Local } from '@/client';
 import { getUploadToken } from './actions/auth-token';
+import axios from "axios";
 
-const target = Environment('api');
+const target = process.env.NODE_ENV === 'development' ? Local : Environment('api');
 
 export const client = new Client(target, {
-    auth: async () => {
-        const token = await getUploadToken();
-        return { authorization: `Bearer ${token}` };
+    requestInit: {
+        credentials: "include",
     }
 });
 
@@ -18,7 +18,17 @@ export async function getJobStatus(jobId: string) {
     return await client.s3.getJobStatus(jobId);
 }
 
-import axios from "axios";
+export async function createNewSession() {
+    return await client.gateway.newAuthSession('POST', null, {
+        headers: {
+            'Authorization': `Bearer ${await getUploadToken()}`,
+        },
+    });
+}
+
+export async function refreshSession() {
+    return await client.gateway.refreshSession('POST')
+}
 
 export interface LocalUploadRequest {
     file: File | Blob;
@@ -30,10 +40,12 @@ export interface LocalUploadRequest {
 
 export interface LocalUploadResponse {
     success: boolean;
+    job_id?: string;
     key: string;
     filename: string;
     size: number;
     error?: string;
+    data?: any;
 }
 
 export async function localUpload(params: LocalUploadRequest): Promise<LocalUploadResponse> {

@@ -19,7 +19,7 @@ export async function getUploadToken() {
     };
 
     // Sign a short-lived token (e.g., 1 hour) for the upload
-    const token = await signJWT(payload, "1h");
+    const token = await signJWT(payload, "5m");
 
     return token;
 }

@@ -1,20 +1,42 @@
-import Client, { terabox, Environment } from '@/client';
+import Client, { terabox, Environment, migrations, Local } from '@/client';
 import { getUploadToken } from './actions/auth-token';
 import axios from "axios";
 
-const target = Environment('api');
+const target = process.env.NODE_ENV === 'development' ? Local : Environment('api');
 
 export const client = new Client(target, {
-    auth: async () => {
-        const token = await getUploadToken();
-        return { authorization: `Bearer ${token}` };
+    requestInit: {
+        credentials: "include"
     }
 });
 
+
+export interface JobResponse {
+    success: boolean;
+    job_id: string;
+    queued_count?: number;
+    message: string;
+    data?: any;
+    error?: string;
+}
+
 export const teraboxClient = client.terabox;
+
 
 export const isTeraboxUrl = (url: string) => {
     return url.includes('terabox.com') || url.includes('1024tera.com') || url.includes('terabox.app') || url.includes('terabox.fun') || url.includes('mirrobox.com') || url.includes('nephobox.com') || url.includes('freeterabox.com');
+}
+
+export async function backfillDuration(params: { limit?: number }) {
+    return await client.terabox.teraboxBackfillDuration(params);
+}
+
+export async function backfillQuality(params: { limit?: number }) {
+    return await client.terabox.teraboxBackfillQuality(params);
+}
+
+export async function backfillShareId(params: { limit?: number }) {
+    return await client.terabox.teraboxBackfillShareId(params);
 }
 
 export async function createBucket(params: terabox.CreateBucketRequest) {
@@ -25,8 +47,6 @@ export async function debugFileInfo(params: { fileId: number }) {
     return await client.terabox.debugFileInfo(params);
 }
 
-
-
 export async function deleteFiles(params: terabox.DeleteRequest) {
     return await client.terabox.teraboxDelete(params);
 }
@@ -35,6 +55,15 @@ export async function downloadFile(params: terabox.DownloadRequest) {
     return await client.terabox.teraboxDownload(params);
 }
 
+
+/**
+ * Terabox File manager copy/move/rename/delete files
+ *     operation - copy (file copy), move (file movement), rename (file renaming), and delete (file deletion)
+ *     opera=copy: filelist: [{"path":"/hello/test.mp4","dest":"","newname":"test.mp4"}]
+ *     opera=move: filelist: [{"path":"/test.mp4","dest":"/test_dir","newname":"test.mp4"}]
+ *     opera=rename: filelist：[{"path":"/hello/test.mp4","newname":"test_one.mp4"}]
+ *     opera=delete: filelist: ["/test.mp4"]
+ */
 export async function fileManager(params: terabox.FileManagerRequest) {
     return await client.terabox.teraboxFileManager(params);
 }
@@ -42,7 +71,6 @@ export async function fileManager(params: terabox.FileManagerRequest) {
 export async function getUploadHost(params: terabox.GetUploadHostRequest) {
     return await client.terabox.teraboxGetUploadHost(params);
 }
-
 
 export interface LocalUploadRequest {
     file: File | Blob;
@@ -52,7 +80,7 @@ export interface LocalUploadRequest {
     signal?: AbortSignal;
 }
 
-export async function localUpload(params: LocalUploadRequest) {
+export async function localUpload(params: LocalUploadRequest): Promise<JobResponse> {
     const formData = new FormData();
     formData.append('file', params.file);
     formData.append('bucket_id', params.bucket_id.toString());
@@ -78,7 +106,8 @@ export async function localUpload(params: LocalUploadRequest) {
         });
 
         // Return raw response data as standard
-        return response.data; // Terabox generated client returned globalThis.Response, but here we return JSON data directly.
+        // Return raw response data as standard
+        return response.data as JobResponse;
         // Note: The previous generated wrapper `teraboxLocalUpload` returned `Promise<globalThis.Response>`.
         // Check usages if any expect Response object. `RemoteUpload4` just uses it. `FileUpload5` will use it.
     } catch (error: any) {
@@ -104,12 +133,14 @@ export async function getQuota(params: { bucket_id?: number; userAgent?: string 
     return await client.terabox.teraboxQuota(params);
 }
 
-export async function remoteUpload(params: terabox.RemoteUploadRequest) {
-    return await client.terabox.teraboxRemoteUpload(params);
+export async function remoteUpload(params: terabox.RemoteUploadRequest): Promise<JobResponse> {
+    const res = await client.terabox.teraboxRemoteUpload(params);
+    return res as unknown as JobResponse;
 }
 
-export async function saveVideo(params: { urls: string[]; bucket_id: number; userAgent?: string }) {
-    return await client.terabox.teraboxSaveVideo(params);
+export async function saveVideo(params: { urls: string[]; bucket_id: number; userAgent?: string }): Promise<JobResponse> {
+    const res = await client.terabox.teraboxSaveVideo(params);
+    return res as unknown as JobResponse;
 }
 
 export async function serveStreamM3U8(method: "GET", fileId: string, body?: RequestInit["body"], options?: any) {
@@ -125,11 +156,20 @@ export async function streamVideo(method: "POST", body?: RequestInit["body"], op
     return await client.terabox.teraboxStream(method, body, options);
 }
 
-export async function updateThumbnail(params: { file_id: number; userAgent?: string }) {
-    return await client.terabox.teraboxUpdateThumbnail(params);
-}
-
-export async function updateThumb(params: terabox.UpdateThumbnailRequest) {
+export async function updateThumb(params: migrations.UpdateThumbnailRequest) {
     return await client.terabox.teraboxUpdateThumb(params);
 }
+
+export async function updateDuration(params: { file_id: number }) {
+    return await client.terabox.updateDuration(params);
+}
+
+export async function updateQuality(params: { file_id: number }) {
+    return await client.terabox.updateQuality(params);
+}
+
+export async function updateShareId(params: { file_id: number }) {
+    return await client.terabox.updateShareId(params);
+}
+
 

@@ -182,6 +182,38 @@ export function FileUpload5({
                     throw new Error((result as any).error || "Upload failed");
                 }
 
+                // Check for job_id and poll status if present
+                const jobId = (result as any).job_id;
+                if (jobId) {
+                    updateStatus(id, "Processing...");
+                    // Dynamically import getJobStatus to avoid circular deps or keep consistency
+                    const { getJobStatus } = await import('@/lib/s3-client');
+
+                    let jobStatus = 'pending';
+                    while (jobStatus !== 'completed' && jobStatus !== 'failed') {
+                        if (controller.signal.aborted) {
+                            throw new Error("Cancelled");
+                        }
+
+                        // Wait 2 seconds
+                        await new Promise(r => setTimeout(r, 2000));
+
+                        try {
+                            const statusData = await getJobStatus(jobId);
+                            jobStatus = statusData.status;
+
+                            if (jobStatus === 'failed') {
+                                throw new Error("Processing failed");
+                            }
+
+                            // Optional: Update detailed status if needed
+                            updateStatus(id, `Processing (${jobStatus})...`);
+                        } catch (err) {
+                            console.warn("Polling error:", err);
+                        }
+                    }
+                }
+
                 toast.success(`${file.name} uploaded!`);
                 setState(prev => ({
                     ...prev,

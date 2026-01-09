@@ -175,6 +175,8 @@ export async function GET(req: NextRequest) {
         f.liked,
         COALESCE(b.name, tb.name) as bucket,
         f.bucket_id,
+        f.quality,
+        f.duration,
         f.tb_bucket_id,
         f.share_id,
         CASE 

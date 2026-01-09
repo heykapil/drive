@@ -115,11 +115,12 @@ export default function RemoteUpload4() {
                     const data = await saveVideo(payload);
                     if (data?.success) {
                         toast.success(`Video save requested for ${saveVideoUrls.length} items`);
-                        // @ts-ignore
-                        setJobId(data?.job_id);
+                        setJobId(data.job_id);
                         setJobStatus({
-                            // @ts-ignore
-                            job_id: data.job_id, queued_count: data.queued_count, message: data.message, status: 'pending'
+                            job_id: data.job_id,
+                            queued_count: data.queued_count ?? 0,
+                            message: data.message,
+                            status: 'pending'
                         });
                     }
                 }

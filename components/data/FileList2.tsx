@@ -21,7 +21,7 @@ import { FileCompactView } from "./views/FileCompactView";
 import { FileGridView } from "./views/FileGridView";
 import { FileListView } from "./views/FileListView";
 import { FileActions } from "./views/types";
-import { updateThumb } from "@/lib/terabox-client";
+import { updateThumb, updateDuration, updateQuality, updateShareId } from "@/lib/terabox-client";
 
 export default function FileList({ bucketId }: { bucketId?: string }) {
   const { selectedFolderName, selectedFolderId, selectedUniqueId: selectedBucketId } = useBucketStore();
@@ -306,11 +306,58 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
     });
   };
 
-  const handleUpdateThumbnail = async (file: any) => {
+  const handleUpdateDuration = async (file: any) => {
+    dispatch({ type: "SET_FIELD", field: "loading", value: true });
+    try {
+      const data = await updateDuration({ file_id: file.id });
+      if (data?.success) toast.success(`Duration updated: ${data.duration}`);
+      else toast.error(data.error || "Failed to update duration");
+    } catch (e) {
+      toast.error("Failed to update duration");
+    } finally {
+      dispatch({ type: "SET_FIELD", field: "loading", value: false });
+      fetchFiles();
+    }
+  };
+
+  const handleUpdateQuality = async (file: any) => {
+    dispatch({ type: "SET_FIELD", field: "loading", value: true });
+    try {
+      const data = await updateQuality({ file_id: file.id });
+      if (data?.success) toast.success(`Quality updated: ${data.quality}`);
+      else toast.error(data.error || "Failed to update quality");
+    } catch (e) {
+      toast.error("Failed to update quality");
+    } finally {
+      dispatch({ type: "SET_FIELD", field: "loading", value: false });
+      fetchFiles();
+    }
+  };
+
+  const handleUpdateShareId = async (file: any) => {
+    dispatch({ type: "SET_FIELD", field: "loading", value: true });
+    try {
+      const data = await updateShareId({ file_id: file.id });
+      if (data?.success) toast.success(`Share ID updated: ${data.share_id}`);
+      else toast.error(data.error || "Failed to update share ID");
+    } catch (e) {
+      toast.error("Failed to update share ID");
+    } finally {
+      dispatch({ type: "SET_FIELD", field: "loading", value: false });
+      fetchFiles();
+    }
+  };
+
+  const handleUpdateThumbnail = async (file: any, seconds: number) => {
     dispatch({ type: "SET_FIELD", field: "selectedFile", value: file });
-    const data = await updateThumb({ file_id: file.id, seconds: 10 })
+    // Use the seconds provided by the user, default to 10 if somehow undefined
+    const sec = seconds || 10;
+    const data = await updateThumb({ file_id: file.id, seconds: sec })
     if (data?.success) {
       toast.success('thumbnail-updated')
+      fetchFiles();
+    } else {
+      toast.error(data.message || 'Failed to update thumbnail');
     }
   }
 
@@ -344,6 +391,9 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
     },
     onCopyLink: handleCopyLink,
     onUpdateThumbnail: handleUpdateThumbnail,
+    onUpdateDuration: handleUpdateDuration,
+    onUpdateQuality: handleUpdateQuality,
+    onUpdateShareId: handleUpdateShareId,
     onToggleSelection: toggleFileSelection,
     onSelectAll: () => setSelectedFiles(new Set(state.files.map((file) => file.id))),
     onClearSelection: () => setSelectedFiles(new Set()),
