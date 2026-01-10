@@ -11,6 +11,7 @@ import { BucketSelector } from "../bucket-selector";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { FileRow2 } from "./FileRow2";
 import { Button } from "../ui/button";
+import { Switch } from "../ui/switch";
 
 // Unique ID Generator
 const generateId = () => Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
@@ -46,6 +47,7 @@ export function FileUpload5({
     });
 
     const [maxConcurrentFiles, setMaxConcurrentFiles] = useState<number>(1);
+    const [encrypt, setEncrypt] = useState<boolean>(false);
     const abortControllers = useRef<Record<string, AbortController>>({});
 
     // --- Handlers ---
@@ -158,6 +160,7 @@ export function FileUpload5({
                         file,
                         bucket_id: bucketId,
                         remote_dir: '/uploads',
+                        encrypt,
                         onProgress,
                         signal: controller.signal
                     });
@@ -349,6 +352,18 @@ export function FileUpload5({
                                 <SelectTrigger className="bg-background/50 border-border/50 focus:ring-primary/20"><SelectValue /></SelectTrigger>
                                 <SelectContent>{[1, 2, 3, 5].map(i => <SelectItem key={i} value={i.toString()}>{i} Files</SelectItem>)}</SelectContent>
                             </Select>
+                        </div>
+                    </div>
+
+                    {/* Encryption */}
+                    <div className="space-y-3">
+                        <label className="text-xs font-medium text-foreground/70 uppercase tracking-wider">Security</label>
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-background/40 border border-border/50">
+                            <div className="space-y-0.5">
+                                <span className="text-sm font-medium">Encrypt Files</span>
+                                <p className="text-[10px] text-muted-foreground">Enable AES-256-CTR encryption</p>
+                            </div>
+                            <Switch checked={encrypt} onCheckedChange={setEncrypt} />
                         </div>
                     </div>
                 </div>

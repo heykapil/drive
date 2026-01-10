@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
-import { getUploadToken } from '@/lib/actions/auth-token';
 import Hls from 'hls.js';
 import {
   Download,
@@ -77,14 +76,14 @@ export const VideoPlayer: React.FC<Media> = ({ url, id, poster }) => {
         hlsRef.current?.destroy();
 
         // Fetch auth token for authenticated streaming
-        const token = await getUploadToken();
+        // const session = await getUploadToken();
 
         const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          xhrSetup: (xhr, url) => {
+          xhrSetup: (xhr) => {
             // Add authorization header to all HLS requests (manifest + segments)
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.withCredentials = true;
           },
         });
         hlsRef.current = hls;

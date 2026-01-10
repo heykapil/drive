@@ -265,6 +265,7 @@ export namespace terabox {
         userAgent?: string
         fileId?: number
         headers?: { [key: string]: string }
+        encrypt?: boolean
     }
 
     export class ServiceClient {
@@ -280,8 +281,11 @@ export namespace terabox {
             this.teraboxBackfillShareId = this.teraboxBackfillShareId.bind(this)
             this.teraboxDelete = this.teraboxDelete.bind(this)
             this.teraboxDownload = this.teraboxDownload.bind(this)
+            this.teraboxDownloadProxy = this.teraboxDownloadProxy.bind(this)
+            this.teraboxEmptyRecyleBin = this.teraboxEmptyRecyleBin.bind(this)
             this.teraboxFileManager = this.teraboxFileManager.bind(this)
             this.teraboxGenerateGifPreview = this.teraboxGenerateGifPreview.bind(this)
+            this.teraboxGetRecyleBin = this.teraboxGetRecyleBin.bind(this)
             this.teraboxGetUploadHost = this.teraboxGetUploadHost.bind(this)
             this.teraboxLocalUpload = this.teraboxLocalUpload.bind(this)
             this.teraboxPrecreateFile = this.teraboxPrecreateFile.bind(this)
@@ -290,6 +294,7 @@ export namespace terabox {
             this.teraboxRemoteUpload = this.teraboxRemoteUpload.bind(this)
             this.teraboxSaveVideo = this.teraboxSaveVideo.bind(this)
             this.teraboxStream = this.teraboxStream.bind(this)
+            this.teraboxThumbnail = this.teraboxThumbnail.bind(this)
             this.teraboxUpdateThumb = this.teraboxUpdateThumb.bind(this)
             this.updateDuration = this.updateDuration.bind(this)
             this.updateQuality = this.updateQuality.bind(this)
@@ -423,6 +428,44 @@ export namespace terabox {
         }
 
         /**
+         * Get download stream for a file (Proxied for Encrypted files)
+         */
+        public async teraboxDownloadProxy(method: "GET", fileId: string, body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
+            return this.baseClient.callAPI(method, `/terabox/download/${encodeURIComponent(fileId)}`, body, options)
+        }
+
+        public async teraboxEmptyRecyleBin(params: {
+            "bucket_id"?: number
+            userAgent?: string
+        }): Promise<{
+            success: boolean
+            data?: any
+            error?: string
+            cause?: any
+            errno?: number
+        }> {
+            // Convert our params into the objects we need for the request
+            const headers = makeRecord<string, string>({
+                "user-agent": params.userAgent,
+            })
+
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                "bucket_id": params["bucket_id"],
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/recycle-bin/empty`, JSON.stringify(body), { headers })
+            return await resp.json() as {
+                success: boolean
+                data?: any
+                error?: string
+                cause?: any
+                errno?: number
+            }
+        }
+
+        /**
          * Terabox File manager copy/move/rename/delete files
          * operation - copy (file copy), move (file movement), rename (file renaming), and delete (file deletion)
          * opera=copy: filelist: [{"path":"/hello/test.mp4","dest":"","newname":"test.mp4"}]
@@ -476,6 +519,40 @@ export namespace terabox {
                 success: boolean
                 url: string | null
                 message: string
+            }
+        }
+
+        /**
+         * Get recycle bin contents
+         */
+        public async teraboxGetRecyleBin(params: {
+            "bucket_id"?: number
+            userAgent?: string
+        }): Promise<{
+            success: boolean
+            data?: any
+            error?: string
+            cause?: any
+            errno?: number
+        }> {
+            // Convert our params into the objects we need for the request
+            const headers = makeRecord<string, string>({
+                "user-agent": params.userAgent,
+            })
+
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                "bucket_id": params["bucket_id"],
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/recycle-bin`, JSON.stringify(body), { headers })
+            return await resp.json() as {
+                success: boolean
+                data?: any
+                error?: string
+                cause?: any
+                errno?: number
             }
         }
 
@@ -609,6 +686,7 @@ export namespace terabox {
             // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
             const body: Record<string, any> = {
                 "bucket_id": params["bucket_id"],
+                encrypt: params.encrypt,
                 fileId: params.fileId,
                 filename: params.filename,
                 headers: params.headers,
@@ -668,6 +746,42 @@ export namespace terabox {
          */
         public async teraboxStream(method: "POST", body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
             return this.baseClient.callAPI(method, `/terabox/stream`, body, options)
+        }
+
+        /**
+         * Get best thumbnail for a file shared
+         */
+        public async teraboxThumbnail(params: {
+            "share_id": string
+            "bucket_id": number
+            userAgent?: string
+        }): Promise<{
+            success: boolean
+            data?: any
+            error?: string
+            cause?: any
+            errno?: number
+        }> {
+            // Convert our params into the objects we need for the request
+            const headers = makeRecord<string, string>({
+                "user-agent": params.userAgent,
+            })
+
+            // Construct the body with only the fields which we want encoded within the body (excluding query string or header fields)
+            const body: Record<string, any> = {
+                "bucket_id": params["bucket_id"],
+                "share_id": params["share_id"],
+            }
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/thumbnail`, JSON.stringify(body), { headers })
+            return await resp.json() as {
+                success: boolean
+                data?: any
+                error?: string
+                cause?: any
+                errno?: number
+            }
         }
 
         public async teraboxUpdateThumb(params: migrations.UpdateThumbnailRequest): Promise<{

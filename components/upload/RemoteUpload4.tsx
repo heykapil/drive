@@ -26,6 +26,7 @@ export default function RemoteUpload4() {
     const { selectedUniqueId: selectedBucketId, isLoading: isBucketLoading } = useBucketStore();
     const [inputUrls, setInputUrls] = useState("");
     const [proxy, setProxy] = useState<boolean>(false);
+    const [encrypt, setEncrypt] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [jobId, setJobId] = useState<string | null>(null);
     const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -129,7 +130,8 @@ export default function RemoteUpload4() {
                     const promises = remoteUploadUrls.map(url => tbRemoteUpload({
                         url,
                         bucket_id: bucketId!,
-                        remote_dir: "/uploads"
+                        remote_dir: "/uploads",
+                        encrypt
                     }));
 
                     await Promise.all(promises);
@@ -265,12 +267,21 @@ export default function RemoteUpload4() {
                         {/* Proxy Mode */}
                         <div className="space-y-3">
                             <label className="text-xs font-medium text-foreground/70 uppercase tracking-wider">Advanced</label>
-                            <div className="flex items-center justify-between p-3 rounded-lg bg-background/40 border border-border/50">
-                                <div className="space-y-0.5">
-                                    <span className="text-sm font-medium">Proxy Mode</span>
-                                    <p className="text-[10px] text-muted-foreground">Route through stream.kapil.app proxy</p>
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between p-3 rounded-lg bg-background/40 border border-border/50">
+                                    <div className="space-y-0.5">
+                                        <span className="text-sm font-medium">Proxy Mode</span>
+                                        <p className="text-[10px] text-muted-foreground">Route through stream.kapil.app proxy</p>
+                                    </div>
+                                    <Switch checked={proxy} onCheckedChange={setProxy} disabled={isSubmitting} />
                                 </div>
-                                <Switch checked={proxy} onCheckedChange={setProxy} disabled={isSubmitting} />
+                                <div className="flex items-center justify-between p-3 rounded-lg bg-background/40 border border-border/50">
+                                    <div className="space-y-0.5">
+                                        <span className="text-sm font-medium">Encrypt Files</span>
+                                        <p className="text-[10px] text-muted-foreground">Enable AES-256-CTR encryption</p>
+                                    </div>
+                                    <Switch checked={encrypt} onCheckedChange={setEncrypt} disabled={isSubmitting} />
+                                </div>
                             </div>
                         </div>
 

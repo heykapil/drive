@@ -100,21 +100,31 @@ export function FileGridView({ files, selectedFiles, actions }: FileViewProps) {
                                     <DropdownMenuItem onClick={() => actions.onCopyLink(file)}>
                                         <Copy className="mr-2 h-4 w-4" /> Copy Link
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => {
-                                        const seconds = prompt("Enter seconds for thumbnail (e.g. 10):", "10");
-                                        if (seconds) actions.onUpdateThumbnail(file, parseInt(seconds));
-                                    }}>
-                                        <RefreshCcw className="mr-2 h-4 w-4" /> Update Thumbnail
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => actions.onUpdateDuration(file)}>
-                                        <RefreshCcw className="mr-2 h-4 w-4" /> Update Duration
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => actions.onUpdateQuality(file)}>
-                                        <RefreshCcw className="mr-2 h-4 w-4" /> Update Quality
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => actions.onUpdateShareId(file)}>
-                                        <RefreshCcw className="mr-2 h-4 w-4" /> Update Share ID
-                                    </DropdownMenuItem>
+                                    <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                            <RefreshCcw className="mr-2 h-4 w-4" />
+                                            Update
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuPortal>
+                                            <DropdownMenuSubContent>
+                                                <DropdownMenuItem onClick={() => {
+                                                    const seconds = prompt("Enter seconds for thumbnail (e.g. 10):", "10");
+                                                    if (seconds) actions.onUpdateThumbnail(file, parseInt(seconds));
+                                                }}>
+                                                    Update Thumbnail
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => actions.onUpdateDuration(file)}>
+                                                    Update Duration
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => actions.onUpdateQuality(file)}>
+                                                    Update Quality
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => actions.onUpdateShareId(file)}>
+                                                    Update Share ID
+                                                </DropdownMenuItem>
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuPortal>
+                                    </DropdownMenuSub>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem className="text-destructive" onClick={() => actions.onDelete(file)}>
                                         <Trash2 className="mr-2 h-4 w-4" /> Delete

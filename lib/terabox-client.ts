@@ -1,5 +1,4 @@
 import Client, { terabox, Environment, migrations, Local } from '@/client';
-import { getUploadToken } from './actions/auth-token';
 import axios from "axios";
 
 const target = process.env.NODE_ENV === 'development' ? Local : Environment('api');
@@ -9,6 +8,8 @@ export const client = new Client(target, {
         credentials: "include"
     }
 });
+
+export const createClient = (options?: any) => new Client(target, options);
 
 
 export interface JobResponse {
@@ -27,16 +28,16 @@ export const isTeraboxUrl = (url: string) => {
     return url.includes('terabox.com') || url.includes('1024tera.com') || url.includes('terabox.app') || url.includes('terabox.fun') || url.includes('mirrobox.com') || url.includes('nephobox.com') || url.includes('freeterabox.com');
 }
 
-export async function backfillDuration(params: { limit?: number }) {
-    return await client.terabox.teraboxBackfillDuration(params);
+export async function backfillDuration(params: { limit?: number }, customClient?: any) {
+    return await (customClient || client).terabox.teraboxBackfillDuration(params);
 }
 
-export async function backfillQuality(params: { limit?: number }) {
-    return await client.terabox.teraboxBackfillQuality(params);
+export async function backfillQuality(params: { limit?: number }, customClient?: any) {
+    return await (customClient || client).terabox.teraboxBackfillQuality(params);
 }
 
-export async function backfillShareId(params: { limit?: number }) {
-    return await client.terabox.teraboxBackfillShareId(params);
+export async function backfillShareId(params: { limit?: number }, customClient?: any) {
+    return await (customClient || client).terabox.teraboxBackfillShareId(params);
 }
 
 export async function createBucket(params: terabox.CreateBucketRequest) {
@@ -47,8 +48,8 @@ export async function debugFileInfo(params: { fileId: number }) {
     return await client.terabox.debugFileInfo(params);
 }
 
-export async function deleteFiles(params: terabox.DeleteRequest) {
-    return await client.terabox.teraboxDelete(params);
+export async function deleteFiles(params: terabox.DeleteRequest, customClient?: any) {
+    return await (customClient || client).terabox.teraboxDelete(params);
 }
 
 export async function downloadFile(params: terabox.DownloadRequest) {
@@ -76,6 +77,7 @@ export interface LocalUploadRequest {
     file: File | Blob;
     bucket_id: number;
     remote_dir?: string;
+    encrypt?: boolean;
     onProgress?: (percent: number) => void;
     signal?: AbortSignal;
 }
@@ -89,21 +91,25 @@ export async function localUpload(params: LocalUploadRequest): Promise<JobRespon
         formData.append('remote_dir', params.remote_dir || '/uploads');
     }
 
+    if (params.encrypt !== undefined) {
+        formData.append('encrypt', params.encrypt.toString());
+    }
+
     try {
-        const token = await getUploadToken();
-        const response = await axios.post(`${target}/terabox/local-upload`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-                "Authorization": `Bearer ${token}`,
-            },
-            signal: params.signal,
-            onUploadProgress: (progressEvent) => {
-                if (params.onProgress && progressEvent.total) {
-                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                    params.onProgress(percentCompleted);
+        const response = await axios.post(`${target}/terabox/local-upload`, formData,
+            {
+                withCredentials: true,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+                signal: params.signal,
+                onUploadProgress: (progressEvent) => {
+                    if (params.onProgress && progressEvent.total) {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        params.onProgress(percentCompleted);
+                    }
                 }
-            }
-        });
+            });
 
         // Return raw response data as standard
         // Return raw response data as standard
@@ -172,4 +178,19 @@ export async function updateShareId(params: { file_id: number }) {
     return await client.terabox.updateShareId(params);
 }
 
+export async function downloadProxy(method: "GET", fileId: string, body?: RequestInit["body"], options?: any) {
+    return await client.terabox.teraboxDownloadProxy(method, fileId, body, options);
+}
+
+export async function emptyRecycleBin(params: { bucket_id?: number; userAgent?: string }) {
+    return await client.terabox.teraboxEmptyRecyleBin(params);
+}
+
+export async function getRecycleBin(params: { bucket_id?: number; userAgent?: string }) {
+    return await client.terabox.teraboxGetRecyleBin(params);
+}
+
+export async function getThumbnail(params: { share_id: string; bucket_id: number; userAgent?: string }) {
+    return await client.terabox.teraboxThumbnail(params);
+}
 

@@ -55,7 +55,15 @@ export function useFileUrlCache(selectedBucketId: string | number | null) {
         }
 
         if (bucket?.bucketType === 'TB') {
-            return `https://api.kapil.app/terabox/stream/${file.id}.m3u8`;
+            // Use proxy if encrypted or quality is null/DEFAULT
+            const useProxy = file.is_encrypted || !file.quality || file.quality === 'DEFAULT';
+
+            if (useProxy) {
+                const baseUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'https://api.kapil.app';
+                return `${baseUrl}/terabox/download/${file.id}`;
+            }
+
+            return `${process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'https://api.kapil.app'}/terabox/stream/${file.id}.m3u8`;
         }
         return await getDownloadUrl(file.id);
     };

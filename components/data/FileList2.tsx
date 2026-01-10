@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,7 +8,7 @@ import FileViewer from "@/components/viewer/FileViewer3";
 import { isValidBucketId, useBucketStore } from "@/hooks/use-bucket-store";
 import { formatBytes } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { CheckSquare, ChevronLeft, ChevronRight, Eye, EyeOff, FileText, Grid, List, RefreshCw, Trash2, X } from "lucide-react";
+import { CheckSquare, ChevronLeft, ChevronRight, Eye, EyeOff, FileText, Grid, List, RefreshCw, Trash2, X, Settings } from "lucide-react";
 import { useEffect, useReducer, useState } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
@@ -21,7 +22,7 @@ import { FileCompactView } from "./views/FileCompactView";
 import { FileGridView } from "./views/FileGridView";
 import { FileListView } from "./views/FileListView";
 import { FileActions } from "./views/types";
-import { updateThumb, updateDuration, updateQuality, updateShareId } from "@/lib/terabox-client";
+import { updateThumb, updateDuration, updateQuality, updateShareId, backfillDuration, backfillQuality, backfillShareId } from "@/lib/terabox-client";
 
 export default function FileList({ bucketId }: { bucketId?: string }) {
   const { selectedFolderName, selectedFolderId, selectedUniqueId: selectedBucketId } = useBucketStore();
@@ -399,6 +400,28 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
     onClearSelection: () => setSelectedFiles(new Set()),
   };
 
+
+  const handleBackfill = async (type: 'duration' | 'quality' | 'shareId') => {
+    const limitStr = prompt("Enter limit (default 5):", "5");
+    const limit = parseInt(limitStr || "5") || 5;
+
+    dispatch({ type: "SET_FIELD", field: "loading", value: true });
+    try {
+      let res;
+      if (type === 'duration') res = await backfillDuration({ limit });
+      else if (type === 'quality') res = await backfillQuality({ limit });
+      else if (type === 'shareId') res = await backfillShareId({ limit });
+
+      if (res?.success) toast.success(`Backfill ${type} started/completed: ` + res.message);
+      else toast.error(res?.error || "Failed");
+    } catch (e: any) {
+      toast.error("Backfill failed: " + e.message);
+    } finally {
+      dispatch({ type: "SET_FIELD", field: "loading", value: false });
+      fetchFiles();
+    }
+  }
+
   const LoadingSkeleton = () => (
     <div className="space-y-4">
       {Array.from({ length: state.limit }).map((_, i) => (
@@ -471,6 +494,25 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
           >
             <RefreshCw className={`w-4 h-4 ${state.loading ? 'animate-spin' : ''}`} />
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost" className="hover:bg-muted/50">
+                <Settings className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleBackfill('duration')}>
+                Backfill Duration
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleBackfill('quality')}>
+                Backfill Quality
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleBackfill('shareId')}>
+                Backfill Share ID
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

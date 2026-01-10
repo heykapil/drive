@@ -1,5 +1,4 @@
 import { getBucketConfig } from '@/service/bucket.config';
-import { getTBBucketConfig } from '@/service/tb-bucket.config';
 import { query } from '@/service/postgres';
 import { s3WithConfig } from '@/service/s3-tebi';
 import { deleteTBFiles } from '@/lib/actions/terabox';
@@ -179,6 +178,7 @@ export async function GET(req: NextRequest) {
         f.duration,
         f.tb_bucket_id,
         f.share_id,
+        f.is_encrypted,
         CASE 
           WHEN f.bucket_id IS NOT NULL THEN 'S3'
           WHEN f.tb_bucket_id IS NOT NULL THEN 'TB'

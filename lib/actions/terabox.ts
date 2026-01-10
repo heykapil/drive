@@ -1,8 +1,9 @@
 'use server'
 
 import { getTBBucketConfig } from '@/service/tb-bucket.config'
-import { getQuota, deleteFiles } from '@/lib/terabox-client'
+import { getQuota, deleteFiles, createClient } from '@/lib/terabox-client'
 import { getTBBucketUsage as getTBBucketUsageData, getTBFileDownloadLink as getTBFileDownloadLinkData } from '@/lib/data/terabox'
+import { cookies } from 'next/headers'
 
 /**
  * Get Terabox bucket usage statistics from backend API
@@ -79,10 +80,21 @@ export async function testTBConnection(bucketIds: number | number[]): Promise<{
  */
 export async function deleteTBFiles(bucketId: number, fileKeys: string[]): Promise<{ success: boolean; deleted: string[]; failed: string[] }> {
     try {
+        const cookieStore = await cookies()
+        const cookieHeader = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ')
+
+        const authenticatedClient = createClient({
+            requestInit: {
+                headers: {
+                    Cookie: cookieHeader
+                }
+            }
+        })
+
         const response = await deleteFiles({
             bucket_id: bucketId,
             paths: fileKeys
-        })
+        }, authenticatedClient)
 
         if (!response.success && response.errno !== 0) {
             throw new Error(response.error || 'Failed to delete files')
