@@ -1,8 +1,8 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 export function formatBytes(bytes: number, decimals = 2) {
@@ -21,95 +21,96 @@ export function formatDate(dateString: string | Date) {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 }
 
-
 const mimeTypeMap: Record<string, string> = {
   // Video formats
-  ".vid": "video/mp4", // Assuming .vid is MP4, update if needed
-  ".mp4": "video/mp4",
-  ".mkv": "video/x-matroska",
-  ".mov": "video/quicktime",
-  ".avi": "video/x-msvideo",
-  ".wmv": "video/x-ms-wmv",
-  ".flv": "video/x-flv",
-  ".webm": "video/webm",
+  '.vid': 'video/mp4', // Assuming .vid is MP4, update if needed
+  '.mp4': 'video/mp4',
+  '.mkv': 'video/x-matroska',
+  '.mov': 'video/quicktime',
+  '.avi': 'video/x-msvideo',
+  '.wmv': 'video/x-ms-wmv',
+  '.flv': 'video/x-flv',
+  '.webm': 'video/webm',
 
   // Image formats
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".gif": "image/gif",
-  ".bmp": "image/bmp",
-  ".webp": "image/webp",
-  ".svg": "image/svg+xml",
-  ".tiff": "image/tiff",
-  ".ico": "image/x-icon",
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.bmp': 'image/bmp',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.tiff': 'image/tiff',
+  '.ico': 'image/x-icon',
 
   // Audio formats
-  ".mp3": "audio/mpeg",
-  ".wav": "audio/wav",
-  ".flac": "audio/flac",
-  ".aac": "audio/aac",
-  ".ogg": "audio/ogg",
-  ".m4a": "audio/mp4",
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.flac': 'audio/flac',
+  '.aac': 'audio/aac',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
 
   // Document formats
-  ".pdf": "application/pdf",
-  ".doc": "application/msword",
-  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ".xls": "application/vnd.ms-excel",
-  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ".ppt": "application/vnd.ms-powerpoint",
-  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  ".txt": "text/plain",
-  ".csv": "text/csv",
-  ".json": "application/json",
-  ".xml": "application/xml",
-  ".md": "text/markdown",
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx':
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx':
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.txt': 'text/plain',
+  '.csv': 'text/csv',
+  '.json': 'application/json',
+  '.xml': 'application/xml',
+  '.md': 'text/markdown',
 
   // Compressed formats
-  ".zip": "application/zip",
-  ".rar": "application/vnd.rar",
-  ".7z": "application/x-7z-compressed",
-  ".tar": "application/x-tar",
-  ".gz": "application/gzip",
+  '.zip': 'application/zip',
+  '.rar': 'application/vnd.rar',
+  '.7z': 'application/x-7z-compressed',
+  '.tar': 'application/x-tar',
+  '.gz': 'application/gzip',
 
   // Code formats
-  ".html": "text/html",
-  ".css": "text/css",
-  ".js": "text/javascript",
-  ".ts": "application/typescript",
-  ".jsx": "text/javascript",
-  ".tsx": "application/typescript",
-  ".py": "text/x-python",
-  ".java": "text/x-java-source",
-  ".cpp": "text/x-c",
-  ".c": "text/x-c",
-  ".go": "text/x-go",
-  ".rb": "text/x-ruby",
-  ".php": "text/x-php",
-  ".sh": "application/x-sh",
-  ".bat": "application/x-msdos-program",
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'text/javascript',
+  '.ts': 'application/typescript',
+  '.jsx': 'text/javascript',
+  '.tsx': 'application/typescript',
+  '.py': 'text/x-python',
+  '.java': 'text/x-java-source',
+  '.cpp': 'text/x-c',
+  '.c': 'text/x-c',
+  '.go': 'text/x-go',
+  '.rb': 'text/x-ruby',
+  '.php': 'text/x-php',
+  '.sh': 'application/x-sh',
+  '.bat': 'application/x-msdos-program',
 
   // Default binary type
-  ".bin": "application/octet-stream",
+  '.bin': 'application/octet-stream',
 };
 
 export const getFileType = (file: File) => {
-  const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-  return mimeTypeMap[extension] || file.type || "application/octet-stream";
+  const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+  return mimeTypeMap[extension] || file.type || 'application/octet-stream';
 };
 
 export const getFileTypeFromFilename = (filename: string): string => {
-  const dotIndex = filename.lastIndexOf(".");
+  const dotIndex = filename.lastIndexOf('.');
   if (dotIndex === -1) {
-    return "application/octet-stream";
+    return 'application/octet-stream';
   }
   const extension = filename.slice(dotIndex).toLowerCase();
-  return mimeTypeMap[extension] || "application/octet-stream";
+  return mimeTypeMap[extension] || 'application/octet-stream';
 };
 
 // Define the types for our data for type safety
@@ -141,7 +142,7 @@ export interface FolderNode {
   folder_name: string;
   folder_parent_id: number | null;
   children: FolderNode[]; // For nested subfolders
-  buckets: Bucket[];      // For buckets directly inside this folder
+  buckets: Bucket[]; // For buckets directly inside this folder
 }
 
 // The raw data format from your buckets API
@@ -158,7 +159,10 @@ type ApiBucketEntry = Bucket & {
  * @param bucketData The flat array from '/api/buckets/postgres'.
  * @returns An array of root-level folder nodes.
  */
-export function buildFolderTree(allFolders: Folder[], bucketData: ApiBucketEntry[]): FolderNode[] {
+export function buildFolderTree(
+  allFolders: Folder[],
+  bucketData: ApiBucketEntry[],
+): FolderNode[] {
   const folderMap: { [key: number]: FolderNode } = {};
 
   // First pass: Create a map of ALL folders using the complete list from the new API.
@@ -195,4 +199,15 @@ export function buildFolderTree(allFolders: Folder[], bucketData: ApiBucketEntry
   });
 
   return rootFolders;
+}
+
+export function formatSeconds(totalSeconds: number) {
+  const totalMs = totalSeconds * 1000;
+  const result = new Date(totalMs).toISOString().slice(11, 19);
+
+  if (result.startsWith('00:')) {
+    return result.slice(3);
+  }
+
+  return result;
 }
