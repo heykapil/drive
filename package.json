@@ -88,7 +88,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "latest",
-    "@types/archiver": "^6.0.3",
+    "@types/archiver": "^7.0.0",
     "@types/busboy": "^1.5.4",
     "@types/node": "^20",
     "@types/pg": "^8.11.11",
