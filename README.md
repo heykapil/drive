@@ -1,20 +1,20 @@
 # Drive  
-A cloud-file-management frontend built with [Next.js](https://nextjs.org) + S3-compatible storage (e.g., AWS S3, Cloudflare R2, Tebi) + custom auth & sharing.
+A cloud-file-management frontend built with [Next.js](https://nextjs.org) + S3-compatible storage (e.g., AWS S3, Cloudflare R2, Tebi) + Terabox (TB) Storage options +  custom auth (OIDC powered) & sharing.
 
 ## 🚀 Project Overview  
 This project enables you to:  
-- Upload files (single + multipart) into one or more S3 buckets.  
+- Upload files (single + multipart) into one or more S3/TB buckets.  
 - Maintain folder/directory structures across one or multiple buckets.  
 - Reference and manage files in a database (metadata, folder path, bucket info, sharing links).  
-- Support remote uploads (e.g., fetch from a URL and store into S3).  
-- Authenticate users via a custom authentication service (e.g., `auth.kapil.app`).  
+- Support remote uploads (e.g., fetch from a URL and store into S3/TB).  
+- Authenticate users via a custom authentication service (OIDC) (e.g., `auth.kapil.app`).  
 - Share files via links, control permissions, handle user/accounts.  
 - Be flexible: multiple buckets, multi-tenant, remote upload, multi-part upload support for large files.
 
 ## ✅ Key Features  
 - Built on **Next.js (App Router)** with React components and SSR/CSR as needed.  
 - Multipart upload support (for large files) using S3 APIs (or compatible).  
-- Multiple S3 buckets support — you can configure many buckets, map folders to buckets.  
+- Multiple S3/TB buckets support — you can configure many buckets, map folders to buckets.  
 - Folder/folder-structure support (nested folders) across buckets.  
 - Remote upload support: provide a URL to download from and store into your S3 bucket.  
 - File sharing: generate shareable links, control access (public/private), optionally link to auth.  
@@ -27,7 +27,7 @@ This project enables you to:
 
 ### Prerequisites  
 - Node.js (recommend version ≥ 16)  
-- Access to one or more S3-compatible buckets (AWS S3, Cloudflare R2, Tebi, etc.)  
+- Access to one or more S3-compatible buckets (AWS S3, Cloudflare R2, Tebi, etc.) and Terabox accounts (email and password prefered, cookies can be used)
 - Database for metadata (PostgreSQL, MySQL, etc)  
 - An authentication service set up (e.g., i am using `auth.kapil.app`)  
 - Environment variables configured (see .env.example).
