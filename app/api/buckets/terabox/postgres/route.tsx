@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
         const cookie_encrypted = '';
 
         // Use a transaction to ensure all tables are updated correctly
-        const newBucket = await sql.begin(async sql => {
+        const newBucket = await sql.begin(async (txn: any) => {
             // 1. Insert into tb_auth_sessions
-            const [session] = await sql`
+            const [session] = await txn`
                 INSERT INTO tb_auth_sessions (
                     email,
                     email_encrypted,
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
             `;
 
             // 2. Insert into tb_account_info
-            await sql`
+            await txn`
                 INSERT INTO tb_account_info (
                     id,
                     account_id,
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
             // However, let's look at schema: id integer DEFAULT nextval('tb_buckets_id_seq').
             // If we force ID, we might be okay.
             // Let's TRY to use same ID.
-            const [backup] = await sql`
+            const [backup] = await txn`
                 INSERT INTO tb_buckets_backup (
                     id,
                     email,
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
 
             // 4. Link the new bucket to the specified folder
             // Use backup.id (which should be session.id if forced)
-            await sql`
+            await txn`
                 INSERT INTO folder_buckets (tb_bucket_id, folder_id, bucket_id)
                 VALUES (${backup.id}, ${folderId}, NULL)
             `;
@@ -181,14 +181,14 @@ export async function PATCH(req: NextRequest) {
         }
 
         // This transaction guarantees data integrity
-        await sql.begin(async sql => {
+        await sql.begin(async (txn: any) => {
             // 1. Remove all existing folder associations for this Terabox bucket
-            await sql`
+            await txn`
         DELETE FROM folder_buckets WHERE tb_bucket_id = ${bucketId}
       `;
 
             // 2. Create the new association in the junction table
-            await sql`
+            await txn`
         INSERT INTO folder_buckets (tb_bucket_id, folder_id, bucket_id) 
         VALUES (${bucketId}, ${newFolderId}, NULL)
       `;

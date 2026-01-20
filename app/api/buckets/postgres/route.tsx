@@ -32,16 +32,16 @@ export async function POST(req: NextRequest) {
     const secret_key_encrypted = await encryptSecret(secretKey);
 
     // Use a transaction to ensure both the bucket and its folder link are created successfully
-    const newBucket = await sql.begin(async sql => {
+    const newBucket = await sql.begin(async (txn: any) => {
       // 1. Insert the new bucket details
-      const [bucket] = await sql`
+      const [bucket] = await txn`
         INSERT INTO s3_buckets (name, region, endpoint, provider, total_capacity_gb, access_key_encrypted, secret_key_encrypted)
         VALUES (${name}, ${region}, ${endpoint}, ${provider}, ${total_capacity_gb}, ${access_key_encrypted}, ${secret_key_encrypted})
         RETURNING id
       `;
 
       // 2. Link the new bucket to the specified folder
-      await sql`
+      await txn`
         INSERT INTO folder_buckets (bucket_id, folder_id)
         VALUES (${bucket.id}, ${folderId})
       `;
@@ -93,14 +93,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     // This transaction guarantees data integrity. It's automatically committed on success or rolled back on error.
-    await sql.begin(async sql => {
+    await sql.begin(async (txn: any) => {
       // 1. Remove all existing folder associations for this bucket
-      await sql`
+      await txn`
         DELETE FROM folder_buckets WHERE bucket_id = ${bucketId}
       `;
 
       // 2. Create the new association in the junction table
-      await sql`
+      await txn`
         INSERT INTO folder_buckets (bucket_id, folder_id) VALUES (${bucketId}, ${newFolderId})
       `;
     });
