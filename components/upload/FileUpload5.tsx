@@ -189,32 +189,34 @@ export function FileUpload5({
                 const jobId = (result as any).job_id;
                 if (jobId) {
                     updateStatus(id, "Processing...");
-                    // Dynamically import getJobStatus to avoid circular deps or keep consistency
-                    const { getJobStatus } = await import('@/lib/s3-client');
+                    const { monitorJobStream } = await import('@/hooks/use-job-stream');
 
-                    let jobStatus = 'pending';
-                    while (jobStatus !== 'completed' && jobStatus !== 'failed') {
-                        if (controller.signal.aborted) {
-                            throw new Error("Cancelled");
-                        }
-
-                        // Wait 2 seconds
-                        await new Promise(r => setTimeout(r, 2000));
-
-                        try {
-                            const statusData = await getJobStatus(jobId);
-                            jobStatus = statusData.status;
-
-                            if (jobStatus === 'failed') {
-                                throw new Error("Processing failed");
+                    await new Promise<void>((resolve, reject) => {
+                        monitorJobStream(jobId, {
+                            signal: controller.signal,
+                            onProgress: (pct) => {
+                                setState(prev => ({
+                                    ...prev,
+                                    uploadProgress: { ...prev.uploadProgress, [id]: pct }
+                                }));
+                                updateStatus(id, `Processing ${pct}%`);
+                            },
+                            onStatus: (status, msg) => {
+                                updateStatus(id, `Processing (${status})...`);
+                            },
+                            onLog: (log) => {
+                                if (log.type === 'error') {
+                                    console.error(`Job ${jobId} error:`, log.message);
+                                }
+                            },
+                            onError: (err) => {
+                                reject(new Error(err));
+                            },
+                            onComplete: () => {
+                                resolve();
                             }
-
-                            // Optional: Update detailed status if needed
-                            updateStatus(id, `Processing (${jobStatus})...`);
-                        } catch (err) {
-                            console.warn("Polling error:", err);
-                        }
-                    }
+                        });
+                    });
                 }
 
                 toast.success(`${file.name} uploaded!`);

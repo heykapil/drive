@@ -2,6 +2,7 @@
 import Client, { gateway, Environment, Local } from '@/client';
 import { SessionData, clientConfig } from './auth-config';
 import { signJWT } from './helpers/jose';
+import { cookies } from 'next/headers';
 
 const target = process.env.NODE_ENV === 'development' ? Local : Environment('api');
 
@@ -33,5 +34,10 @@ export async function createNewSession(session: SessionData) {
 }
 
 export async function refreshSession() {
-    return await edgeClient.gateway.refreshSession('POST')
+    const cookieStore = await cookies();
+    return await edgeClient.gateway.refreshSession('POST', null, {
+        headers: {
+            Cookie: cookieStore.toString(),
+        },
+    })
 }

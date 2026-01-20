@@ -13,6 +13,9 @@ CREATE TABLE drive.public.files (
 	share_id text,
 	thumbnail text,
 	duration integer,
+	quality text,
+	preview_gif text,
+	is_encrypted bool DEFAULT false,
 	PRIMARY KEY (id)
 );
 
@@ -27,6 +30,16 @@ CREATE TABLE drive.public.folders (
 	"name" text NOT NULL,
 	parent_id integer,
 	created_at timestamptz DEFAULT now(),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE drive.public.keys (
+	id serial NOT NULL,
+	file_id integer NOT NULL,
+	algorithm text DEFAULT 'aes-256-ctr'::text,
+	key_hex text NOT NULL,
+	iv_hex text NOT NULL,
+	created_at timestamp DEFAULT now(),
 	PRIMARY KEY (id)
 );
 
@@ -97,6 +110,8 @@ CREATE TABLE drive.public.upload_jobs (
 	created_at timestamptz DEFAULT now(),
 	updated_at timestamptz DEFAULT now(),
 	tb_bucket_id integer,
+	progress jsonb DEFAULT '{}'::jsonb,
+	metadata jsonb DEFAULT '{}'::jsonb,
 	PRIMARY KEY (id)
 );
 
@@ -127,6 +142,12 @@ ALTER TABLE drive.public.folder_buckets
 ALTER TABLE drive.public.folders
 	ADD FOREIGN KEY (parent_id) 
 	REFERENCES folders (id);
+
+
+
+ALTER TABLE drive.public.keys
+	ADD FOREIGN KEY (file_id) 
+	REFERENCES files (id);
 
 
 
@@ -224,6 +245,10 @@ CREATE INDEX idx_files_tb_bucket_id ON public.files USING btree (tb_bucket_id);
 CREATE INDEX idx_folder_buckets_tb_bucket_id ON public.folder_buckets USING btree (tb_bucket_id);
 
 CREATE INDEX idx_upload_jobs_created_at ON public.upload_jobs USING btree (created_at DESC);
+
+CREATE UNIQUE INDEX keys_file_id_key ON public.keys USING btree (file_id);
+
+CREATE UNIQUE INDEX keys_pkey ON public.keys USING btree (id);
 
 CREATE UNIQUE INDEX s3_buckets_name_key ON public.s3_buckets USING btree (name);
 

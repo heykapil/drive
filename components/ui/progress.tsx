@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
->(({ className, value, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & { indicatorClassName?: string }
+>(({ className, value, indicatorClassName, ...props }, ref) => {
   // ✨ Calculate the color based on the current value
   const indicatorColor = getUsageColor(value as number)
 
@@ -25,7 +25,7 @@ const Progress = React.forwardRef<
       {...props}
     >
       <ProgressPrimitive.Indicator
-        className={cn("h-full w-full flex-1 transition-all duration-500 ease-in-out")}
+        className={cn("h-full w-full flex-1 transition-all duration-500 ease-in-out", indicatorClassName)}
         style={{
           backgroundColor: props.color || indicatorColor,
           transform: `translateX(-${100 - (value || 0)}%)`,

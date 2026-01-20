@@ -268,6 +268,11 @@ export namespace terabox {
         encrypt?: boolean
     }
 
+    export interface StreamMessage {
+        type: string
+        data: any
+    }
+
     export class ServiceClient {
         private baseClient: BaseClient
 
@@ -276,6 +281,7 @@ export namespace terabox {
             this.createBucket = this.createBucket.bind(this)
             this.debugFileInfo = this.debugFileInfo.bind(this)
             this.serveStreamM3U8 = this.serveStreamM3U8.bind(this)
+            this.streamJobUpdates = this.streamJobUpdates.bind(this)
             this.teraboxBackfillDuration = this.teraboxBackfillDuration.bind(this)
             this.teraboxBackfillQuality = this.teraboxBackfillQuality.bind(this)
             this.teraboxBackfillShareId = this.teraboxBackfillShareId.bind(this)
@@ -335,6 +341,10 @@ export namespace terabox {
          */
         public async serveStreamM3U8(method: "GET", fileId: string, body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
             return this.baseClient.callAPI(method, `/terabox/stream/${encodeURIComponent(fileId)}`, body, options)
+        }
+
+        public async streamJobUpdates(jobId: string): Promise<StreamIn<StreamMessage>> {
+            return await this.baseClient.createStreamIn(`/terabox/jobs/${encodeURIComponent(jobId)}/stream`)
         }
 
         public async teraboxBackfillDuration(params: {

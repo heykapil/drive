@@ -141,11 +141,31 @@ export async function getQuota(params: { bucket_id?: number; userAgent?: string 
 
 export async function remoteUpload(params: terabox.RemoteUploadRequest): Promise<JobResponse> {
     const res = await client.terabox.teraboxRemoteUpload(params);
+    // Backend returns { success, data: { job_id, queued_count, message } }
+    if (res.success && res.data) {
+        return {
+            success: res.success,
+            job_id: res.data.job_id,
+            queued_count: res.data.queued_count,
+            message: res.data.message || 'Upload started',
+            data: res.data
+        };
+    }
     return res as unknown as JobResponse;
 }
 
 export async function saveVideo(params: { urls: string[]; bucket_id: number; userAgent?: string }): Promise<JobResponse> {
     const res = await client.terabox.teraboxSaveVideo(params);
+    // Backend returns { success, data: { job_id, queued_count, message } }
+    if (res.success && res.data) {
+        return {
+            success: res.success,
+            job_id: res.data.job_id,
+            queued_count: res.data.queued_count,
+            message: res.data.message || 'Save video started',
+            data: res.data
+        };
+    }
     return res as unknown as JobResponse;
 }
 
@@ -192,5 +212,9 @@ export async function getRecycleBin(params: { bucket_id?: number; userAgent?: st
 
 export async function getThumbnail(params: { share_id: string; bucket_id: number; userAgent?: string }) {
     return await client.terabox.teraboxThumbnail(params);
+}
+
+export async function streamJobUpdates(jobId: string) {
+    return await client.terabox.streamJobUpdates(jobId);
 }
 
