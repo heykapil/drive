@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { rows } = await query(
-      'SELECT key, share_id, bucket_id, tb_bucket_id FROM files WHERE id = $1',
+      'SELECT key, bucket_id, tb_bucket_id FROM files WHERE id = $1',
       [fileId],
     );
 
@@ -30,11 +30,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    const { key, share_id, bucket_id, tb_bucket_id } = rows[0];
+    const { key, bucket_id, tb_bucket_id } = rows[0];
     if (tb_bucket_id) {
-      // Import dynamically to avoid circular deps if any, or just consistent with previous
-      const { getTBFileDownloadLink } = await import('@/lib/actions/terabox');
-      const downloadUrl = await getTBFileDownloadLink(tb_bucket_id, share_id || key); // Fallback to key if share_id empty? unlikely if logic correct
+      const { rows: tbRows } = await query(
+        'SELECT account_id FROM tb_buckets WHERE id = $1',
+        [tb_bucket_id],
+      );
+      const { account_id } = tbRows[0];
+      const downloadUrl = `https://cdn${tb_bucket_id === 1 ? '' : tb_bucket_id}.kapil.app/${account_id}/${key}`;
       return NextResponse.json({ url: downloadUrl });
     }
 

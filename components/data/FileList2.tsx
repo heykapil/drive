@@ -22,7 +22,7 @@ import { FileCompactView } from "./views/FileCompactView";
 import { FileGridView } from "./views/FileGridView";
 import { FileListView } from "./views/FileListView";
 import { FileActions } from "./views/types";
-import { updateThumb, updateDuration, updateQuality, updateShareId, backfillDuration, backfillQuality, backfillShareId } from "@/lib/terabox-client";
+import { updateThumb, updateDuration, updateQuality, updateShareId, backfillDuration, backfillQuality, backfillShareId, backfillThumbnails } from "@/lib/terabox-client";
 
 export default function FileList({ bucketId }: { bucketId?: string }) {
   const { selectedFolderName, selectedFolderId, selectedUniqueId: selectedBucketId } = useBucketStore();
@@ -401,7 +401,7 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
   };
 
 
-  const handleBackfill = async (type: 'duration' | 'quality' | 'shareId') => {
+  const handleBackfill = async (type: 'duration' | 'quality' | 'shareId' | 'thumbnail') => {
     const limitStr = prompt("Enter limit (default 5):", "5");
     const limit = parseInt(limitStr || "5") || 5;
 
@@ -411,7 +411,7 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
       if (type === 'duration') res = await backfillDuration({ limit });
       else if (type === 'quality') res = await backfillQuality({ limit });
       else if (type === 'shareId') res = await backfillShareId({ limit });
-
+      else if (type === 'thumbnail') res = await backfillThumbnails({ limit })
       if (res?.success) toast.success(`Backfill ${type} started/completed: ` + res.message);
       else toast.error(res?.error || "Failed");
     } catch (e: any) {
@@ -511,6 +511,9 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
               <DropdownMenuItem onClick={() => handleBackfill('shareId')}>
                 Backfill Share ID
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleBackfill('thumbnail')}>
+                Backfill Thumbnails
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -579,7 +582,7 @@ export default function FileList({ bucketId }: { bucketId?: string }) {
                   <SelectValue placeholder={state.limit} />
                 </SelectTrigger>
                 <SelectContent side="top">
-                  {[10, 20, 30, 40, 50].map((pageSize) => (
+                  {[25, 50, 100, 150, 250].map((pageSize) => (
                     <SelectItem key={pageSize} value={`${pageSize}`}>
                       {pageSize}
                     </SelectItem>

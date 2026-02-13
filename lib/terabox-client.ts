@@ -218,3 +218,6 @@ export async function streamJobUpdates(jobId: string) {
     return await client.terabox.streamJobUpdates(jobId);
 }
 
+export async function backfillThumbnails({ limit, seconds }: { limit?: number, seconds?: number }) {
+    return await client.migration.backfillThumbnails({ limit: limit || 500, seconds: seconds || 0 })
+}

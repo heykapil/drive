@@ -33,6 +33,7 @@ const BROWSER = typeof globalThis === "object" && ("window" in globalThis);
  */
 export default class Client {
     public readonly gateway: gateway.ServiceClient
+    public readonly migration: migration.ServiceClient
     public readonly s3: s3.ServiceClient
     public readonly terabox: terabox.ServiceClient
     private readonly options: ClientOptions
@@ -50,6 +51,7 @@ export default class Client {
         this.options = options ?? {}
         const base = new BaseClient(this.target, this.options)
         this.gateway = new gateway.ServiceClient(base)
+        this.migration = new migration.ServiceClient(base)
         this.s3 = new s3.ServiceClient(base)
         this.terabox = new terabox.ServiceClient(base)
     }
@@ -108,6 +110,146 @@ export namespace gateway {
          */
         public async refreshSession(method: "POST", body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
             return this.baseClient.callAPI(method, `/session/refresh`, body, options)
+        }
+    }
+}
+
+export namespace migration {
+    export interface BackfillThumbnailRequest {
+        limit?: number
+        /**
+         * Timestamp (seconds) at which to capture thumbnail.
+         * 0 = use Terabox's own thumbUrl (default).
+         * >0 = use ffmpeg to extract frame at this timestamp.
+         */
+        seconds?: number
+    }
+
+    export interface CheckStatusRequest {
+        "bucket_name"?: string
+        "bucket_id"?: number
+    }
+
+    export interface CheckTeraboxFileRequest {
+        path: string
+        "bucket_id"?: number
+    }
+
+    export interface FileStatus {
+        id: number
+        filename: string
+        key: string
+        "bucket_id": number | null
+        "tb_bucket_id": number | null
+        "bucket_name"?: string
+        migrated: boolean
+    }
+
+    export interface MigrateS3Request {
+        "dry_run"?: boolean
+        "bucket_id"?: number
+        all?: boolean
+    }
+
+    export interface MigrationResult {
+        success: boolean
+        stats: {
+            totalBuckets: number
+            totalFiles: number
+            migratedFiles: number
+            failedFiles: number
+            durationMinutes: number
+        }
+        errors: {
+            bucket: string
+            file: string
+            error: string
+        }[]
+        message?: string
+    }
+
+    export class ServiceClient {
+        private baseClient: BaseClient
+
+        constructor(baseClient: BaseClient) {
+            this.baseClient = baseClient
+            this.backfillThumbnails = this.backfillThumbnails.bind(this)
+            this.checkMigrationStatus = this.checkMigrationStatus.bind(this)
+            this.checkTeraboxFile = this.checkTeraboxFile.bind(this)
+            this.migrateS3ToTerabox = this.migrateS3ToTerabox.bind(this)
+        }
+
+        public async backfillThumbnails(params: BackfillThumbnailRequest): Promise<{
+            processed: number
+            updated: number
+            errors: number
+            lastError?: string
+        }> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/migration/backfill-thumbnails`, JSON.stringify(params))
+            return await resp.json() as {
+                processed: number
+                updated: number
+                errors: number
+                lastError?: string
+            }
+        }
+
+        public async checkMigrationStatus(params: CheckStatusRequest): Promise<{
+            "bucket_info"?: any
+            "files_in_db": FileStatus[]
+            "s3_bucket_id"?: number
+            "total_files": number
+            "migrated_files": number
+            "pending_files": number
+        }> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                "bucket_id": params["bucket_id"] === undefined ? undefined : String(params["bucket_id"]),
+                "bucket_name": params["bucket_name"],
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("GET", `/migration/check-status`, undefined, { query })
+            return await resp.json() as {
+                "bucket_info"?: any
+                "files_in_db": FileStatus[]
+                "s3_bucket_id"?: number
+                "total_files": number
+                "migrated_files": number
+                "pending_files": number
+            }
+        }
+
+        public async checkTeraboxFile(params: CheckTeraboxFileRequest): Promise<{
+            exists: boolean
+            path: string
+            "file_info"?: any
+            error?: string
+        }> {
+            // Convert our params into the objects we need for the request
+            const query = makeRecord<string, string | string[]>({
+                "bucket_id": params["bucket_id"] === undefined ? undefined : String(params["bucket_id"]),
+                path: params.path,
+            })
+
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("GET", `/migration/check-terabox-file`, undefined, { query })
+            return await resp.json() as {
+                exists: boolean
+                path: string
+                "file_info"?: any
+                error?: string
+            }
+        }
+
+        /**
+         * Migrate S3 buckets to Terabox
+         */
+        public async migrateS3ToTerabox(params: MigrateS3Request): Promise<MigrationResult> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/migration/s3-to-terabox`, JSON.stringify(params))
+            return await resp.json() as MigrationResult
         }
     }
 }
@@ -197,6 +339,75 @@ export namespace s3 {
 }
 
 export namespace terabox {
+    export interface BatchUploadRequest {
+        /**
+         * URL pattern with `{n}` as the placeholder for the number.
+         * Example: "https://cdn.domain.com/{n}.mp4"
+         */
+        pattern: string
+
+        /**
+         * Start number (inclusive), default 1
+         */
+        start?: number
+
+        /**
+         * End number (inclusive)
+         */
+        end: number
+
+        /**
+         * Optional zero-padding width, e.g. 3 → 001, 002 ...
+         */
+        pad?: number
+
+        /**
+         * The folder ID to determine which Terabox bucket to use
+         */
+        "folder_id": number
+
+        /**
+         * Optional: encrypt uploaded files
+         */
+        encrypt?: boolean
+
+        /**
+         * Optional cookie for fetching
+         */
+        cookie?: string
+
+        /**
+         * Optional User-Agent for fetching
+         */
+        "user_agent"?: string
+    }
+
+    export interface BatchUploadResponse {
+        success: boolean
+        /**
+         * Total URLs generated from the pattern
+         */
+        total: number
+
+        /**
+         * Number queued for upload
+         */
+        queued: number
+
+        /**
+         * Number skipped (duplicates)
+         */
+        skipped: number
+
+        items?: {
+            url: string
+            "job_id"?: string
+            status: "queued" | "duplicate" | "error"
+            error?: string
+        }[]
+        error?: string
+    }
+
     export interface CreateBucketRequest {
         email: string
         password: string
@@ -210,6 +421,7 @@ export namespace terabox {
         manualSearch: any
         categoryList: any
         shortUrlList: any
+        keys?: any
     }
 
     export interface DeleteRequest {
@@ -266,6 +478,63 @@ export namespace terabox {
         fileId?: number
         headers?: { [key: string]: string }
         encrypt?: boolean
+        "source_url"?: string
+    }
+
+    export interface ScrapeRequest {
+        /**
+         * The website URL to scrape for video links
+         */
+        url: string
+
+        /**
+         * The folder ID to determine which Terabox bucket to use
+         */
+        "folder_id": number
+
+        /**
+         * Optional cookie string to bypass Cloudflare or authentication
+         */
+        cookie?: string
+
+        /**
+         * Optional User-Agent to use when fetching the page
+         */
+        "user_agent"?: string
+
+        /**
+         * Optional: encrypt uploaded files
+         */
+        encrypt?: boolean
+    }
+
+    export interface ScrapeResponse {
+        success: boolean
+        /**
+         * Number of videos found on the page
+         */
+        found: number
+
+        /**
+         * Number of new videos queued for upload (not duplicates)
+         */
+        queued: number
+
+        /**
+         * Number of videos skipped because they already exist
+         */
+        skipped: number
+
+        /**
+         * Details of queued items
+         */
+        items?: {
+            "video_url": string
+            "job_id"?: string
+            status: "queued" | "duplicate"
+        }[]
+
+        error?: string
     }
 
     export interface StreamMessage {
@@ -280,15 +549,19 @@ export namespace terabox {
             this.baseClient = baseClient
             this.createBucket = this.createBucket.bind(this)
             this.debugFileInfo = this.debugFileInfo.bind(this)
+            this.refreshExpiringCookiesHandler = this.refreshExpiringCookiesHandler.bind(this)
             this.serveStreamM3U8 = this.serveStreamM3U8.bind(this)
             this.streamJobUpdates = this.streamJobUpdates.bind(this)
             this.teraboxBackfillDuration = this.teraboxBackfillDuration.bind(this)
             this.teraboxBackfillQuality = this.teraboxBackfillQuality.bind(this)
             this.teraboxBackfillShareId = this.teraboxBackfillShareId.bind(this)
+            this.teraboxBatchUpload = this.teraboxBatchUpload.bind(this)
+            this.teraboxDecryptFile = this.teraboxDecryptFile.bind(this)
             this.teraboxDelete = this.teraboxDelete.bind(this)
             this.teraboxDownload = this.teraboxDownload.bind(this)
             this.teraboxDownloadProxy = this.teraboxDownloadProxy.bind(this)
             this.teraboxEmptyRecyleBin = this.teraboxEmptyRecyleBin.bind(this)
+            this.teraboxEncryptFile = this.teraboxEncryptFile.bind(this)
             this.teraboxFileManager = this.teraboxFileManager.bind(this)
             this.teraboxGenerateGifPreview = this.teraboxGenerateGifPreview.bind(this)
             this.teraboxGetRecyleBin = this.teraboxGetRecyleBin.bind(this)
@@ -298,7 +571,11 @@ export namespace terabox {
             this.teraboxProxy = this.teraboxProxy.bind(this)
             this.teraboxQuota = this.teraboxQuota.bind(this)
             this.teraboxRemoteUpload = this.teraboxRemoteUpload.bind(this)
+            this.teraboxS3FileResolver = this.teraboxS3FileResolver.bind(this)
+            this.teraboxS3Proxy = this.teraboxS3Proxy.bind(this)
+            this.teraboxS3Resolver = this.teraboxS3Resolver.bind(this)
             this.teraboxSaveVideo = this.teraboxSaveVideo.bind(this)
+            this.teraboxScrape = this.teraboxScrape.bind(this)
             this.teraboxStream = this.teraboxStream.bind(this)
             this.teraboxThumbnail = this.teraboxThumbnail.bind(this)
             this.teraboxUpdateThumb = this.teraboxUpdateThumb.bind(this)
@@ -337,6 +614,14 @@ export namespace terabox {
         }
 
         /**
+         * Proactive cookie expiration monitor
+         * Runs daily at 2 AM to check for expiring cookies and refresh them
+         */
+        public async refreshExpiringCookiesHandler(): Promise<void> {
+            await this.baseClient.callTypedAPI("POST", `/terabox/cron/refresh-expiring-cookies`)
+        }
+
+        /**
          * Serve a playable M3U8 stream for a file
          */
         public async serveStreamM3U8(method: "GET", fileId: string, body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
@@ -369,6 +654,46 @@ export namespace terabox {
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI("POST", `/terabox/backfill-shareid`, JSON.stringify(params))
             return await resp.json() as migrations.BackfillResponse
+        }
+
+        /**
+         * POST /terabox/batch-upload
+         * 
+         * Generate URLs from a pattern and queue each for remote upload.
+         * Pattern uses `{n}` as the numeric placeholder.
+         * 
+         * Example: pattern="https://cdn.example.com/{n}.mp4", start=1, end=10
+         * → queues https://cdn.example.com/1.mp4 … https://cdn.example.com/10.mp4
+         * 
+         * Use `pad` for zero-padded numbers: pad=3 → 001, 002 … 010
+         */
+        public async teraboxBatchUpload(params: BatchUploadRequest): Promise<BatchUploadResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/batch-upload`, JSON.stringify(params))
+            return await resp.json() as BatchUploadResponse
+        }
+
+        /**
+         * Decrypt a file in place (Replaces encrypted file with plaintext)
+         */
+        public async teraboxDecryptFile(params: {
+            "file_id": number
+        }): Promise<{
+            success: boolean
+            data?: any
+            error?: string
+            cause?: any
+            errno?: number
+        }> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/decrypt-file`, JSON.stringify(params))
+            return await resp.json() as {
+                success: boolean
+                data?: any
+                error?: string
+                cause?: any
+                errno?: number
+            }
         }
 
         /**
@@ -466,6 +791,31 @@ export namespace terabox {
 
             // Now make the actual call to the API
             const resp = await this.baseClient.callTypedAPI("POST", `/terabox/recycle-bin/empty`, JSON.stringify(body), { headers })
+            return await resp.json() as {
+                success: boolean
+                data?: any
+                error?: string
+                cause?: any
+                errno?: number
+            }
+        }
+
+        /**
+         * Encrypt an existing Terabox file (In-Place / Replace)
+         * Downloads the file, encrypts it using v2 algorithm, uploads back, and updates DB
+         */
+        public async teraboxEncryptFile(params: {
+            "file_id": number
+            force?: boolean
+        }): Promise<{
+            success: boolean
+            data?: any
+            error?: string
+            cause?: any
+            errno?: number
+        }> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/encrypt-file`, JSON.stringify(params))
             return await resp.json() as {
                 success: boolean
                 data?: any
@@ -641,7 +991,7 @@ export namespace terabox {
         }
 
         /**
-         * Proxy VIDEO segments to bypass hotlink protection
+         * Proxy VIDEO segments to bypass hotlink protection (Generic Proxy)
          */
         public async teraboxProxy(method: "GET", body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
             return this.baseClient.callAPI(method, `/terabox/proxy`, body, options)
@@ -701,6 +1051,7 @@ export namespace terabox {
                 filename: params.filename,
                 headers: params.headers,
                 "remote_dir": params["remote_dir"],
+                "source_url": params["source_url"],
                 url: params.url,
             }
 
@@ -713,6 +1064,32 @@ export namespace terabox {
                 cause?: any
                 errno?: number
             }
+        }
+
+        /**
+         * S3 File ID Resolver for Cloudflare Worker (DB-backed files)
+         * Returns download URL and headers by looking up file_id in database
+         * Path: /s3/resolve/file/:id
+         */
+        public async teraboxS3FileResolver(method: "GET", id: string, filename: string, body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
+            return this.baseClient.callAPI(method, `/s3/resolve/file/${encodeURIComponent(id)}/${encodeURIComponent(filename)}`, body, options)
+        }
+
+        /**
+         * S3-compatible object proxy for Cloudflare Caching
+         * Path: /s3/object/:bucket/*key
+         */
+        public async teraboxS3Proxy(method: "GET", bucket: string, key: string[], body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
+            return this.baseClient.callAPI(method, `/s3/object/${encodeURIComponent(bucket)}/${key.map(encodeURIComponent).join("/")}`, body, options)
+        }
+
+        /**
+         * S3 Link Resolver for Cloudflare Worker
+         * Returns download URL and headers (does NOT stream data)
+         * Path: /s3/resolve/:bucket/*key
+         */
+        public async teraboxS3Resolver(method: "GET", bucket: string, key: string[], body?: RequestInit["body"], options?: CallParameters): Promise<globalThis.Response> {
+            return this.baseClient.callAPI(method, `/s3/resolve/${encodeURIComponent(bucket)}/${key.map(encodeURIComponent).join("/")}`, body, options)
         }
 
         /**
@@ -749,6 +1126,18 @@ export namespace terabox {
                 cause?: any
                 errno?: number
             }
+        }
+
+        /**
+         * POST /terabox/scrape
+         * 
+         * Scrape a website for video links and queue them for remote upload to Terabox.
+         * Uses the source URL as the unique identifier for duplicate prevention.
+         */
+        public async teraboxScrape(params: ScrapeRequest): Promise<ScrapeResponse> {
+            // Now make the actual call to the API
+            const resp = await this.baseClient.callTypedAPI("POST", `/terabox/scrape`, JSON.stringify(params))
+            return await resp.json() as ScrapeResponse
         }
 
         /**
