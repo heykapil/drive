@@ -62,7 +62,12 @@ export async function middleware(request: NextRequest) {
                 }
                 await session.save();
             } catch (error: any) {
-                console.error('[Middleware] Failed to refresh token:', error);
+                console.error('[Middleware] Failed to refresh token:', {
+                    name: error?.name,
+                    message: error?.message,
+                    cause: error?.cause,
+                    code: error?.code,
+                });
 
                 // If refresh fails, force logout and redirect
                 const redirectRes = NextResponse.redirect(new URL('/login', request.url));
@@ -106,8 +111,13 @@ export async function middleware(request: NextRequest) {
                 secure,
                 domain,
             });
-        } catch (error) {
-            console.log(error)
+        } catch (error: any) {
+            console.error('[Middleware] createNewSession failed:', {
+                name: error?.name,
+                message: error?.message,
+                cause: error?.cause,
+                code: error?.code,
+            });
         }
     } else {
         const expiresAt = parseInt(expiryCookie, 10);
@@ -133,8 +143,13 @@ export async function middleware(request: NextRequest) {
                     secure,
                     domain,
                 });
-            } catch (error) {
-                console.log(error)
+            } catch (error: any) {
+                console.error('[Middleware] refreshSession failed:', {
+                    name: error?.name,
+                    message: error?.message,
+                    cause: error?.cause,
+                    code: error?.code,
+                });
             }
         }
     }
