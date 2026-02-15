@@ -219,5 +219,5 @@ export async function streamJobUpdates(jobId: string) {
 }
 
 export async function backfillThumbnails({ limit, seconds }: { limit?: number, seconds?: number }) {
-    return await client.migration.backfillThumbnails({ limit: limit || 500, seconds: seconds || 0 })
+    return await client.migration.backfillThumbnails({ limit: limit || 500, seconds: seconds || 10 })
 }
